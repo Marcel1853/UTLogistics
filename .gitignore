@@ -7,3 +7,6 @@ MySkillsAi-s-main/
 
 # Gepackte Mod-Zips
 dist/
+
+# Projektregeln für Claude – nur lokal
+CLAUDE.md

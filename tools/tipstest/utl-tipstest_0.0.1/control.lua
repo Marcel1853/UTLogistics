@@ -37,7 +37,7 @@ script.on_nth_tick(30, function(e)
   if e.tick == 600 or e.tick == 3000 then
     local info = {}
     for _, st in pairs(game.surfaces[1].find_entities_filtered({ type = { "train-stop" } })) do
-      local g = remote.call("utl", "get_station", st.unit_number)
+      local g = remote.call("utl", "get_station", st.unit_number) --[[@as { config: table, provide: table, request: table }?]]
       info[#info + 1] = st.backer_name .. "=" .. (g and (g.config.mode .. " P" .. serpent.line(g.provide) .. " R" .. serpent.line(g.request)) or "-")
     end
     local tr = {}

@@ -1,0 +1,93 @@
+# Baut bei jedem Push auf main die Mod-Zip und lädt sie aufs Mod-Portal – aber nur, wenn die
+# Version in info.json neu ist. Gepackt wird mit tools/package.sh: ohne tools/, docs/, .github/,
+# .vscode/, CLAUDE.md usw. (dieselbe Zip wie lokal).
+#
+# Voraussetzungen:
+#   - Secret FACTORIO_MOD_PORTAL_TOKEN (API-Schlüssel von factorio.com mit Recht „ModPortal: Upload Mods“).
+#   - Die ERSTE Veröffentlichung von Hand im Mod-Portal hochladen: init_upload geht nur für Mods,
+#     die es dort schon gibt. Danach laufen alle neuen Versionen über diesen Workflow.
+name: Release auf dem Mod-Portal
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write # für Release-Branch und Tag
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Werkzeuge installieren
+        run: sudo apt-get install -y jq zip rsync
+
+      - name: Mod-Name und Version lesen
+        id: info
+        run: |
+          echo "name=$(jq -r '.name' info.json)" >> "$GITHUB_OUTPUT"
+          echo "version=$(jq -r '.version' info.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Version auf dem Mod-Portal prüfen
+        id: check
+        run: |
+          RESPONSE=$(curl -s "https://mods.factorio.com/api/mods/${{ steps.info.outputs.name }}")
+          if echo "$RESPONSE" | jq -e '.releases' >/dev/null 2>&1; then
+            FOUND=$(echo "$RESPONSE" | jq -r --arg v "${{ steps.info.outputs.version }}" '[.releases[].version] | index($v) != null')
+          else
+            echo "Mod noch nicht auf dem Portal – die erste Version bitte von Hand hochladen."
+            FOUND="missing"
+          fi
+          echo "Version ${{ steps.info.outputs.version }} schon auf dem Portal: $FOUND"
+          echo "found=$FOUND" >> "$GITHUB_OUTPUT"
+
+      # Alle folgenden Schritte nur, wenn die Mod auf dem Portal existiert und die Version neu ist.
+      - name: Zip bauen
+        if: steps.check.outputs.found == 'false'
+        run: |
+          bash tools/package.sh
+          echo "ZIP=dist/${{ steps.info.outputs.name }}_${{ steps.info.outputs.version }}.zip" >> "$GITHUB_ENV"
+
+      - name: Upload anfordern (init_upload)
+        id: init
+        if: steps.check.outputs.found == 'false'
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.FACTORIO_MOD_PORTAL_TOKEN }}" \
+            -F "mod=${{ steps.info.outputs.name }}" \
+            https://mods.factorio.com/api/v2/mods/releases/init_upload)
+          UPLOAD_URL=$(echo "$RESPONSE" | jq -r '.upload_url // empty' 2>/dev/null || true)
+          if [ -z "$UPLOAD_URL" ]; then
+            echo "Keine Upload-Adresse erhalten:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+          echo "upload_url=$UPLOAD_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Zip hochladen (finish_upload)
+        if: steps.check.outputs.found == 'false'
+        run: |
+          RESPONSE=$(curl -s -X POST -F "file=@$ZIP" "${{ steps.init.outputs.upload_url }}")
+          echo "Antwort des Portals: $RESPONSE"
+          if echo "$RESPONSE" | jq -e '.error' >/dev/null 2>&1; then
+            echo "Hochladen fehlgeschlagen."
+            exit 1
+          fi
+
+      - name: Release-Branch und Tag setzen
+        if: steps.check.outputs.found == 'false'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git checkout -B release
+          git push origin release --force
+          TAG="v${{ steps.info.outputs.version }}"
+          git tag -f "$TAG"
+          git push origin "$TAG" --force

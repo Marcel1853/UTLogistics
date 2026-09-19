@@ -2,9 +2,24 @@ local W = defines.wire_connector_id
 local results = {}
 local function check(name, ok, info) results[#results+1] = (ok and "PASS " or "FAIL ") .. name .. (info and (" -- " .. info) or "") end
 local st = {}
+
+---@class StationInfo
+---@field unit integer
+---@field kind string
+---@field stop_name string?
+---@field config table
+---@field provide table<string, integer>
+---@field request table<string, integer>
+
+--- UTL-Station abfragen (Remote-API); typisiert, damit der Linter die Felder kennt.
+---@param unit integer?
+---@return StationInfo?
+local function station_info(unit)
+  return remote.call("utl", "get_station", unit) --[[@as StationInfo?]]
+end
 script.on_nth_tick(10, function(e)
-  local s = game.surfaces.nauvis
-  local force = game.forces.player
+  local s = game.surfaces["nauvis"]
+  local force = game.forces["player"]
   if e.tick == 10 then
     s.request_to_generate_chunks({0,0}, 2); s.force_generate_chunk_requests()
     for _, ent in pairs(s.find_entities_filtered{area={{-20,-20},{20,20}}}) do if ent.type ~= "character" then ent.destroy() end end
@@ -38,32 +53,32 @@ script.on_nth_tick(10, function(e)
     check("station_count == 2", remote.call("utl","station_count") == 2, tostring(remote.call("utl","station_count")))
     remote.call("utl","configure_station", st.comb.unit_number, {mode="station", provide=true, request=true})
   elseif e.tick == 190 then
-    local u = remote.call("utl","get_station", st.ustop.unit_number)
+    local u = station_info(st.ustop.unit_number)
     check("utl-halt: art stop", u and u.kind == "stop", u and u.kind)
     check("utl-halt: angebot coal 500", u and u.provide["item|coal|normal"] == 500, serpent.line(u and u.provide))
-    local info = remote.call("utl","get_station", st.comb.unit_number)
+    local info = station_info(st.comb.unit_number)
     check("combinator verbindet sich nicht mit utl-halt", info and info.stop_name == st.stop.backer_name, info and tostring(info.stop_name))
     -- Anforderung per Slot: 600 Kohle wollen, 500 liegen da → noch keine Anforderung unter Schwelle 1000
     remote.call("utl","configure_station", st.ustop.unit_number, {provide=false, request=true, request_threshold=50})
     remote.call("utl","set_request", st.ustop.unit_number, 1, {type="item", name="coal"}, 600)
-    u = remote.call("utl","get_station", st.ustop.unit_number)
+    u = station_info(st.ustop.unit_number)
     check("slot-anforderung: bedarf coal 100", u and u.request["item|coal|normal"] == 100, serpent.line(u and u.request))
     -- Stack-Schwelle 1 Stack Kohle (50) > Bedarf 100? nein → bleibt; 3 Stacks (150) > 100 → fällt weg
     remote.call("utl","configure_station", st.ustop.unit_number, {request_stack_threshold=3})
-    u = remote.call("utl","get_station", st.ustop.unit_number)
+    u = station_info(st.ustop.unit_number)
     check("stack-schwelle filtert bedarf", u and next(u.request) == nil, serpent.line(u and u.request))
     st.ustop.destroy()
   elseif e.tick == 200 then
-    local info = remote.call("utl","get_station", st.comb.unit_number)
+    local info = station_info(st.comb.unit_number)
     check("stop verbunden", info and info.stop_name ~= nil, info and tostring(info.stop_name))
     check("angebot iron 2000", info and info.provide["item|iron-plate|normal"] == 2000, serpent.line(info and info.provide))
     check("bedarf copper 1500", info and info.request["item|copper-plate|normal"] == 1500, serpent.line(info and info.request))
     remote.call("utl","configure_station", st.comb.unit_number, {provide_threshold=5000})
-    info = remote.call("utl","get_station", st.comb.unit_number)
+    info = station_info(st.comb.unit_number)
     check("schwelle 5000 filtert angebot", info and next(info.provide) == nil, serpent.line(info and info.provide))
     st.stop.destroy()
   elseif e.tick == 220 then
-    local info = remote.call("utl","get_station", st.comb.unit_number)
+    local info = station_info(st.comb.unit_number)
     check("stop entfernt -> nicht verbunden", info and info.stop_name == nil)
     st.comb.destroy()
   elseif e.tick == 240 then
@@ -74,12 +89,12 @@ script.on_nth_tick(10, function(e)
       direction=defines.direction.north, force=force,
       tags={utl={mode="depot", provide=true, request=true, network="bp-netz", max_trains=3}}}
     local _, built = ghost.revive{raise_revive=true}
-    local info = built and remote.call("utl","get_station", built.unit_number)
+    local info = built and station_info(built.unit_number)
     check("blaupause: einstellungen übernommen", info and info.config.mode == "depot"
       and info.config.network == "bp-netz" and info.config.max_trains == 3, info and serpent.line(info.config))
     -- Klonen: Einstellungen der Quelle übernehmen.
     local copy = built and built.clone{position={3,5}, surface=s, force=force}
-    local cinfo = copy and remote.call("utl","get_station", copy.unit_number)
+    local cinfo = copy and station_info(copy.unit_number)
     check("klonen: einstellungen übernommen", cinfo and cinfo.config.mode == "depot"
       and cinfo.config.network == "bp-netz", cinfo and serpent.line(cinfo.config))
     -- Blaupause erstellen: UTL schreibt die Einstellungen als Tag hinein.
@@ -100,11 +115,11 @@ script.on_nth_tick(10, function(e)
     -- Combinator ohne Kabel: keine Verbindung (kein Umkreis mehr); mit Kabel am Ausgang: verbunden
     st.vstop = s.create_entity{name="train-stop", position={3,-9}, direction=defines.direction.north, force=force, raise_built=true}
     st.vcomb = s.create_entity{name="utl-station-combinator", position={5,-9.5}, direction=defines.direction.east, force=force, raise_built=true}
-    local vi = remote.call("utl","get_station", st.vcomb.unit_number)
+    local vi = station_info(st.vcomb.unit_number)
     check("combinator ohne kabel: keine haltestelle", vi and vi.stop_name == nil, vi and tostring(vi.stop_name))
     st.vcomb.get_wire_connector(W.combinator_output_green, true).connect_to(st.vstop.get_wire_connector(W.circuit_green, true))
   elseif e.tick == 260 then
-    local vi = remote.call("utl","get_station", st.vcomb.unit_number)
+    local vi = station_info(st.vcomb.unit_number)
     check("combinator mit kabel am ausgang: verbunden", vi and vi.stop_name == st.vstop.backer_name, vi and tostring(vi.stop_name))
     st.vcomb.destroy(); st.vstop.destroy()
     build_train_test(s, force)
@@ -143,7 +158,7 @@ function build_train_test(s, force)
   -- Einstellungen kopieren (Shift-Klick): zweite Haltestelle wird ebenfalls Depot.
   local e = stop("UTL-E", {63,-30}, defines.direction.north)
   remote.call("utl","copy_settings", st.d.unit_number, e.unit_number)
-  local ei = remote.call("utl","get_station", e.unit_number)
+  local ei = station_info(e.unit_number)
   check("einstellungen kopiert: depot", ei and ei.config.mode == "depot", ei and ei.config.mode)
   e.destroy()
   local l1 = s.create_entity{name="locomotive", position={61,0}, direction=defines.direction.north, force=force}
@@ -164,7 +179,7 @@ local CARGO = defines.inventory.cargo_wagon
 
 -- Runde 10: eigenes Gleis bei x = 91 mit Flüssigkeitszug (Netzwerk „fluid“).
 function build_fluid_test()
-  local s, force = game.surfaces.nauvis, game.forces.player
+  local s, force = game.surfaces["nauvis"], game.forces["player"]
   local t = {} for x = 84, 100 do for y = -90, 90 do t[#t + 1] = { name = "concrete", position = { x, y } } end end
   s.set_tiles(t)
   for _, ent in pairs(s.find_entities_filtered{ area = {{84,-90},{100,90}} }) do if ent.type ~= "character" then ent.destroy() end end
@@ -296,8 +311,8 @@ function train_test_step()
       st.round = 6
       remote.call("utl","configure_station", st.d.unit_number, {max_train_length=0})
       -- erreichbares echtes Depot gleichen Namens in Fahrtrichtung (gerade Strecke ohne Schleife)
-      st.d3 = game.surfaces.nauvis.create_entity{name="utl-train-stop", position={63,-45},
-        direction=defines.direction.north, force=game.forces.player, raise_built=true}
+      st.d3 = game.surfaces["nauvis"].create_entity{name="utl-train-stop", position={63,-45},
+        direction=defines.direction.north, force=game.forces["player"], raise_built=true}
       st.d3.backer_name = "UTL-D"
       remote.call("utl","configure_station", st.d3.unit_number, {mode="depot"})
       remote.call("utl","configure_station", st.d2.unit_number, {mode="station", provide=false, request=false})
@@ -310,7 +325,7 @@ function train_test_step()
       check("R6 zug steht frei im echten depot", st.train.station == st.d3)
       -- Runde 7: Netzwerk „leer“ ohne Züge → Warnung „kein Zug“ erst nach 5 Minuten.
       st.round = 7
-      local surface, force = game.surfaces.nauvis, game.forces.player
+      local surface, force = game.surfaces["nauvis"], game.forces["player"]
       local req = surface.create_entity{name="utl-train-stop", position={59,-70}, direction=defines.direction.south, force=force, raise_built=true}
       local prov = surface.create_entity{name="utl-train-stop", position={63,70}, direction=defines.direction.north, force=force, raise_built=true}
       local cc = surface.create_entity{name="constant-combinator", position={65,70}, force=force}
@@ -397,7 +412,7 @@ function train_test_step()
       -- Runde 11: Cleanup-Filter. Näher liegt ein Cleanup nur für Items, weiter weg eins nur für
       -- Wasser: Restwasser muss zum Wasser-Cleanup. Danach Dampf, den keiner annimmt: Zug wartet,
       -- bis der Filter ergänzt wird (erneuter Versuch per Heartbeat).
-      local s, force = game.surfaces.nauvis, game.forces.player
+      local s, force = game.surfaces["nauvis"], game.forces["player"]
       local function stop(name, y)
         local e = s.create_entity{ name = "utl-train-stop", position = { 89, y }, direction = defines.direction.south, force = force, raise_built = true }
         e.backer_name = name

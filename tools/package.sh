@@ -18,7 +18,7 @@ trap 'rm -rf "$STAGE"' EXIT
 
 # Im Zip muss der Ordner <name>_<version> heißen.
 rsync -a \
-  --exclude '.git/' --exclude '.gitignore' --exclude '.vscode/' \
+  --exclude '.git/' --exclude '.gitignore' --exclude '.github/' --exclude '.vscode/' \
   --exclude 'docs/' --exclude 'tools/' --exclude 'dist/' \
   --exclude 'CLAUDE.md' --exclude 'MySkillsAi-s-main*' \
   "$MOD_DIR/" "$STAGE/$PACKAGE/"
