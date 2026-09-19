@@ -1,0 +1,9 @@
+# Plan und Ideen – nur lokal
+docs/
+
+# Skill-Kopie aus GitHub – gehört nicht in den Mod
+MySkillsAi-s-main.zip
+MySkillsAi-s-main/
+
+# Gepackte Mod-Zips
+dist/

@@ -1,0 +1,18 @@
+---------------------------------------------------------------------------------------------------
+Version: 0.0.1
+Date: 2026-09-19
+  Major Features:
+    - Initial release: standalone train dispatcher combining LTN, LTN Manager, LTN Combinator Modernized and LTN Cleanup in one mod.
+  Features:
+    - UTL train stop with built-in logic, or UTL station combinator wired to a normal train stop.
+    - Roles: provider, requester, depot, fuel station, cleanup; named networks.
+    - Requests in the station window as target stock; values for train length, max. trains, thresholds, priorities and locked slots.
+    - Items and fluids, several goods per train, next job right away after unloading.
+    - Your schedule, train groups and interrupts are kept (UTL only adds temporary stops).
+    - Automatic refueling and cleanup; cleanup stations accept all items, all fluids or chosen goods.
+    - Depots with train length, trains move to a fitting depot by themselves.
+    - UTL Manager: depots, stations, inventory, history and alerts.
+    - Alerts that can be turned off per player.
+    - Copy settings with Shift-click; blueprints keep the settings.
+    - Tips & tricks with example scenes and a large example scenario.
+    - German and English.

@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "factorio",
+            "request": "launch",
+            "name": "Factorio Mod Debug",
+            "factorioArgs": [
+                "--disable-migration-window"
+            ]
+        }
+    ]
+}

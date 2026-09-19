@@ -1,0 +1,160 @@
+--- Remote-Schnittstelle „utl“ für andere Mods, Tests und die Konsole.
+--- Beispiel: /c game.print(serpent.line(remote.call("utl", "get_station", 123)))
+local Registry = require("scripts.stations.registry")
+local Reader = require("scripts.stations.reader")
+local Roles = require("scripts.stations.roles")
+local Requests = require("scripts.stations.requests")
+local Paste = require("scripts.stations.settings-paste")
+local Blueprint = require("scripts.stations.blueprint")
+local Perf = require("scripts.core.perf")
+local Window = require("scripts.gui.station.window")
+local Manager = require("scripts.gui.manager.window")
+local util = require("util")
+
+local function copy(t)
+  return util.table.deepcopy(t)
+end
+
+local interface = {
+  station_count = function()
+    return storage.stations.count
+  end,
+
+  --- Anzahl freier Züge im Depot und laufender Lieferungen.
+  idle_train_count = function()
+    return storage.trains.count
+  end,
+  delivery_count = function()
+    return storage.deliveries.count
+  end,
+  --- Wie viele Lieferungen direkt im Anschluss (ohne Depot) vergeben wurden.
+  chained_count = function()
+    return storage.deliveries.chained or 0
+  end,
+
+  --- Zeitmessung für die nächsten `heartbeats` Heartbeats (Ergebnis in factorio-current.log).
+  perf = function(heartbeats)
+    Perf.start(heartbeats or 60)
+  end,
+
+  --- Letzte Warnungen (neueste zuerst): { key, group, icon, count, tick }.
+  get_alerts = function()
+    local list = {}
+    for i, entry in ipairs(storage.alert_log) do
+      list[i] = { key = entry.key, group = entry.group, icon = entry.icon, count = entry.count, tick = entry.tick }
+    end
+    return list
+  end,
+
+  --- Laufende Lieferungen als Liste (ohne Entity-Referenzen).
+  get_deliveries = function()
+    local list = {}
+    for id, d in pairs(storage.deliveries.active) do
+      list[#list + 1] = {
+        id = id, train_id = d.train_id, provider = d.provider, requester = d.requester,
+        manifest = util.table.deepcopy(d.manifest), state = d.state, started = d.started, chained = d.chained,
+      }
+    end
+    return list
+  end,
+
+  --- Kopie der Stationsdaten (ohne Entity-Referenzen), nil wenn unbekannt.
+  get_station = function(unit)
+    local station = Registry.get(unit)
+    if not station then return nil end
+    local stop = station.stop
+    return {
+      unit = station.unit,
+      kind = station.kind,
+      stop_name = stop and stop.valid and stop.backer_name or nil,
+      config = copy(station.config),
+      provide = copy(station.provide),
+      request = copy(station.request),
+      version = station.version,
+    }
+  end,
+
+  --- Einstellungen übernehmen, z. B. { mode = "station", provide = true, request = false, priority = 5 }.
+  configure_station = function(unit, changes)
+    local station = Registry.get(unit)
+    if not station then return false end
+    local cfg = station.config
+    for key, value in pairs(changes) do
+      if key ~= "roles" and cfg[key] ~= nil and type(cfg[key]) == type(value) then
+        cfg[key] = value
+      end
+    end
+    Roles.derive(cfg)
+    Reader.read(station)
+    Registry.config_changed(station)
+    return true
+  end,
+
+  --- Alle Einstellungen einer Station auf eine andere kopieren (wie Shift-Klick).
+  copy_settings = function(from_unit, to_unit)
+    local source, destination = Registry.get(from_unit), Registry.get(to_unit)
+    if not (source and destination) then return false end
+    return Paste.copy(source, destination)
+  end,
+
+  --- UTL-Einstellungen in eine per Script erstellte Blaupause schreiben.
+  --- Beispiel: local map = stack.create_blueprint{...}; remote.call("utl", "tag_blueprint", stack, map)
+  tag_blueprint = function(blueprint, mapping, surface)
+    return Blueprint.tag(blueprint, mapping, surface)
+  end,
+
+  --- Anforderungs-Slot setzen, z. B. set_request(unit, 1, { type = "item", name = "iron-plate" }, 400).
+  --- signal = nil leert den Slot.
+  set_request = function(unit, slot, signal, count)
+    local station = Registry.get(unit)
+    if not station or slot < 1 or slot > Requests.slot_count then return false end
+    Requests.set(station.config, slot, signal, count or 0)
+    Reader.read(station)
+    return true
+  end,
+
+  --- Stationsfenster für einen Spieler öffnen (Tipps-Szenen, Tests). `tab` 2 = Reiter „Werte“
+  --- (nur UTL-Haltestelle). Bei der Haltestelle öffnet sich das Vanilla-Fenster mit UTL-Panel,
+  --- mit `standalone` nur das UTL-Panel als eigenes Fenster.
+  open_station = function(player_index, unit, tab, standalone)
+    local player = game.get_player(player_index)
+    local station = Registry.get(unit)
+    if not (player and station and station.entity.valid) then return false end
+    if standalone then
+      Window.open(player, station, true)
+    else
+      if station.kind == "stop" then player.opened = station.entity end
+      if not Window.get(player_index) then Window.open(player, station) end
+    end
+    if tab then Window.select_tab(player_index, tab) end
+    return true
+  end,
+
+  --- UTL-Manager öffnen, optional mit Reiter: depots, stations, inventory, history, alerts.
+  open_manager = function(player_index, tab)
+    local player = game.get_player(player_index)
+    if not player then return false end
+    if not Manager.get(player_index) then Manager.open(player) end
+    if tab then Manager.select(player_index, tab) end
+    return true
+  end,
+
+  --- UTL-Fenster eines Spielers schließen.
+  close_windows = function(player_index)
+    local player = game.get_player(player_index)
+    if player then player.opened = nil end
+    Window.close(player_index)
+    Manager.close(player_index)
+  end,
+}
+
+-- Jede Funktion kann vor UTLs on_init aufgerufen werden (Szenario-Script startet zuerst).
+local State = require("scripts.core.state")
+for name, fn in pairs(interface) do
+  interface[name] = function(...)
+    State.ensure()
+    return fn(...)
+  end
+end
+
+remote.add_interface("utl", interface)

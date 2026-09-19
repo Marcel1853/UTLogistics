@@ -1,0 +1,15 @@
+{
+    "name": "UTLogistics",
+    "version": "0.0.1",
+    "factorio_version": "2.1",
+    "title": "Unified Train Logistics",
+    "author": "Marcel171297",
+    "contact": "",
+    "homepage": "",
+    "description": "Zug-Dispatcher: Anbieter, Abnehmer, Depots, Tankstellen, Cleanup und Manager in einem Mod – gebaut für hohe UPS.",
+    "dependencies": [
+        "base >= 2.1",
+        "flib >= 0.17.2",
+        "? space-age"
+    ]
+}

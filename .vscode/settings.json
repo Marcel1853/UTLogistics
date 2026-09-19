@@ -1,0 +1,50 @@
+{
+    "factorio.versions": [
+        {
+            "name": "factorio",
+            "factorioPath": "/mnt/6459bc3a-dd91-42e5-8723-71427d99d0ba/SteamLibrary/steamapps/common/Factorio/bin/x64/factorio"
+        }
+    ],
+    
+    "Lua.workspace.checkThirdParty": "ApplyInMemory",
+    "Lua.runtime.version": "Lua 5.2",
+    "Lua.diagnostics.globals": [
+    "LSlib",
+    "aai_processed_fuel_ignore",
+    "angelsmods",
+    "appmod",
+    "commands",
+    "data",
+    "defines",
+    "game",
+    "helpers",
+    "log",
+    "mods",
+    "prototypes",
+    "remote",
+    "rendering",
+    "script",
+    "serpent",
+    "settings",
+    "storage",
+    "trainConstructionSite",
+    "util"
+    ],
+    "Lua.diagnostics.disable": [
+    "assign-type-mismatch",
+    "deprecated",
+    "different-requires",
+    "duplicate-set-field",
+    "inject-field",
+    "missing-fields",
+    "param-type-mismatch",
+    "redefined-local",
+    "redundant-parameter",
+    "undefined-global"
+    ],
+    "http.proxyStrictSSL": false,
+    "json.schemaDownload.enable": true,
+    "Lua.workspace.userThirdParty": [
+        "/home/marcel/.config/Code/User/workspaceStorage/eaba812a8b5e08c18afb5f128e9b6841/justarandomgeek.factoriomod-debug/sumneko-3rd"
+    ]
+}
