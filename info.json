@@ -6,7 +6,7 @@
     "author": "Marcel171297",
     "contact": "",
     "homepage": "",
-    "description": "Zug-Dispatcher: Anbieter, Abnehmer, Depots, Tankstellen, Cleanup und Manager in einem Mod – gebaut für hohe UPS.",
+    "description": "Train dispatcher: providers, requesters, depots, fuel stations, cleanup and manager in one mod – built for high UPS.",
     "dependencies": [
         "base >= 2.1",
         "flib >= 0.17.2",

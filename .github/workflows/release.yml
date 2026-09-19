@@ -1,6 +1,8 @@
 # Baut bei jedem Push auf main die Mod-Zip und lädt sie aufs Mod-Portal – aber nur, wenn die
-# Version in info.json neu ist. Gepackt wird mit tools/package.sh: ohne tools/, docs/, .github/,
-# .vscode/, CLAUDE.md usw. (dieselbe Zip wie lokal).
+# Version in info.json dort neu ist. Gibt es auf GitHub noch kein Release für die Version, legt er
+# eins an (Tag vX.Y.Z, Zip als Download, Text = Abschnitt der Version aus changelog.txt).
+# Gepackt wird mit tools/package.sh: ohne tools/, docs/, .github/, .vscode/, CLAUDE.md usw.
+# (dieselbe Zip wie lokal).
 #
 # Voraussetzungen:
 #   - Secret FACTORIO_MOD_PORTAL_TOKEN (API-Schlüssel von factorio.com mit Recht „ModPortal: Upload Mods“).
@@ -14,7 +16,7 @@ on:
       - main
 
 permissions:
-  contents: write # für Release-Branch und Tag
+  contents: write # für Release-Branch, Tag und GitHub-Release
 
 jobs:
   release:
@@ -48,9 +50,20 @@ jobs:
           echo "Version ${{ steps.info.outputs.version }} schon auf dem Portal: $FOUND"
           echo "found=$FOUND" >> "$GITHUB_OUTPUT"
 
-      # Alle folgenden Schritte nur, wenn die Mod auf dem Portal existiert und die Version neu ist.
+      - name: GitHub-Release prüfen
+        id: gh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.info.outputs.version }}" >/dev/null 2>&1; then
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Noch kein GitHub-Release für v${{ steps.info.outputs.version }}."
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Zip bauen
-        if: steps.check.outputs.found == 'false'
+        if: steps.check.outputs.found == 'false' || steps.gh.outputs.missing == 'true'
         run: |
           bash tools/package.sh
           echo "ZIP=dist/${{ steps.info.outputs.name }}_${{ steps.info.outputs.version }}.zip" >> "$GITHUB_ENV"
@@ -81,13 +94,28 @@ jobs:
             exit 1
           fi
 
-      - name: Release-Branch und Tag setzen
-        if: steps.check.outputs.found == 'false'
+      - name: Release-Branch setzen
+        if: steps.check.outputs.found == 'false' || steps.gh.outputs.missing == 'true'
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git checkout -B release
           git push origin release --force
-          TAG="v${{ steps.info.outputs.version }}"
-          git tag -f "$TAG"
-          git push origin "$TAG" --force
+
+      - name: GitHub-Release anlegen
+        if: steps.gh.outputs.missing == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.info.outputs.version }}"
+          # Abschnitt dieser Version aus changelog.txt (bis zur nächsten Trennlinie)
+          awk -v v="$VERSION" '
+            /^-+$/ { if (found) exit; next }
+            $0 ~ "^Version: " v "$" { found = 1; next }
+            found { print }
+          ' changelog.txt > release-notes.md
+          [ -s release-notes.md ] || echo "Version $VERSION" > release-notes.md
+          gh release create "v$VERSION" "$ZIP" \
+            --title "Unified Train Logistics $VERSION" \
+            --notes-file release-notes.md \
+            --target "${{ github.sha }}"

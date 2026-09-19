@@ -110,9 +110,13 @@ end
 --- Jede Minute Zwischenstand ins Log.
 function Lasttest.on_nth_tick_60(event)
   if storage.count and event.tick % 3600 == 0 then
-    local states, empty = {}, 0
+    local states, empty, at_depot = {}, 0, 0
     for _, t in pairs(game.train_manager.get_trains({ surface = "utl-lasttest" })) do
       states[t.state] = (states[t.state] or 0) + 1
+      local st = t.station
+      if t.state == defines.train_state.wait_station and st and string.find(st.backer_name, "Depot", 1, true) then
+        at_depot = at_depot + 1
+      end
       local loco = t.front_stock
       if loco then
         local inv = loco.get_fuel_inventory()
@@ -121,9 +125,9 @@ function Lasttest.on_nth_tick_60(event)
       end
     end
     local c = storage.count
-    L(("min %d: frei %d, Lieferungen %d, Ankünfte Anbieter %d, Abnehmer %d (davon Flüssigkeit %d), Tankstelle %d, Cleanup %d, Warnungen %d, ohne Treibstoff %d, Zustände %s")
+    L(("min %d: frei %d, Lieferungen %d, Ankünfte Anbieter %d, Abnehmer %d (davon Flüssigkeit %d), Tankstelle %d, Cleanup %d, Warnungen %d, ohne Treibstoff %d, an Depots wartend %d, Zustände %s")
       :format(event.tick / 3600, remote.call("utl", "idle_train_count"), remote.call("utl", "delivery_count"),
-        c.provider, c.requester, c.fluid or 0, c.fuel, c.cleanup, #remote.call("utl", "get_alerts"), empty, serpent.line(states)))
+        c.provider, c.requester, c.fluid or 0, c.fuel, c.cleanup, #remote.call("utl", "get_alerts"), empty, at_depot, serpent.line(states)))
   end
 end
 

@@ -123,7 +123,8 @@ local interface = {
     if standalone then
       Window.open(player, station, true)
     else
-      if station.kind == "stop" then player.opened = station.entity end
+      -- dieselbe Haltestelle nicht erneut öffnen (schlösse das Fenster), nur den Reiter wechseln
+      if station.kind == "stop" and player.opened ~= station.entity then player.opened = station.entity end
       if not Window.get(player_index) then Window.open(player, station) end
     end
     if tab then Window.select_tab(player_index, tab) end

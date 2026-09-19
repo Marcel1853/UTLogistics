@@ -1,9 +1,193 @@
 # Unified Train Logistics (UTL)
 
+Automatic train logistics for Factorio 2.1: **providers, requesters, depots, fuel stations,
+cleanup and an overview window in one mod**, built for high UPS.
+
+*Deutsche Version weiter unten.*
+
+- Requires: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age is optional.
+- Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
+  circuit network).
+
+## Quick start
+
+1. **Depot:** place a **UTL train stop**, open it, tick **Depot**.
+2. **Train:** schedule with **only the depot stop** (any wait condition, e.g. inactivity 5 s),
+   automatic mode. The train must be **empty**.
+3. **Provider:** UTL train stop, tick **Provider**, wire a chest (red or green) **to the stop**.
+   Inserters load the train.
+4. **Requester:** UTL train stop, tick **Requester**. Click a **request slot**, pick an item,
+   enter an amount (e.g. 8000 iron plates). Inserters unload the train.
+5. Done: as soon as the requester is short enough, a free train goes depot → provider →
+   requester → depot.
+
+Tip: **Shift + right-click** a configured station and **Shift + left-click** another one to
+copy all UTL settings (stop ↔ stop, combinator ↔ combinator). **Blueprints** and
+Ctrl + C / Ctrl + V keep the settings as well.
+
+## Two station types, same logic
+
+- **UTL train stop:** replaces the normal stop (can be built over it). Wires go to the stop.
+  The UTL panel opens to the left of the train stop window (tabs “Station” and “Values”).
+- **UTL station combinator:** belongs to a normal train stop – wire its **output** (red or green) to the stop. Chest wires go to the
+  combinator input. Own window. Neither needs power.
+
+## Roles
+
+**Provider** (positive signals are picked up), **Requester** (negative signals or request slots
+are delivered), both = buffer, **Depot** (free trains wait here), **Fuel station**,
+**Cleanup** (trains with leftover cargo are emptied here). Depot, fuel station and cleanup
+exclude each other and provider/requester.
+
+## Requests are a target stock
+
+The amount in a request slot is the **stock you want to have**. Only the difference
+is delivered: *demand = target − in stock − already in transit*. A train is sent once the
+demand reaches the **requester threshold**. Want several trains at once? Set a higher target.
+
+## Values
+
+Min./max. train length (0 = any; also for depots, see below), max. trains, supply threshold /
+stack threshold, provider priority, locked slots per wagon, demand threshold / stack threshold,
+requester priority. The grey ⟲ button resets a value. **Math works in every number field**:
+`4000*2`, `8000/4`, `(1+2)*3`, `2^3`, `1e3`. Stations with the same **network** name work
+together (empty = default).
+
+## How trains run
+
+- UTL **does not overwrite your schedule**: provider and requester are inserted as
+  **temporary stops** that vanish after departure. **Train groups and interrupts** are kept.
+- A rail waypoint in front of each stop makes the train use exactly that stop, even if several
+  stops share the name.
+- The train waits at the provider until the ordered amount is loaded, at the requester until
+  it is empty.
+- Selection: highest provider priority and amount, then a free train that carries as much as
+  possible in one trip and is close; reachability is checked with the pathfinder.
+- Reservations prevent several trains from being sent for the same demand.
+- **Several items per train**, **fluids** (fluid wagons, one fluid per delivery) and **next job
+  right away** after unloading or cleanup/fuel stations (map setting).
+
+## Refueling
+
+If **any** locomotive is below **40 %** (map setting “Refuel below (%)”), the train visits the
+nearest matching **fuel station** – before its next job, right after unloading or from the
+depot – and waits until all locomotives are full (max. 30 s). If no fuel station is free, a low
+train gets no job and waits in the depot; UTL retries every 10 seconds. If the network has **no** UTL fuel station at all (you refuel via
+interrupts or by hand), low trains run normally. Use min./max. train length on fuel stations to
+separate small and large trains; the stations may share a name.
+
+## Cleanup
+
+Trains with leftover cargo (arriving at the depot with cargo, after a canceled delivery, or not
+fully unloaded at the requester) go to the nearest matching **cleanup station**. What a cleanup
+station accepts is set in its window ("Values" tab, "Cleanup" section, not via the stop name): **All items** and **All fluids** switches (both on by default) or single items and
+fluids. Goods entered one by one come before "All …"; if one station is not enough, the train
+visits several in a row and waits at each until its goods are gone (max. 30 s without change).
+Empty fluids with pumps; use "All fluids" only with a drain, fluids mix in pipes. Without a
+fitting free cleanup, the train waits in the depot with the alert "no fitting cleanup for
+[good]" and UTL retries every 10 s.
+
+## Depots and train length
+
+Free trains wait **empty** at stops with the **Depot** role – **every** depot stop needs the
+role, the name alone is not enough; a train that ends up at a stop with a depot's name but
+without the role (also vanilla stops) moves on to a free real depot of that name. If a train
+arrives at a depot whose min./max. length does
+not fit, it moves to a **free matching depot with the same name**; if there is none, it stays
+and remains available.
+
+## UTL Manager
+
+Open with the **locomotive button in the shortcut bar** or **Ctrl + Shift + U**. Tabs:
+**Depots** (trains with composition, status, cargo), **Stations** (role, provided/requested,
+in transit, trains), **Inventory** (network totals; click an item for details), **History**
+(last 100 deliveries, canceled ones in red), **Alerts** (last 100 alerts, repeats merged). Search by station name; click a station to view it
+on the map, click a train to follow it.
+
+## Alerts
+
+UTL reports problems as regular Factorio alerts (bottom right; click to see the spot) in three
+groups: **no suitable train** (only after a request has been unserved for 5 minutes – map
+setting – and no train with the item is on its way), **leftover/missing cargo**, **train problems** (no path, no free
+depot, refueling failed, delivery canceled). Each group can be turned off per player in
+**Settings → Mod settings → Per player**. The same alert repeats at most every 10 seconds.
+
+## Trains tab
+
+Rails, elevated rails, signals, stops, locomotives, wagons and train combinators – also from
+other mods – get their own crafting tab (startup setting).
+
+## Map settings
+
+Heartbeat (10 ticks), stations per heartbeat (20), new deliveries per cycle (2), refuel below
+(40 %), “no train” alert after (5 minutes), default supply/demand threshold (1000), debug log (off).
+
+## Performance
+
+Measured headless (no graphics, so no FPS) with the load test scenario:
+
+| Network | Run | UTL per tick (avg.) | whole game per tick (avg.) | ticks below 60 UPS |
+|---|---|---|---|---|
+| 9 × 9, 180 trains, 340 stations | 40 min, ~1300 deliveries | 0.045 ms | – | 0 |
+| 12 × 12, 384 trains (24 fluid), 496 stations | 10 min | 0.067 ms | 3.6 ms | 36 of 36,000 |
+
+UTL itself peaks at about 15 ms when it sends trains (sending triggers the game's pathfinding).
+Most of the time is spent by the game's own trains (movement and pathfinding).
+
+**Important:** the map is otherwise **almost empty** – no factory, no mining drills, no belts, no
+biters, just rails, stations, inserters at infinity chests, poles and radars. In a real save the
+factory costs extra UPS and FPS; the numbers show what UTL and the trains themselves need, not the
+UPS of a whole megabase.
+
+## Scenario
+
+**New game → Scenarios → UTL load test (384 trains)**: a ready-made city-block grid (12 × 12, 4
+tracks per corridor, chain-signalled crossings, radars); 5 depots with 72 trains each in depot-only
+blocks (6 yards with 12 tracks) plus "Depot Flüssig" with 24 fluid trains; 496 stations with room
+for 3 trains each (platform + 2 waiting spots), providers and requesters mixed, crude oil and
+petroleum gas with pumps and tanks, 16 fuel and 6 cleanup stations spread evenly;
+every fourth station is a normal stop with a **UTL station combinator**; real inserters at
+infinity chests. Cleanup: 4 stations for all items, one each only for crude oil / petroleum gas
+(with pumps). **No other mods needed** – not even Creative Mod: infinity chests, infinity pipes and
+the power sources are part of the base game (only hidden in the build menu); the scenario places
+them itself.
+
+## Tips & tricks
+
+The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: eleven entries
+explaining how to use the mod, each with a running example scene (some with an open UTL window,
+the manager and shift-click copying), among them: a UTL stop with provider, requester and depot; the same
+line with normal stops and UTL station combinators (wires visible); a train that refuels
+first and then delivers; a train with leftover cargo that is emptied at a cleanup station first.
+Plus explanations of roles, requests, values and network, depots, copying settings/blueprints and
+the manager.
+
+## FAQ
+
+- **Only one train runs:** one is probably enough (target stock, see above), or there are no
+  more free trains – `/utl-status` shows “trains in depot”.
+- **A depot train is not used:** does the stop have the Depot role? Is the train empty and in
+  automatic mode? Does its length fit provider and requester?
+- **A train does not refuel:** is there a reachable fuel station in the same network whose
+  train length fits?
+
+## Not yet included
+
+Loading/unloading timeouts, deliveries between surfaces (Space Age).
+
+## For mod authors
+
+Remote interface `utl`: `station_count`, `get_station(unit)`, `configure_station(unit, changes)`,
+`set_request(unit, slot, signal, count)`, `copy_settings(from, to)`, `tag_blueprint(stack, mapping, surface)`, `idle_train_count`,
+`delivery_count`, `get_deliveries`, `get_alerts`.
+
+---
+---
+
+# Unified Train Logistics (UTL) – Deutsch
+
 Automatischer Zugverkehr für Factorio 2.1: **Anbieter, Abnehmer, Depots, Tankstellen,
 Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
-
-*English version below.*
 
 - Benötigt: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age ist optional.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
@@ -276,187 +460,3 @@ folgen.
 Remote-Schnittstelle `utl`: `station_count`, `get_station(unit)`,
 `configure_station(unit, changes)`, `set_request(unit, slot, signal, count)`,
 `copy_settings(from, to)`, `tag_blueprint(stack, mapping, surface)`, `idle_train_count`, `delivery_count`, `get_deliveries`, `get_alerts`.
-
----
----
-
-# Unified Train Logistics (UTL) – English
-
-Automatic train logistics for Factorio 2.1: **providers, requesters, depots, fuel stations,
-cleanup and an overview window in one mod**, built for high UPS.
-
-- Requires: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age is optional.
-- Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
-  circuit network).
-
-## Quick start
-
-1. **Depot:** place a **UTL train stop**, open it, tick **Depot**.
-2. **Train:** schedule with **only the depot stop** (any wait condition, e.g. inactivity 5 s),
-   automatic mode. The train must be **empty**.
-3. **Provider:** UTL train stop, tick **Provider**, wire a chest (red or green) **to the stop**.
-   Inserters load the train.
-4. **Requester:** UTL train stop, tick **Requester**. Click a **request slot**, pick an item,
-   enter an amount (e.g. 8000 iron plates). Inserters unload the train.
-5. Done: as soon as the requester is short enough, a free train goes depot → provider →
-   requester → depot.
-
-Tip: **Shift + right-click** a configured station and **Shift + left-click** another one to
-copy all UTL settings (stop ↔ stop, combinator ↔ combinator). **Blueprints** and
-Ctrl + C / Ctrl + V keep the settings as well.
-
-## Two station types, same logic
-
-- **UTL train stop:** replaces the normal stop (can be built over it). Wires go to the stop.
-  The UTL panel opens to the left of the train stop window (tabs “Station” and “Values”).
-- **UTL station combinator:** belongs to a normal train stop – wire its **output** (red or green) to the stop. Chest wires go to the
-  combinator input. Own window. Neither needs power.
-
-## Roles
-
-**Provider** (positive signals are picked up), **Requester** (negative signals or request slots
-are delivered), both = buffer, **Depot** (free trains wait here), **Fuel station**,
-**Cleanup** (trains with leftover cargo are emptied here). Depot, fuel station and cleanup
-exclude each other and provider/requester.
-
-## Requests are a target stock
-
-The amount in a request slot is the **stock you want to have**. Only the difference
-is delivered: *demand = target − in stock − already in transit*. A train is sent once the
-demand reaches the **requester threshold**. Want several trains at once? Set a higher target.
-
-## Values
-
-Min./max. train length (0 = any; also for depots, see below), max. trains, supply threshold /
-stack threshold, provider priority, locked slots per wagon, demand threshold / stack threshold,
-requester priority. The grey ⟲ button resets a value. **Math works in every number field**:
-`4000*2`, `8000/4`, `(1+2)*3`, `2^3`, `1e3`. Stations with the same **network** name work
-together (empty = default).
-
-## How trains run
-
-- UTL **does not overwrite your schedule**: provider and requester are inserted as
-  **temporary stops** that vanish after departure. **Train groups and interrupts** are kept.
-- A rail waypoint in front of each stop makes the train use exactly that stop, even if several
-  stops share the name.
-- The train waits at the provider until the ordered amount is loaded, at the requester until
-  it is empty.
-- Selection: highest provider priority and amount, then a free train that carries as much as
-  possible in one trip and is close; reachability is checked with the pathfinder.
-- Reservations prevent several trains from being sent for the same demand.
-- **Several items per train**, **fluids** (fluid wagons, one fluid per delivery) and **next job
-  right away** after unloading or cleanup/fuel stations (map setting).
-
-## Refueling
-
-If **any** locomotive is below **40 %** (map setting “Refuel below (%)”), the train visits the
-nearest matching **fuel station** – before its next job, right after unloading or from the
-depot – and waits until all locomotives are full (max. 30 s). If no fuel station is free, a low
-train gets no job and waits in the depot; UTL retries every 10 seconds. If the network has **no** UTL fuel station at all (you refuel via
-interrupts or by hand), low trains run normally. Use min./max. train length on fuel stations to
-separate small and large trains; the stations may share a name.
-
-## Cleanup
-
-Trains with leftover cargo (arriving at the depot with cargo, after a canceled delivery, or not
-fully unloaded at the requester) go to the nearest matching **cleanup station**. What a cleanup
-station accepts is set in its window ("Values" tab, "Cleanup" section, not via the stop name): **All items** and **All fluids** switches (both on by default) or single items and
-fluids. Goods entered one by one come before "All …"; if one station is not enough, the train
-visits several in a row and waits at each until its goods are gone (max. 30 s without change).
-Empty fluids with pumps; use "All fluids" only with a drain, fluids mix in pipes. Without a
-fitting free cleanup, the train waits in the depot with the alert "no fitting cleanup for
-[good]" and UTL retries every 10 s.
-
-## Depots and train length
-
-Free trains wait **empty** at stops with the **Depot** role – **every** depot stop needs the
-role, the name alone is not enough; a train that ends up at a stop with a depot's name but
-without the role (also vanilla stops) moves on to a free real depot of that name. If a train
-arrives at a depot whose min./max. length does
-not fit, it moves to a **free matching depot with the same name**; if there is none, it stays
-and remains available.
-
-## UTL Manager
-
-Open with the **locomotive button in the shortcut bar** or **Ctrl + Shift + U**. Tabs:
-**Depots** (trains with composition, status, cargo), **Stations** (role, provided/requested,
-in transit, trains), **Inventory** (network totals; click an item for details), **History**
-(last 100 deliveries, canceled ones in red), **Alerts** (last 100 alerts, repeats merged). Search by station name; click a station to view it
-on the map, click a train to follow it.
-
-## Alerts
-
-UTL reports problems as regular Factorio alerts (bottom right; click to see the spot) in three
-groups: **no suitable train** (only after a request has been unserved for 5 minutes – map
-setting – and no train with the item is on its way), **leftover/missing cargo**, **train problems** (no path, no free
-depot, refueling failed, delivery canceled). Each group can be turned off per player in
-**Settings → Mod settings → Per player**. The same alert repeats at most every 10 seconds.
-
-## Trains tab
-
-Rails, elevated rails, signals, stops, locomotives, wagons and train combinators – also from
-other mods – get their own crafting tab (startup setting).
-
-## Map settings
-
-Heartbeat (10 ticks), stations per heartbeat (20), new deliveries per cycle (2), refuel below
-(40 %), “no train” alert after (5 minutes), default supply/demand threshold (1000), debug log (off).
-
-## Performance
-
-Measured headless (no graphics, so no FPS) with the load test scenario:
-
-| Network | Run | UTL per tick (avg.) | whole game per tick (avg.) | ticks below 60 UPS |
-|---|---|---|---|---|
-| 9 × 9, 180 trains, 340 stations | 40 min, ~1300 deliveries | 0.045 ms | – | 0 |
-| 12 × 12, 384 trains (24 fluid), 496 stations | 10 min | 0.067 ms | 3.6 ms | 36 of 36,000 |
-
-UTL itself peaks at about 15 ms when it sends trains (sending triggers the game's pathfinding).
-Most of the time is spent by the game's own trains (movement and pathfinding).
-
-**Important:** the map is otherwise **almost empty** – no factory, no mining drills, no belts, no
-biters, just rails, stations, inserters at infinity chests, poles and radars. In a real save the
-factory costs extra UPS and FPS; the numbers show what UTL and the trains themselves need, not the
-UPS of a whole megabase.
-
-## Scenario
-
-**New game → Scenarios → UTL load test (384 trains)**: a ready-made city-block grid (12 × 12, 4
-tracks per corridor, chain-signalled crossings, radars); 5 depots with 72 trains each in depot-only
-blocks (6 yards with 12 tracks) plus "Depot Flüssig" with 24 fluid trains; 496 stations with room
-for 3 trains each (platform + 2 waiting spots), providers and requesters mixed, crude oil and
-petroleum gas with pumps and tanks, 16 fuel and 6 cleanup stations spread evenly;
-every fourth station is a normal stop with a **UTL station combinator**; real inserters at
-infinity chests. Cleanup: 4 stations for all items, one each only for crude oil / petroleum gas
-(with pumps). **No other mods needed** – not even Creative Mod: infinity chests, infinity pipes and
-the power sources are part of the base game (only hidden in the build menu); the scenario places
-them itself.
-
-## Tips & tricks
-
-The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: eleven entries
-explaining how to use the mod, each with a running example scene (some with an open UTL window,
-the manager and shift-click copying), among them: a UTL stop with provider, requester and depot; the same
-line with normal stops and UTL station combinators (wires visible); a train that refuels
-first and then delivers; a train with leftover cargo that is emptied at a cleanup station first.
-Plus explanations of roles, requests, values and network, depots, copying settings/blueprints and
-the manager.
-
-## FAQ
-
-- **Only one train runs:** one is probably enough (target stock, see above), or there are no
-  more free trains – `/utl-status` shows “trains in depot”.
-- **A depot train is not used:** does the stop have the Depot role? Is the train empty and in
-  automatic mode? Does its length fit provider and requester?
-- **A train does not refuel:** is there a reachable fuel station in the same network whose
-  train length fits?
-
-## Not yet included
-
-Loading/unloading timeouts, deliveries between surfaces (Space Age).
-
-## For mod authors
-
-Remote interface `utl`: `station_count`, `get_station(unit)`, `configure_station(unit, changes)`,
-`set_request(unit, slot, signal, count)`, `copy_settings(from, to)`, `tag_blueprint(stack, mapping, surface)`, `idle_train_count`,
-`delivery_count`, `get_deliveries`, `get_alerts`.
