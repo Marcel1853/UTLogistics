@@ -1,8 +1,7 @@
 # Unified Train Logistics (UTL)
 
 Automatischer Zugverkehr für Factorio 2.1: **Anbieter, Abnehmer, Depots, Tankstellen,
-Cleanup und Übersichtsfenster in einem Mod** – so wie LTN mit LTN Manager, LTN Combinator
-Modernized und LTN Cleanup zusammen, gebaut für hohe UPS.
+Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 
 *English version below.*
 
@@ -58,7 +57,7 @@ Depot, Tankstelle und Cleanup schließen sich gegenseitig und Anbieter/Abnehmer 
 
 ## Anforderungen: Zielbestand, keine Bestellung
 
-Die Menge im Anforderungs-Slot ist der **Bestand, den du haben willst** (wie bei LTN).
+Die Menge im Anforderungs-Slot ist der **Bestand, den du haben willst**.
 Geliefert wird nur, was fehlt:
 
 > Bedarf = Zielbestand − vorhanden − schon unterwegs
@@ -130,7 +129,7 @@ Ein Zug mit Restladung fährt zur nächsten passenden **Cleanup-Station** und da
 - ein Zug beim Abnehmer nicht ganz leer wurde.
 
 **Was eine Cleanup-Station annimmt**, stellst du im Fenster ein (Reiter „Werte“, Abschnitt
-„Cleanup“) – nicht über den Namen wie bei LTN Cleanup:
+„Cleanup“), nicht über den Namen der Haltestelle:
 
 - Schalter **Alle Items** und **Alle Flüssigkeiten** (Standard: beide an),
 - oder einzelne Items und Flüssigkeiten in den Slots.
@@ -284,8 +283,7 @@ Remote-Schnittstelle `utl`: `station_count`, `get_station(unit)`,
 # Unified Train Logistics (UTL) – English
 
 Automatic train logistics for Factorio 2.1: **providers, requesters, depots, fuel stations,
-cleanup and an overview window in one mod** – like LTN with LTN Manager, LTN Combinator
-Modernized and LTN Cleanup combined, built for high UPS.
+cleanup and an overview window in one mod**, built for high UPS.
 
 - Requires: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age is optional.
 - Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
@@ -323,7 +321,7 @@ exclude each other and provider/requester.
 
 ## Requests are a target stock
 
-The amount in a request slot is the **stock you want to have** (like LTN). Only the difference
+The amount in a request slot is the **stock you want to have**. Only the difference
 is delivered: *demand = target − in stock − already in transit*. A train is sent once the
 demand reaches the **requester threshold**. Want several trains at once? Set a higher target.
 
@@ -362,8 +360,7 @@ separate small and large trains; the stations may share a name.
 
 Trains with leftover cargo (arriving at the depot with cargo, after a canceled delivery, or not
 fully unloaded at the requester) go to the nearest matching **cleanup station**. What a cleanup
-station accepts is set in its window ("Values" tab, "Cleanup" section – not via the name as in
-LTN Cleanup): **All items** and **All fluids** switches (both on by default) or single items and
+station accepts is set in its window ("Values" tab, "Cleanup" section, not via the stop name): **All items** and **All fluids** switches (both on by default) or single items and
 fluids. Goods entered one by one come before "All …"; if one station is not enough, the train
 visits several in a row and waits at each until its goods are gone (max. 30 s without change).
 Empty fluids with pumps; use "All fluids" only with a drain, fluids mix in pipes. Without a

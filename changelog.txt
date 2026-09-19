@@ -2,7 +2,7 @@
 Version: 0.0.1
 Date: 2026-09-19
   Major Features:
-    - Initial release: standalone train dispatcher combining LTN, LTN Manager, LTN Combinator Modernized and LTN Cleanup in one mod.
+    - Initial release: standalone train dispatcher with providers, requesters, depots, fuel, cleanup and manager in one mod.
   Features:
     - UTL train stop with built-in logic, or UTL station combinator wired to a normal train stop.
     - Roles: provider, requester, depot, fuel station, cleanup; named networks.
