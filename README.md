@@ -216,7 +216,12 @@ the manager.
 
 ## Not yet included
 
-Loading/unloading timeouts, deliveries between surfaces (Space Age).
+Loading/unloading timeouts.
+
+**Surfaces (Space Age):** every surface is handled on its own. UTL only matches stations, depots,
+fuel and cleanup stations **on the same surface**, so Nauvis and Vulcanus each need their own
+depot and their own trains. Deliveries *between* surfaces are not planned – trains cannot change
+planet.
 
 ## For mod authors
 
@@ -539,8 +544,12 @@ Depots, Einstellungen kopieren/Blaupausen und Manager.
 
 ## Noch nicht enthalten
 
-Zeitlimits beim Laden/Entladen und Lieferungen zwischen Oberflächen (Space Age). Diese Punkte
-folgen.
+Zeitlimits beim Laden/Entladen.
+
+**Oberflächen (Space Age):** Jede Oberfläche arbeitet für sich. UTL bringt nur Stationen, Depots,
+Tankstellen und Cleanups **derselben Oberfläche** zusammen. Auf Nauvis und auf Vulcanus brauchst
+du also jeweils eigene Depots und eigene Züge. Lieferungen **zwischen** Oberflächen sind nicht
+geplant – Züge können den Planeten nicht wechseln.
 
 ## Für Mod-Autoren
 
