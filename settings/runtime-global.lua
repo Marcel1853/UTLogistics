@@ -35,6 +35,20 @@ data:extend({
     order = "a-d",
   },
   {
+    type = "bool-setting",
+    name = "utl-wagon-filters",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "a-e",
+  },
+  {
+    type = "bool-setting",
+    name = "utl-station-output",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "a-f",
+  },
+  {
     type = "int-setting",
     name = "utl-fuel-threshold",
     setting_type = "runtime-global",

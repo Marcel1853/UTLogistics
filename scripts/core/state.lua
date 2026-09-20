@@ -29,6 +29,7 @@ function State.init()
   trains.visiting = trains.visiting or {} -- [train_id] = Tank-/Cleanup-Haltestelle, an der er steht
   trains.cargo_waiting = trains.cargo_waiting or {} -- [train_id] = { train, stop, network }: Restladung, kein Cleanup frei
   trains.home = trains.home or {} -- [train_id] = { train, depot = Name, stop = Haltestelle } (für den Manager)
+  trains.filtered = trains.filtered or {} -- [train_id] = von UTL gesetzte Ladefilter (wagon-filters.lua)
   storage.trains = trains
 
   -- Dienst-Stationen: [rolle][station] = true (fuel, cleanup)
@@ -47,6 +48,7 @@ function State.init()
   deliveries.outgoing = deliveries.outgoing or {} -- [station] = { [key] = reservierte Menge }
   deliveries.incoming = deliveries.incoming or {} -- [station] = { [key] = Menge unterwegs }
   deliveries.trains_at = deliveries.trains_at or {} -- [station] = Züge auf dem Weg dorthin
+  deliveries.output_dirty = deliveries.output_dirty or {} -- [station] = Auftrags-Ausgabe neu schreiben
   storage.deliveries = deliveries
 
   -- Dispatcher: Anbieter-Index pro Ware und Menge der Abnehmer.

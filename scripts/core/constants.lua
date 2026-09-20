@@ -2,6 +2,7 @@
 return {
   station_combinator = "utl-station-combinator",
   train_stop = "utl-train-stop",
+  station_output = "utl-station-output",
 
 
   -- Offene Stationsfenster alle N Heartbeats auffrischen (Standard-Takt 10 → 60 Ticks).

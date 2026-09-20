@@ -13,12 +13,15 @@ local Fuel = require("scripts.trains.fuel")
 local Log = require("scripts.lib.log")
 local Alerts = require("scripts.alerts.alerts")
 local Util = require("scripts.lib.util")
+local Filters = require("scripts.trains.wagon-filters")
+local Output = require("scripts.stations.output")
 
 local Deliveries = {}
 
 local HISTORY_SIZE = 100
 
 local function add(map, unit, key, amount)
+  Output.mark(unit) -- Auftrags-Ausgabe dieser Station neu schreiben
   local by_key = map[unit]
   if not by_key then
     by_key = {}
@@ -98,6 +101,8 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop)
   end
   count_train(provider.unit, 1)
   count_train(requester.unit, 1)
+  -- Ladefilter: nur die Waren des Auftrags dürfen in die Wagen (Anbieter kann es abschalten).
+  if provider.config.filter_load then Filters.apply(delivery, provider.config.locked_slots) end
   Heartbeat.update_registration()
   Log.debug("Lieferung " .. id .. " mit Zug " .. train.id .. ": " .. serpent.line(manifest))
   return delivery
@@ -129,6 +134,7 @@ end
 
 local function remove(delivery, canceled)
   record_history(delivery, canceled)
+  Filters.clear(delivery)
   local deliveries = storage.deliveries
   release_provider(delivery)
   for key, amount in pairs(delivery.manifest) do add(deliveries.incoming, delivery.requester, key, -amount) end
@@ -155,6 +161,7 @@ function Deliveries.on_arrive(delivery, stop)
   local unit = stop.unit_number
   if delivery.state == "to_provider" and unit == stop_unit_of(delivery.provider) then
     delivery.state = "loading"
+    Filters.repair(delivery) -- Slots, die beim Losschicken noch belegt waren
   elseif delivery.state == "to_requester" and unit == stop_unit_of(delivery.requester) then
     delivery.state = "unloading"
   end

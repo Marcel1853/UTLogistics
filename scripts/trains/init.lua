@@ -5,6 +5,7 @@ local Depot = require("scripts.trains.depot")
 local Deliveries = require("scripts.deliveries.deliveries")
 local Dispatch = require("scripts.dispatcher.dispatch")
 local ServiceStops = require("scripts.trains.service-stops")
+local Filters = require("scripts.trains.wagon-filters")
 local Alerts = require("scripts.alerts.alerts")
 local Heartbeat = require("scripts.core.heartbeat")
 local Perf = require("scripts.core.perf")
@@ -47,6 +48,7 @@ local function on_state(event)
       local unit = storage.stations.by_stop[stop.unit_number]
       local station = unit and Registry.get(unit)
       if station and station.config.roles.depot then
+        Filters.reset(id) -- Sicherheitsnetz: im Depot sind die Wagen wieder frei
         Depot.arrive(train, stop, station)
       else
         if station and (station.config.roles.fuel or station.config.roles.cleanup) then
@@ -88,6 +90,7 @@ Events.on(defines.events.on_train_created, function(event)
   State.ensure()
   local function retire(old)
     if not old then return end
+    Filters.reset(old) -- die Wagen gehören jetzt zu einer anderen Zug-ID
     Depot.remove(old)
     storage.trains.service[old] = nil
     storage.trains.visiting[old] = nil

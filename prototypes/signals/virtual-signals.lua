@@ -17,11 +17,13 @@ local SIGNALS = {
   { "utl-provide-stack-threshold", icon("passive-provider-chest.png", "signal-stack-size.png") },
   { "utl-provide-priority", icon("passive-provider-chest.png", "signal-star.png") },
   { "utl-locked-slots", icon("cargo-wagon.png", "signal-lock.png") },
+  { "utl-filter-load", icon("cargo-wagon.png", "signal-checked-green.png") },
   { "utl-request-threshold", icon("requester-chest.png", "signal-greater-than-or-equal-to.png") },
   { "utl-request-stack-threshold", icon("requester-chest.png", "signal-stack-size.png") },
   { "utl-request-priority", icon("requester-chest.png", "signal-star.png") },
   { "utl-depot-priority", icon("train-stop.png", "signal-star.png") },
   { "utl-network", icon("radar.png", "signal_N.png") },
+  { "utl-station-output", icon("constant-combinator.png", "signal-lightning.png") },
   { "utl-cleanup-all-items", icon("cargo-wagon.png", "signal_everything.png") },
   { "utl-cleanup-all-fluids", icon("fluid-wagon.png", "signal_everything.png") },
 }

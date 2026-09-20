@@ -10,6 +10,8 @@ function Config.refresh()
     max_deliveries = s["utl-max-deliveries-per-cycle"].value,
     fuel_threshold = s["utl-fuel-threshold"].value,
     chaining = s["utl-chaining"].value,
+    wagon_filters = s["utl-wagon-filters"].value,
+    station_output = s["utl-station-output"].value,
     alert_no_train_minutes = s["utl-alert-no-train-minutes"].value,
     default_provide_threshold = s["utl-default-provide-threshold"].value,
     default_request_threshold = s["utl-default-request-threshold"].value,
