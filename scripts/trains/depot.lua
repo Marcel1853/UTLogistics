@@ -6,6 +6,7 @@ local Fuel = require("scripts.trains.fuel")
 local Schedule = require("scripts.trains.schedule")
 local CleanupRoute = require("scripts.trains.cleanup-route")
 local Alerts = require("scripts.alerts.alerts")
+local Networks = require("scripts.stations.networks")
 
 local Depot = {}
 
@@ -45,10 +46,13 @@ function Depot.remove(train_id)
   if not record then return end
   trains.by_id[train_id] = nil
   trains.count = trains.count - 1
-  local pool = trains.idle[record.network]
-  if pool then
-    pool[train_id] = nil
-    if next(pool) == nil then trains.idle[record.network] = nil end
+  -- aus ALLEN Netzen des Depots austragen (Heimatnetz + Zusatznetze)
+  for _, name in ipairs(record.networks or { record.network }) do
+    local pool = trains.idle[name]
+    if pool then
+      pool[train_id] = nil
+      if next(pool) == nil then trains.idle[name] = nil end
+    end
   end
 end
 
@@ -102,6 +106,7 @@ function Depot.arrive(train, stop, station)
     train = train,
     id = id,
     network = network,
+    networks = Networks.list(station.config), -- Heimatnetz + Zusatznetze (für die Pools)
     surface_index = stop.surface_index,
     stop = stop,
     stop_unit = stop.unit_number,
@@ -112,12 +117,15 @@ function Depot.arrive(train, stop, station)
     fluid = fluid,
   }
   trains.count = trains.count + 1
-  local pool = trains.idle[network]
-  if not pool then
-    pool = {}
-    trains.idle[network] = pool
+  -- in JEDES Netz des Depots eintragen: so bedient ein Reserve-Depot mehrere Netze
+  for _, name in ipairs(trains.by_id[id].networks) do
+    local pool = trains.idle[name]
+    if not pool then
+      pool = {}
+      trains.idle[name] = pool
+    end
+    pool[id] = true
   end
-  pool[id] = true
 end
 
 --- Steht der Zug noch wirklich wartend an seinem Depot? (Lazy-Prüfung im Dispatcher.)
@@ -172,7 +180,7 @@ function Depot.relocate(train, current, network, after_service)
   for _, station in pairs(storage.stations.by_unit) do
     local stop, cfg = station.stop, station.config
     if cfg.roles.depot and stop and stop.valid and stop ~= current and stop.backer_name == name
-      and (network == nil or cfg.network == network) and stop.surface_index == surface
+      and (network == nil or Networks.matches(cfg, network)) and stop.surface_index == surface
       and length_ok(cfg, length)
       and stop.trains_count == 0 then
       stops[#stops + 1] = stop
@@ -243,6 +251,7 @@ end
 --- Einstellungen geändert (Rolle, Netzwerk): Züge dieser Station neu erfassen.
 function Depot.refresh_station(station)
   Depot.invalidate_names()
+  Networks.invalidate()
   if station.stop_unit then Depot.forget(station.stop_unit) end
   if station.config.roles.depot then
     Depot.scan(station)

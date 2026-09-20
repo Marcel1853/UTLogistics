@@ -177,6 +177,49 @@ end
 
 local CARGO = defines.inventory.cargo_wagon
 
+-- Runde 12: eigenes Gleis bei x = 121. Netz „A“ und Netz „B“ sind getrennt; das Reserve-Depot
+-- hat das Heimatnetz „R“ und die Zusatznetze „A“ und „B“, sein Zug bedient also beide.
+function build_network_test()
+  local s, force = game.surfaces["nauvis"], game.forces["player"]
+  local t = {} for x = 114, 130 do for y = -90, 90 do t[#t + 1] = { name = "concrete", position = { x, y } } end end
+  s.set_tiles(t)
+  for _, ent in pairs(s.find_entities_filtered{ area = {{114,-90},{130,90}} }) do if ent.type ~= "character" then ent.destroy() end end
+  for y = -80, 80, 2 do s.create_entity{ name = "straight-rail", position = { 121, y }, direction = defines.direction.north, force = force } end
+  local function stop(name, pos, dir)
+    local e = s.create_entity{ name = "utl-train-stop", position = pos, direction = dir, force = force, raise_built = true }
+    e.backer_name = name
+    return e
+  end
+  st.pa = stop("UTL-PA", { 123, -60 }, defines.direction.north)   -- Anbieter Netz A
+  st.pb = stop("UTL-PB", { 123, -40 }, defines.direction.north)   -- Anbieter Netz B
+  st.nd = stop("UTL-RD", { 123, -10 }, defines.direction.north)   -- Reserve-Depot (R + A + B)
+  st.ra = stop("UTL-RA", { 119, 40 }, defines.direction.south)    -- Abnehmer Netz A
+  st.rb = stop("UTL-RB", { 119, 60 }, defines.direction.south)    -- Abnehmer Netz B
+  for _, def in ipairs({ { st.pa, "iron-plate" }, { st.pb, "copper-plate" } }) do
+    local cc = s.create_entity{ name = "constant-combinator", position = { def[1].position.x + 2, def[1].position.y }, force = force }
+    cc.get_control_behavior().get_section(1).set_slot(1, { value = { type = "item", name = def[2], quality = "normal" }, min = 5000 })
+    cc.get_wire_connector(W.circuit_green, true).connect_to(def[1].get_wire_connector(W.circuit_green, true))
+  end
+  remote.call("utl", "configure_station", st.pa.unit_number, { mode = "station", provide = true, request = false, network = "A", provide_threshold = 100 })
+  remote.call("utl", "configure_station", st.pb.unit_number, { mode = "station", provide = true, request = false, network = "B", provide_threshold = 100 })
+  remote.call("utl", "configure_station", st.ra.unit_number, { mode = "station", provide = false, request = true, network = "A", request_threshold = 100 })
+  remote.call("utl", "configure_station", st.rb.unit_number, { mode = "station", provide = false, request = true, network = "B", request_threshold = 100 })
+  -- Reserve-Depot: Heimatnetz R, dazu die Zusatznetze A und B
+  remote.call("utl", "configure_station", st.nd.unit_number, { mode = "depot", network = "R", networks = { A = true, B = true } })
+  local info = remote.call("utl", "get_station", st.nd.unit_number)
+  check("R12 zusatznetze gespeichert", info and info.config.networks and info.config.networks.A and info.config.networks.B,
+    info and serpent.line(info.config.networks))
+  local l1 = s.create_entity{ name = "locomotive", position = { 121, 0 }, direction = defines.direction.north, force = force }
+  st.nwagon = s.create_entity{ name = "cargo-wagon", position = { 121, 7 }, direction = defines.direction.north, force = force }
+  local l2 = s.create_entity{ name = "locomotive", position = { 121, 14 }, direction = defines.direction.south, force = force }
+  for _, l in ipairs({ l1, l2 }) do l.insert{ name = "coal", count = 120 } end
+  st.ntrain = l1.train
+  local sch = st.ntrain.get_schedule()
+  sch.add_record{ station = "UTL-RD", wait_conditions = {{ type = "inactivity", ticks = 300 }} }
+  sch.go_to_station(1)
+  remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+end
+
 -- Runde 10: eigenes Gleis bei x = 91 mit Flüssigkeitszug (Netzwerk „fluid“).
 function build_fluid_test()
   local s, force = game.surfaces["nauvis"], game.forces["player"]
@@ -453,10 +496,50 @@ function train_test_step()
       st.fwagon.clear_fluid_inside()
     elseif st.seen.r11_steam_done and at == st.fd then
       check("R11 danach wieder im depot", true)
+      -- Runde 12: Zusatznetze. Eigenes Gleis bei x = 121 mit zwei getrennten Netzen „A“ und „B“
+      -- und einem Reserve-Depot (Heimatnetz „R“, Zusatznetze A und B).
+      build_network_test()
+      st.round = 12
+    end
+  elseif st.round == 12 then
+    local d = remote.call("utl", "get_deliveries")[1]
+    local cargo = st.nwagon.get_inventory(CARGO)
+    if d then
+      local to = d.to or ""
+      -- Be- und Entladen übernimmt der Test (wie in den anderen Runden)
+      if d.state == "loading" then
+        cargo.insert{ name = string.find(to, "UTL-RA", 1, true) and "iron-plate" or "copper-plate", count = 1000 }
+      elseif d.state == "unloading" then
+        cargo.clear()
+      end
+      if string.find(to, "UTL-RA", 1, true) and not st.seen.r12_a then
+        st.seen.r12_a = true
+        check("R12 reserve-zug bedient netz A", d.train_id == st.ntrain.id, tostring(d.train_id))
+      elseif string.find(to, "UTL-RB", 1, true) and not st.seen.r12_b then
+        st.seen.r12_b = true
+        check("R12 derselbe reserve-zug bedient auch netz B", d.train_id == st.ntrain.id, tostring(d.train_id))
+      end
+    elseif st.seen.r12_a and not st.seen.r12_next then
+      -- Netz A fertig: jetzt Bedarf in Netz B; derselbe Zug muss auch dorthin
+      st.seen.r12_next = true
+      remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
+      remote.call("utl", "set_request", st.rb.unit_number, 1, { type = "item", name = "copper-plate" }, 1000)
+    elseif st.seen.r12_b and st.ntrain.station == st.nd then
+      check("R12 reserve-zug wieder im eigenen depot", true)
+      -- Gegenprobe: ein Depot nur in Netz A darf Netz B nicht bedienen
+      remote.call("utl", "configure_station", st.nd.unit_number, { networks = {} })
+      remote.call("utl", "set_request", st.rb.unit_number, 1, { type = "item", name = "copper-plate" }, 1000)
+      st.round = 13
+      st.wait_until = tick + 1200
+    end
+  elseif st.round == 13 then
+    if tick >= st.wait_until then
+      check("R13 ohne zusatznetz keine lieferung in netz B", remote.call("utl", "delivery_count") == 0,
+        tostring(remote.call("utl", "delivery_count")))
       st.done = true
     end
   end
-  if not st.done and tick >= 71900 then
+  if not st.done and tick >= 107900 then
     check("zugtest vollständig", false, "runde " .. st.round .. " " .. serpent.line(st.seen) .. " idle=" .. remote.call("utl","idle_train_count") .. " state=" .. st.train.state)
     st.done = true
   end

@@ -1,10 +1,9 @@
 --- Linker Kasten (wie LTN Combinator): Status, Vorschau, Netzwerk, Rollen-Häkchen.
 local Builder = require("scripts.gui.common.builder")
 local Roles = require("scripts.stations.roles")
+local Nets = require("scripts.gui.station.section-networks")
 
 local Main = {}
-
-local DEFAULT_NETWORK = "default"
 
 -- Häkchen in zwei Spalten: links Station (Anbieter/Abnehmer), rechts Sonderrollen.
 local ROLE_COLUMNS = {
@@ -34,20 +33,7 @@ function Main.build(parent, station, with_preview)
     preview.entity = station.entity
   end
 
-  -- Netzwerk: Symbol, Beschriftung, Textfeld (leer = Standard-Netzwerk).
-  local net = parent.add({ type = "flow", style = "flib_indicator_flow" })
-  net.style.top_margin = 4
-  net.add({ type = "sprite", style = "utl_entry_sprite", sprite = "virtual-signal/utl-network" })
-  net.add({ type = "label", style = "caption_label", caption = { "utl-gui.network" }, tooltip = { "utl-gui.network-tooltip" } })
-  net.add({ type = "empty-widget", style = "flib_horizontal_pusher" })
-  local field = net.add({
-    type = "textfield",
-    text = cfg.network ~= DEFAULT_NETWORK and cfg.network or "",
-    lose_focus_on_confirm = true,
-    tooltip = { "utl-gui.network-tooltip" },
-    tags = { utl_action = "network" },
-  })
-  field.style.width = 150
+  refs.net = Nets.build(parent, station)
 
   -- Rollen
   local roles = parent.add({ type = "flow", direction = "horizontal" })
@@ -82,10 +68,6 @@ function Main.apply_role(cfg, role, state)
     cfg.mode = "station"
   end
   Roles.derive(cfg)
-end
-
-function Main.apply_network(cfg, text)
-  cfg.network = text ~= "" and text or DEFAULT_NETWORK
 end
 
 --- Status: grün = bereit, gelb = Halt fehlt, grau = Station ohne Aufgabe.

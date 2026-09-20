@@ -2,6 +2,7 @@
 --- Passend = Rolle, gleiches Netzwerk, gleiche Oberfläche, Zuglänge im Bereich der Station;
 --- unter den passenden wählt eine einzige Pfadsuche die nächste erreichbare.
 local Registry = require("scripts.stations.registry")
+local Networks = require("scripts.stations.networks")
 
 local ServiceStops = {}
 
@@ -38,7 +39,7 @@ end
 function ServiceStops.exists(network, role)
   for unit in pairs(set_of(role)) do
     local station = Registry.get(unit)
-    if station and station.config.roles[role] and station.config.network == network
+    if station and station.config.roles[role] and Networks.matches(station.config, network)
       and station.stop and station.stop.valid then
       return true
     end
@@ -62,7 +63,7 @@ function ServiceStops.candidates(train, network, role)
       local stop, cfg = station.stop, station.config
       -- Zuglimit der Haltestelle beachten: UTL fährt per Schienen-Wegpunkt direkt davor, da
       -- greift das Vanilla-Limit nicht – ein Stau würde sonst die Hauptstrecke blockieren.
-      if stop and stop.valid and cfg.roles[role] and cfg.network == network
+      if stop and stop.valid and cfg.roles[role] and Networks.matches(cfg, network)
         and stop.surface_index == surface and length_ok(cfg, length)
         and stop.trains_count < stop.trains_limit then
         list[#list + 1] = { stop = stop, config = cfg }

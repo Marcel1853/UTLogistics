@@ -79,16 +79,35 @@ Example: two separate systems on one map.
 Ore trains never take a plate job, and each system needs **its own depot, fuel and cleanup
 stations**. Leave the field empty everywhere if you just want one big network.
 
-The UTL Manager shows the network in brackets behind the station name when it is not `default`.
+### Additional networks
+
+Besides its home network a station can take part in **further networks**. In the station window
+the home network is picked from a drop-down listing every network on the map (✎ renames it or
+types a new one); below it, "Add network …" adds another one, and each additional network appears
+as a small button – a click takes it out again.
+
+Two stations work together as soon as their networks **overlap**. That way a reserve depot serves
+several networks without merging them:
+
+| Station | Home network | also in |
+|---|---|---|
+| Provider/requester ore | `Ore` | – |
+| Provider/requester plates | `Plates` | – |
+| Reserve depot (10 trains) | `Reserve` | `Ore`, `Plates` |
+
+The depot's trains then take ore jobs and plate jobs, while ore and plate stations still ignore
+each other.
+
+The UTL Manager shows the network in brackets behind the station name when it is not `default`,
+with additional networks as `[Reserve +Ore +Plates]`. Its **Networks** tab lists every network on
+the map with free trains, running deliveries and all its stations – and whether a station is there
+with its home network or only as an additional one.
 
 **Typical mistakes**
 
 - Depot in the wrong network → alert "no free train in network …", although trains are waiting.
 - Fuel station in the wrong network → low trains are not sent (see *Refueling*).
 - A typo or a capital letter is a different network: `Ore` and `ore` do not work together.
-
-Today a station belongs to exactly one network. Letting a few trains serve several networks
-(a "reserve" pool) is planned.
 
 ## How trains run
 
@@ -137,7 +156,8 @@ and remains available.
 
 Open with the **locomotive button in the shortcut bar** or **Ctrl + Shift + U**. Tabs:
 **Depots** (trains with composition, status, cargo), **Stations** (role, provided/requested,
-in transit, trains), **Inventory** (network totals; click an item for details), **History**
+in transit, trains), **Networks** (every network with its stations, free trains and deliveries),
+**Inventory** (network totals; click an item for details), **History**
 (last 100 deliveries, canceled ones in red), **Alerts** (last 100 alerts, repeats merged). Search by station name; click a station to view it
 on the map, click a train to follow it.
 
@@ -166,7 +186,7 @@ Measured headless (no graphics, so no FPS) with the load test scenario:
 | Network | Run | UTL per tick (avg.) | whole game per tick (avg.) | ticks below 60 UPS |
 |---|---|---|---|---|
 | 9 × 9, 180 trains, 340 stations | 40 min, ~1300 deliveries | 0.045 ms | – | 0 |
-| 12 × 12, 384 trains (24 fluid), 496 stations | 10 min | 0.067 ms | 3.6 ms | 36 of 36,000 |
+| 12 × 12, 297 trains (27 fluid), 678 stations | 10 min | 0.078 ms | 2.9 ms | 97 of 36,000 |
 
 UTL itself peaks at about 15 ms when it sends trains (sending triggers the game's pathfinding).
 Most of the time is spent by the game's own trains (movement and pathfinding).
@@ -178,16 +198,17 @@ UPS of a whole megabase.
 
 ## Scenario
 
-**New game → Scenarios → UTL load test (384 trains)**: a ready-made city-block grid (12 × 12, 4
-tracks per corridor, chain-signalled crossings, radars); 5 depots with 72 trains each in depot-only
-blocks (6 yards with 12 tracks) plus "Depot Flüssig" with 24 fluid trains; 496 stations with room
+**New game → Scenarios → UTL load test (297 trains)**: a ready-made city-block grid (12 × 12, 4
+tracks per corridor, chain-signalled crossings, radars); 5 depots of 54 trains each in depot-only
+blocks (a yard with 27 stops per block, two trains behind each other per stop) plus
+"Depot Flüssig" with 27 fluid trains; 516 stations with room
 for 3 trains each (platform + 2 waiting spots), providers and requesters mixed, crude oil and
 petroleum gas with pumps and tanks, 16 fuel and 6 cleanup stations spread evenly;
 every fourth station is a normal stop with a **UTL station combinator**; real inserters at
 infinity chests.
 
-**The first start takes a moment:** the scenario builds the whole map by script – about 48,000
-rail pieces, 3,840 signals, 880 stations and 384 trains. Depending on your machine the game
+**The first start takes a moment:** the scenario builds the whole map by script – about 57,000
+rail pieces, 7,300 signals, 678 stations and 297 trains. Depending on your machine the game
 freezes for a few seconds up to about a minute, and stutters briefly afterwards while the map is
 drawn and charted. That is normal and happens only once. Cleanup: 4 stations for all items, one each only for crude oil / petroleum gas
 (with pumps). **No other mods needed** – not even Creative Mod: infinity chests, infinity pipes and
@@ -344,8 +365,29 @@ Beispiel: zwei getrennte Systeme auf einer Karte.
 Erz-Züge nehmen dann nie einen Platten-Auftrag an. Jedes System braucht **eigenes Depot, eigene
 Tankstelle und eigenes Cleanup**. Wer nur ein großes Netz will, lässt das Feld überall leer.
 
+### Zusatznetze
+
+Neben ihrem Heimatnetz kann eine Station in **weiteren Netzwerken** mitarbeiten. Im Stationsfenster
+wählst du das Heimatnetz aus einer Liste aller Netze der Karte (mit ✎ benennst du es um oder trägst
+ein neues ein); darunter fügt „Netz hinzufügen …“ ein weiteres hinzu. Jedes Zusatznetz steht als
+kleiner Knopf darunter – ein Klick nimmt es wieder heraus.
+
+Zwei Stationen arbeiten zusammen, sobald sich ihre Netze **überschneiden**. Ein Reserve-Depot
+bedient damit mehrere Netze, ohne dass die Netze zusammenwachsen:
+
+| Station | Heimatnetz | zusätzlich |
+|---|---|---|
+| Anbieter/Abnehmer Erz | `Erze` | – |
+| Anbieter/Abnehmer Platten | `Platten` | – |
+| Reserve-Depot (10 Züge) | `Reserve` | `Erze`, `Platten` |
+
+Die Züge dieses Depots nehmen dann Erz- und Platten-Aufträge an, während Erz- und Platten-Stationen
+einander weiterhin nicht kennen.
+
 Im UTL-Manager steht das Netzwerk in eckigen Klammern hinter dem Stationsnamen, sobald es nicht
-`default` ist.
+`default` ist, Zusatznetze als `[Reserve +Erze +Platten]`. Der Reiter **Netzwerke** zeigt alle Netze
+der Karte mit freien Zügen, laufenden Lieferungen und ihren Stationen – und ob eine Station dort mit
+ihrem Heimatnetz steht oder nur als Zusatznetz mitarbeitet.
 
 **Typische Fehler**
 
@@ -353,9 +395,6 @@ Im UTL-Manager steht das Netzwerk in eckigen Klammern hinter dem Stationsnamen, 
 - Tankstelle im falschen Netzwerk → knappe Züge fahren nicht los (siehe *Tanken*).
 - Ein Tippfehler oder ein großer Buchstabe ist ein anderes Netzwerk: `Erze` und `erze` gehören
   nicht zusammen.
-
-Heute gehört eine Station zu genau einem Netzwerk. Dass ein paar Züge mehrere Netzwerke
-bedienen können (ein „Reserve“-Pool), ist geplant.
 
 ## Wie die Züge fahren
 
@@ -435,6 +474,9 @@ er stehen und ist trotzdem verfügbar.
   Zustand („Lädt bei …“, „Fährt tanken“ …) und Ladung.
 - **Stationen:** Rolle, Angebot (grün) / Bedarf (rot), Unterwegs (blau = kommt, gelb = wird
   abgeholt), Anzahl Züge.
+- **Netzwerke:** alle Netzwerke der Karte mit Stationszahl, freien Zügen und laufenden
+  Lieferungen; rechts die Stationen des gewählten Netzes mit Rolle und der Angabe, ob sie dort
+  ihr Heimatnetz haben oder nur als Zusatznetz mitarbeiten.
 - **Inventar:** alles, was im Netz angeboten, angefordert und unterwegs ist. Klick auf eine
   Ware zeigt Stationen und Züge.
 - **Verlauf:** die letzten 100 Lieferungen mit Laufzeit; abgebrochene stehen rot mit Grund.
@@ -483,7 +525,7 @@ Gemessen mit dem Lasttest-Szenario, headless (ohne Grafik, also ohne FPS):
 | Netz | Messung | UTL pro Tick (Schnitt) | ganzes Spiel pro Tick (Schnitt) | Ticks unter 60 UPS |
 |---|---|---|---|---|
 | 9 × 9, 180 Züge, 340 Bahnhöfe | 40 min, ~1300 Lieferungen | 0,045 ms | – | 0 |
-| 12 × 12, 384 Züge (davon 24 Flüssigkeit), 496 Bahnhöfe | 10 min | 0,067 ms | 3,6 ms | 36 von 36 000 |
+| 12 × 12, 297 Züge (davon 27 Flüssigkeit), 678 Bahnhöfe | 10 min | 0,078 ms | 2,9 ms | 97 von 36 000 |
 
 UTL selbst hat Spitzen bis etwa 15 ms, wenn es Züge losschickt (das Losschicken löst die
 Pfadsuche des Spiels aus). Den größten Teil der Zeit brauchen die Züge des Spiels selbst
@@ -496,10 +538,11 @@ also, was UTL und die Züge selbst brauchen, nicht die UPS einer ganzen Megabase
 
 ## Szenario zum Ausprobieren
 
-**Neues Spiel → Szenarien → UTL-Lasttest (384 Züge)**: ein fertiges Netz aus einem City-Block-Gitter
-(12 × 12 Blöcke, 4 Gleise je Korridor, Kreuzungen mit Kettensignalen, Radare). 5 Depots mit je 72 Zügen
-liegen in reinen Depot-Blöcken ohne Bahnhöfe (6 Abstellbahnhöfe mit je 12 Gleisen), dazu
-„Depot Flüssig“ mit 24 Flüssigkeitszügen; 496 Bahnhöfe an den Korridoren haben je Platz für 3 Züge
+**Neues Spiel → Szenarien → UTL-Lasttest (297 Züge)**: ein fertiges Netz aus einem City-Block-Gitter
+(12 × 12 Blöcke, 4 Gleise je Korridor, Kreuzungen mit Kettensignalen, Radare). 5 Depots mit je 54 Zügen
+liegen in reinen Depot-Blöcken ohne Bahnhöfe (ein Abstellbahnhof mit 27 Haltestellen je Block, an
+jeder stehen zwei Züge hintereinander), dazu „Depot Flüssig“ mit 27 Flüssigkeitszügen; 516 Bahnhöfe
+an den Korridoren haben je Platz für 3 Züge
 (Bahnsteig + 2 Warteplätze). Anbieter und Abnehmer liegen gemischt, Rohöl und Petroleumgas werden
 mit Pumpen und Tanks geliefert, 16 Tankstellen und 6 Cleanup-Stationen sind gleichmäßig über die
 Karte verteilt. Jede vierte Station ist eine
@@ -507,7 +550,7 @@ normale Haltestelle mit **UTL-Stations-Combinator** – so sieht man beide Bauar
 Be- und Entladen mit echten Greifarmen an Unendlich-Kisten.
 
 **Beim ersten Start dauert es einen Moment:** Das Szenario baut die ganze Karte per Script auf –
-gut 48 000 Gleisstücke, 3 840 Signale, 880 Haltestellen und 384 Züge. Je nach Rechner stockt das
+gut 57 000 Gleisstücke, 7 300 Signale, 678 Haltestellen und 297 Züge. Je nach Rechner stockt das
 Spiel dabei einige Sekunden bis etwa eine Minute, und auch danach ruckelt es kurz, während die
 Karte gezeichnet und erkundet wird. Das ist normal und passiert nur einmal.
 

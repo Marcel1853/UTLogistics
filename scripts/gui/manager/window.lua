@@ -1,9 +1,10 @@
---- UTL-Manager (Vorbild LTN Manager): Reiter Depots, Stationen, Inventar, Verlauf, Alarme.
+--- UTL-Manager (Vorbild LTN Manager): Reiter Depots, Stationen, Netzwerke, Inventar, Verlauf, Alarme.
 --- Öffnen über den Shortcut-Knopf oder Strg + Umschalt + U.
 --- Aufgefrischt wird nur, solange das Fenster offen ist, und nur der sichtbare Reiter.
 local Tabs = {
   depots = require("scripts.gui.manager.tab-depots"),
   stations = require("scripts.gui.manager.tab-stations"),
+  networks = require("scripts.gui.manager.tab-networks"),
   inventory = require("scripts.gui.manager.tab-inventory"),
   history = require("scripts.gui.manager.tab-history"),
   alerts = require("scripts.gui.manager.tab-alerts"),
@@ -14,10 +15,10 @@ local Manager = {}
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 2
-local ORDER = { "depots", "stations", "inventory", "history", "alerts" }
+local GUI_VERSION = 3
+local ORDER = { "depots", "stations", "networks", "inventory", "history", "alerts" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste).
-local AUTO_REFRESH = { depots = true, stations = true, history = true, alerts = true }
+local AUTO_REFRESH = { depots = true, stations = true, networks = true, history = true, alerts = true }
 
 local function frame_button(parent, sprite, tooltip, action)
   return parent.add({

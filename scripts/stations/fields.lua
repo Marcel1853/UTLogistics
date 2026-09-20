@@ -68,6 +68,8 @@ function Fields.fill(cfg)
   end
   cfg.requests = cfg.requests or {}       -- [slot] = { signal = SignalID, count = n }
   cfg.request_map = cfg.request_map or {} -- [key] = Menge (abgeleitet)
+  -- Zusatznetze („auch in diesen Netzen“); leer = nur das Heimatnetz cfg.network
+  cfg.networks = cfg.networks or {}
   -- Cleanup: was hier geleert werden darf. Standard wie früher: alles.
   cfg.cleanup = cfg.cleanup or { all_items = true, all_fluids = true, items = {}, fluids = {} }
   cfg.cleanup.items = cfg.cleanup.items or {}   -- [slot] = Item-Name

@@ -67,3 +67,14 @@ styles.utl_slot_count = {
   vertical_align = "bottom",
   right_padding = 2,
 }
+
+-- Zusatznetz im Stationsfenster: schmaler Knopf mit dem Netznamen (Klick nimmt es heraus).
+styles.utl_net_chip = {
+  type = "button_style",
+  parent = "button",
+  height = 26,
+  minimal_width = 0,
+  left_padding = 8,
+  right_padding = 8,
+  font = "default-small",
+}

@@ -52,6 +52,7 @@ local interface = {
     for id, d in pairs(storage.deliveries.active) do
       list[#list + 1] = {
         id = id, train_id = d.train_id, provider = d.provider, requester = d.requester,
+        from = d.from, to = d.to, network = d.network, -- Namen der Haltestellen und das Netzwerk
         manifest = util.table.deepcopy(d.manifest), state = d.state, started = d.started, chained = d.chained,
       }
     end

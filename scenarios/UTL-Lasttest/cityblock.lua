@@ -1,4 +1,4 @@
--- City Block 4 (ohne Brücken) aus Marcels Blaupausen-Buch „Schienensystem“ (docs/blaupause.txt).
+-- City Block 4 (ohne Brücken) aus Marcels Blaupausen-Buch „Schienensystem“ (docs/blaupausen/cityblock_schienensystem.txt).
 -- Rastermaß 224; Positionen relativ zur Blockecke. Gleise, Signale, Großmasten (P) und Radare (R).
 -- { Name, x, y, Richtung }
 return {

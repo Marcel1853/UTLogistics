@@ -1,6 +1,7 @@
 --- Reiter „Stationen“ (wie LTN Manager): Name + Rolle | Angebot/Bedarf | Unterwegs | Züge.
 local List = require("scripts.gui.common.list")
 local Widgets = require("scripts.gui.common.widgets")
+local Networks = require("scripts.stations.networks")
 
 local Tab = {}
 
@@ -23,8 +24,9 @@ local function role_caption(station)
     end
   end
   if #caption == 1 then caption[2] = { "utl-manager.role-none" } end
-  if cfg.network ~= "default" then
-    caption = { "", caption, "  [", cfg.network, "]" }
+  local extra = Networks.extra_text(cfg)
+  if cfg.network ~= "default" or extra ~= "" then
+    caption = { "", caption, "  [", cfg.network, extra ~= "" and (" " .. extra) or "", "]" }
   end
   return caption
 end

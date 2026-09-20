@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.3
+Date: 2026-09-20
+  Features:
+    - Additional networks: besides its home network a station can now work in further networks. Two stations work together as soon as their networks overlap – a reserve depot can serve several networks without merging them.
+    - Station window, new network section: the home network is picked from a drop-down of every network on the map and renamed with the pencil button; additional networks are added from a list and shown as small buttons that a click removes.
+    - UTL Manager: new tab "Networks" – every network with its stations, free trains and running deliveries, and whether a station is in it with its home network or as an additional one.
+  Changes:
+    - The manager shows the additional networks behind the station name, for example [Reserve +Erze +Platten].
+    - Load test scenario: the depot blocks are now built from the blueprint "City Block 4 Depo" – 27 stops per block with two trains behind each other per stop (297 trains, 678 stations).
+---------------------------------------------------------------------------------------------------
 Version: 0.0.2
 Date: 2026-09-20
   Features:

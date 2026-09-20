@@ -13,6 +13,7 @@
 local Registry = require("scripts.stations.registry")
 local Reader = require("scripts.stations.reader")
 local Deliveries = require("scripts.deliveries.deliveries")
+local Networks = require("scripts.stations.networks")
 local Depot = require("scripts.trains.depot")
 local Index = require("scripts.dispatcher.index")
 local Util = require("scripts.lib.util")
@@ -97,7 +98,7 @@ local function find_providers(request)
     if not provider then
       set[unit] = nil
     elseif unit ~= requester.unit and usable(provider) and provider.config.roles.provider
-      and provider.config.network == network and provider.stop.surface_index == surface
+      and Networks.matches(provider.config, network) and provider.stop.surface_index == surface
       and has_room(provider) then
       local available = (provider.provide[request.key] or 0) - Deliveries.outgoing(unit, request.key)
       if available > 0 then
@@ -372,7 +373,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   Index.update()
   local best
   for _, request in ipairs(collect_requests()) do
-    if request.station.config.network == network then
+    if Networks.matches(request.station.config, network) then
       local providers = find_providers(request) or {}
       for i = 1, math.min(#providers, PROVIDER_TRIES) do
         local provider = providers[i]

@@ -81,8 +81,14 @@ end)
 
 Events.on(defines.events.on_gui_selection_state_changed, function(event)
   local action, _, manager = context(event)
-  if action ~= "depot_list" or not manager then return end
-  Manager.tab("depots").select(manager.refs.depots, manager, event.element.selected_index)
+  if not manager then return end
+  if action == "depot_list" then
+    Manager.tab("depots").select(manager.refs.depots, manager, event.element.selected_index)
+  elseif action == "network_list" then
+    Manager.tab("networks").select(manager.refs.networks, manager, event.element.selected_index)
+  else
+    return
+  end
   Manager.refresh(event.player_index)
 end)
 

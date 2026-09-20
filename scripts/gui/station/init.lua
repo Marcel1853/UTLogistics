@@ -9,6 +9,8 @@ local Main = require("scripts.gui.station.panel-main")
 local Values = require("scripts.gui.station.panel-values")
 local RequestsSection = require("scripts.gui.station.section-requests")
 local CleanupSection = require("scripts.gui.station.section-cleanup")
+local Networks = require("scripts.stations.networks")
+local Nets = require("scripts.gui.station.section-networks")
 
 local function tags_of(element)
   if not (element and element.valid) then return nil end
@@ -64,6 +66,22 @@ Events.on(defines.events.on_gui_closed, function(event)
   end
 end)
 
+--- Eingegebenen Netznamen übernehmen: entweder als Heimatnetz oder als neues Zusatznetz.
+local function apply_network_name(event, gui, station)
+  local refs = gui.main.net
+  local field = refs.field
+  local target = field.tags.target
+  local name = field.text
+  Nets.stop_edit(refs)
+  if target == "home" then
+    Nets.apply_home(station.config, name)
+  elseif not Networks.toggle(station.config, name ~= "" and name or nil) then
+    return
+  end
+  Networks.invalidate()
+  changed(event, station, true)
+end
+
 Events.on(defines.events.on_gui_click, function(event)
   local tags, gui, station = context(event)
   if not (tags and gui and station) then return end
@@ -85,6 +103,17 @@ Events.on(defines.events.on_gui_click, function(event)
     RequestsSection.select(gui.requests, cfg, nil)
   elseif action == "cleanup_all" then
     if CleanupSection.toggle(cfg, tags.key) then changed(event, station, true) end
+  elseif action == "network_chip" then
+    if Networks.toggle(cfg, tags.network) then
+      Networks.invalidate()
+      changed(event, station, true)
+    end
+  elseif action == "network_rename" then
+    Nets.start_edit(gui.main.net, "home", cfg.network)
+  elseif action == "network_confirm" then
+    apply_network_name(event, gui, station)
+  elseif action == "network_cancel" then
+    Nets.stop_edit(gui.main.net)
   end
 end)
 
@@ -104,19 +133,45 @@ end)
 
 Events.on(defines.events.on_gui_checked_state_changed, function(event)
   local tags, _, station = context(event)
-  if not (tags and station and tags.utl_action == "role") then return end
-  Main.apply_role(station.config, tags.role, event.element.state)
-  changed(event, station, true)
+  if not (tags and station) then return end
+  if tags.utl_action == "role" then
+    Main.apply_role(station.config, tags.role, event.element.state)
+    changed(event, station, true)
+  end
+end)
+
+-- Auswahllisten des Netzwerk-Abschnitts: Heimatnetz und „Netz hinzufügen“.
+Events.on(defines.events.on_gui_selection_state_changed, function(event)
+  local tags, gui, station = context(event)
+  if not (tags and gui and station) then return end
+  local action, element = tags.utl_action, event.element
+  if action == "network_pick" then
+    local name = element.get_item(element.selected_index)
+    if type(name) == "string" then
+      Nets.apply_home(station.config, name)
+      Networks.invalidate()
+      changed(event, station, true)
+    end
+  elseif action == "network_add_pick" then
+    local index = element.selected_index
+    if index == #element.items then -- letzter Eintrag: „Neu …“
+      element.selected_index = 1
+      Nets.start_edit(gui.main.net, "extra", "")
+    elseif index > 1 then
+      local name = element.get_item(index)
+      if type(name) == "string" and Networks.toggle(station.config, name) then
+        Networks.invalidate()
+        changed(event, station, true)
+      end
+    end
+  end
 end)
 
 Events.on(defines.events.on_gui_text_changed, function(event)
   local tags, gui, station = context(event)
   if not (tags and gui and station) then return end
   local action, cfg = tags.utl_action, station.config
-  if action == "network" then
-    Main.apply_network(cfg, event.element.text)
-    changed(event, station, false)
-  elseif action == "value" then
+  if action == "value" then
     if Values.apply(cfg, tags.key, event.element.text) then changed(event, station, false) end
   elseif action == "req_stacks" or action == "req_items" then
     RequestsSection.sync(gui.requests, cfg, action)
@@ -131,6 +186,8 @@ Events.on(defines.events.on_gui_confirmed, function(event)
     if RequestsSection.confirm(gui.requests, station.config) then changed(event, station, false) end
   elseif action == "value" then
     changed(event, station, true) -- Reset-Knöpfe an/aus neu setzen
+  elseif action == "network_name" then
+    apply_network_name(event, gui, station)
   end
 end)
 

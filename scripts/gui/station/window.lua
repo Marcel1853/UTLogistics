@@ -19,7 +19,7 @@ local Window = {}
 local NAME = "utl_station_window"
 -- Bei jedem Umbau des Fensters erhöhen: offene Fenster aus alten Spielständen werden dann
 -- geschlossen statt mit falschem Aufbau aufgefrischt.
-local GUI_VERSION = 7
+local GUI_VERSION = 9
 -- Breiten passend zum Inhalt (Kasten-Innenrand 2 × 12 px):
 local LEFT_WIDTH = 10 * 40 + 24 -- 10 Slots
 local RIGHT_WIDTH = 380         -- Reset 20 + Symbol 32 + Beschriftung 190 + Feld 80 + Ränder
