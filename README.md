@@ -50,8 +50,45 @@ demand reaches the **requester threshold**. Want several trains at once? Set a h
 Min./max. train length (0 = any; also for depots, see below), max. trains, supply threshold /
 stack threshold, provider priority, locked slots per wagon, demand threshold / stack threshold,
 requester priority. The grey ⟲ button resets a value. **Math works in every number field**:
-`4000*2`, `8000/4`, `(1+2)*3`, `2^3`, `1e3`. Stations with the same **network** name work
-together (empty = default).
+`4000*2`, `8000/4`, `(1+2)*3`, `2^3`, `1e3`. The **network** name is explained in the next
+section.
+
+## Networks
+
+Every station has **one network name** (field "Network" in its window). Empty means `default`.
+Two stations only work together when the name is **exactly the same** – there is no numbering
+and no bitmask.
+
+This applies to **all roles**:
+
+| Role | Effect of the network |
+|---|---|
+| Provider | is only offered to requesters with the same name |
+| Requester | is only served from providers with the same name |
+| Depot | hands its trains only to that network |
+| Fuel station | a train only refuels in its own network |
+| Cleanup | a train is only emptied in its own network |
+
+Example: two separate systems on one map.
+
+| Station | Network |
+|---|---|
+| Iron mine, iron smelter, depot "Ore depot" | `Ore` |
+| Plate storage, plate consumers, depot "Plate depot" | `Plates` |
+
+Ore trains never take a plate job, and each system needs **its own depot, fuel and cleanup
+stations**. Leave the field empty everywhere if you just want one big network.
+
+The UTL Manager shows the network in brackets behind the station name when it is not `default`.
+
+**Typical mistakes**
+
+- Depot in the wrong network → alert "no free train in network …", although trains are waiting.
+- Fuel station in the wrong network → low trains are not sent (see *Refueling*).
+- A typo or a capital letter is a different network: `Ore` and `ore` do not work together.
+
+Today a station belongs to exactly one network. Letting a few trains serve several networks
+(a "reserve" pool) is planned.
 
 ## How trains run
 
@@ -147,18 +184,24 @@ blocks (6 yards with 12 tracks) plus "Depot Flüssig" with 24 fluid trains; 496 
 for 3 trains each (platform + 2 waiting spots), providers and requesters mixed, crude oil and
 petroleum gas with pumps and tanks, 16 fuel and 6 cleanup stations spread evenly;
 every fourth station is a normal stop with a **UTL station combinator**; real inserters at
-infinity chests. Cleanup: 4 stations for all items, one each only for crude oil / petroleum gas
+infinity chests.
+
+**The first start takes a moment:** the scenario builds the whole map by script – about 48,000
+rail pieces, 3,840 signals, 880 stations and 384 trains. Depending on your machine the game
+freezes for a few seconds up to about a minute, and stutters briefly afterwards while the map is
+drawn and charted. That is normal and happens only once. Cleanup: 4 stations for all items, one each only for crude oil / petroleum gas
 (with pumps). **No other mods needed** – not even Creative Mod: infinity chests, infinity pipes and
 the power sources are part of the base game (only hidden in the build menu); the scenario places
 them itself.
 
 ## Tips & tricks
 
-The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: eleven entries
+The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: twelve entries
 explaining how to use the mod, each with a running example scene (some with an open UTL window,
 the manager and shift-click copying), among them: a UTL stop with provider, requester and depot; the same
 line with normal stops and UTL station combinators (wires visible); a train that refuels
-first and then delivers; a train with leftover cargo that is emptied at a cleanup station first.
+first and then delivers; a train with leftover cargo that is emptied at a cleanup station first;
+**two separate networks** side by side with a camera tour.
 Plus explanations of roles, requests, values and network, depots, copying settings/blueprints and
 the manager.
 
@@ -268,7 +311,46 @@ Mit dem grauen ⟲-Knopf setzt du einen Wert auf den Standard zurück.
 **Rechnen in Feldern:** In allen Zahlenfeldern kannst du rechnen, z. B. `4000*2`, `8000/4`,
 `(1+2)*3`, `2^3` oder `1e3`. Enter übernimmt das Ergebnis.
 
-**Netzwerk:** Stationen und Depots mit gleichem Netzwerknamen arbeiten zusammen. Leer = Standard.
+**Netzwerk:** Siehe den nächsten Abschnitt.
+
+## Netzwerke
+
+Jede Station hat **einen Netzwerknamen** (Feld „Netzwerk“ in ihrem Fenster). Leer bedeutet
+`default`. Zwei Stationen arbeiten nur zusammen, wenn der Name **genau gleich** ist. Es gibt
+keine Nummern und keine Bitmaske wie bei LTN.
+
+Das gilt für **alle Rollen**:
+
+| Rolle | Wirkung des Netzwerks |
+|---|---|
+| Anbieter | wird nur Abnehmern mit demselben Namen angeboten |
+| Abnehmer | wird nur von Anbietern mit demselben Namen beliefert |
+| Depot | gibt seine Züge nur an dieses Netzwerk |
+| Tankstelle | ein Zug tankt nur in seinem eigenen Netzwerk |
+| Cleanup | ein Zug wird nur in seinem eigenen Netzwerk geleert |
+
+Beispiel: zwei getrennte Systeme auf einer Karte.
+
+| Station | Netzwerk |
+|---|---|
+| Erzabbau, Erzverhüttung, Depot „Erz-Depot“ | `Erze` |
+| Plattenlager, Plattenverbraucher, Depot „Platten-Depot“ | `Platten` |
+
+Erz-Züge nehmen dann nie einen Platten-Auftrag an. Jedes System braucht **eigenes Depot, eigene
+Tankstelle und eigenes Cleanup**. Wer nur ein großes Netz will, lässt das Feld überall leer.
+
+Im UTL-Manager steht das Netzwerk in eckigen Klammern hinter dem Stationsnamen, sobald es nicht
+`default` ist.
+
+**Typische Fehler**
+
+- Depot im falschen Netzwerk → Warnung „kein freier Zug im Netzwerk …“, obwohl Züge dastehen.
+- Tankstelle im falschen Netzwerk → knappe Züge fahren nicht los (siehe *Tanken*).
+- Ein Tippfehler oder ein großer Buchstabe ist ein anderes Netzwerk: `Erze` und `erze` gehören
+  nicht zusammen.
+
+Heute gehört eine Station zu genau einem Netzwerk. Dass ein paar Züge mehrere Netzwerke
+bedienen können (ein „Reserve“-Pool), ist geplant.
 
 ## Wie die Züge fahren
 
@@ -419,6 +501,11 @@ Karte verteilt. Jede vierte Station ist eine
 normale Haltestelle mit **UTL-Stations-Combinator** – so sieht man beide Bauarten nebeneinander.
 Be- und Entladen mit echten Greifarmen an Unendlich-Kisten.
 
+**Beim ersten Start dauert es einen Moment:** Das Szenario baut die ganze Karte per Script auf –
+gut 48 000 Gleisstücke, 3 840 Signale, 880 Haltestellen und 384 Züge. Je nach Rechner stockt das
+Spiel dabei einige Sekunden bis etwa eine Minute, und auch danach ruckelt es kurz, während die
+Karte gezeichnet und erkundet wird. Das ist normal und passiert nur einmal.
+
 **Keine weiteren Mods nötig** – auch nicht der Kreativmod: Unendlich-Kisten, Unendlich-Rohre und
 die Strom-Quellen gehören zum Grundspiel (nur im Baumenü versteckt), das Szenario setzt sie selbst.
 Cleanup: 4 Stationen für alle Items, je eine nur für Rohöl bzw. Petroleumgas (mit Pumpen).
@@ -431,12 +518,12 @@ Signal; Depots gebündelt in einem Abstellbahnhof.
 
 ## Tipps & Tricks im Spiel
 
-Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: elf Einträge,
+Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: zwölf Einträge,
 die die Bedienung erklären, jeder mit einer laufenden Beispielszene (teils mit geöffnetem
 UTL-Fenster, Manager und Umschalt-Klick zum Kopieren). Darunter: eine UTL-Haltestelle mit Anbieter, Abnehmer und Depot;
 dieselbe Strecke mit normalen Haltestellen und UTL-Stations-Combinatoren (Kabel sichtbar); und
 ein Zug, der zuerst zur Tankstelle fährt und dann liefert; ein Zug mit Restladung, der erst an
-der Cleanup-Station geleert wird. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
+der Cleanup-Station geleert wird; **zwei getrennte Netzwerke übereinander** mit Kamerafahrt. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
 Depots, Einstellungen kopieren/Blaupausen und Manager.
 
 ## Häufige Fragen

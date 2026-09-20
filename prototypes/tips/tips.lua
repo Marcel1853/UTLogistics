@@ -27,6 +27,7 @@ data:extend({
   item("utl-roles", "d", "roles"),
   item("utl-requests", "e", "requests"),
   item("utl-values", "f", "values"),
+  item("utl-networks", "f2", "networks", { tag = "[virtual-signal=utl-network]" }),
   item("utl-depots", "g", "depots"),
   item("utl-fuel", "h", "fuel", { tag = "[item=coal]" }),
   item("utl-cleanup", "i", "cleanup"),

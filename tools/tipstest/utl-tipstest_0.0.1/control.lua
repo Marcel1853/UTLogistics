@@ -11,6 +11,12 @@ script.on_nth_tick(30, function(e)
     return
   end
   for _, d in pairs(remote.call("utl", "get_deliveries")) do
+    -- Netzwerk-Szene: Start und Ziel müssen im selben Netz liegen
+    local from, to = d.from or "", d.to or ""
+    if (string.find(from, "Erze", 1, true) ~= nil) ~= (string.find(to, "Erze", 1, true) ~= nil) then
+      log("[TIPS] NETZ FEHLER: " .. from .. " -> " .. to)
+      seen.wrong_net = true
+    end
     if not seen[d.state] then log(("[TIPS] %s erstes %s nach %d s"):format(scene, d.state, (e.tick - 30) / 60)) end
     seen[d.state] = (seen[d.state] or 0) + 1
     if d.chained then seen.chained = true end

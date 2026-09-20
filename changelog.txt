@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.2
+Date: 2026-09-20
+  Features:
+    - Tips & tricks: new entry "Networks" with a running example – one ring with sidings (built from a blueprint), six stations, two networks ("Erze" and "Platten") on the same rails, two of the stations as a normal train stop with a UTL station combinator. The camera tours the ring and opens a station window.
+  Changes:
+    - Networks are now explained properly: own section in the README (English and German), clearer tooltip on the network field, longer text in the tips entry "Values and network".
+    - The scenario description now says that building the map on first start takes a moment and stutters once.
+    - Mod description in info.json is English now.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.1
 Date: 2026-09-19
   Major Features:
