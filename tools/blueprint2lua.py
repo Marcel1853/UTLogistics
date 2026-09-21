@@ -14,6 +14,7 @@ CODE = {
     "rail-support": "U", "rail-ramp": "M", "elevated-straight-rail": "E",
     "elevated-curved-rail-a": "EA", "elevated-curved-rail-b": "EB",
     "elevated-half-diagonal-rail": "EH", "utl-train-stop": "T",
+    "train-stop": "V", "utl-station-combinator": "C",
 }
 ORDER = {"U": 0, "M": 1, "E": 2, "EA": 2, "EB": 2, "EH": 2}
 

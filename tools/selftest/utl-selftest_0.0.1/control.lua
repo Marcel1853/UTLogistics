@@ -207,7 +207,7 @@ function build_network_test()
   -- Reserve-Depot: Heimatnetz R, dazu die Zusatznetze A und B
   remote.call("utl", "configure_station", st.nd.unit_number, { mode = "depot", network = "R", networks = { A = true, B = true } })
   local info = remote.call("utl", "get_station", st.nd.unit_number)
-  check("R12 zusatznetze gespeichert", info and info.config.networks and info.config.networks.A and info.config.networks.B,
+  check("R16 zusatznetze gespeichert", info and info.config.networks and info.config.networks.A and info.config.networks.B,
     info and serpent.line(info.config.networks))
   local l1 = s.create_entity{ name = "locomotive", position = { 121, 0 }, direction = defines.direction.north, force = force }
   st.nwagon = s.create_entity{ name = "cargo-wagon", position = { 121, 7 }, direction = defines.direction.north, force = force }
@@ -496,12 +496,112 @@ function train_test_step()
       st.fwagon.clear_fluid_inside()
     elseif st.seen.r11_steam_done and at == st.fd then
       check("R11 danach wieder im depot", true)
-      -- Runde 12: Zusatznetze. Eigenes Gleis bei x = 121 mit zwei getrennten Netzen „A“ und „B“
-      -- und einem Reserve-Depot (Heimatnetz „R“, Zusatznetze A und B).
-      build_network_test()
+      -- Runde 12: Ladefilter. Der Anbieter bietet Eisen und Kupfer an, bestellt wird nur Eisen –
+      -- die Wagenslots müssen auf Eisen stehen und der Rest gesperrt sein.
       st.round = 12
+      remote.call("utl", "set_request", st.r.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
     end
   elseif st.round == 12 then
+    local inv = st.wagon.get_inventory(CARGO)
+    local d = remote.call("utl","get_deliveries")[1]
+    if d and not st.seen["R12 " .. d.state] then
+      st.seen["R12 " .. d.state] = true
+      if d.state == "to_provider" then
+        local f = inv.get_filter(1)
+        check("R12 ladefilter auf die bestellte ware", f ~= nil and f.name == "iron-plate", f and f.name or "kein filter")
+        check("R12 übrige slots gesperrt", inv.get_bar() <= #inv, inv.get_bar() .. " von " .. #inv)
+        check("R12 fremde ware wird nicht angenommen", inv.can_insert{ name = "copper-plate", count = 1 } == false)
+      elseif d.state == "loading" then
+        check("R12 bestellte ware passt hinein", inv.insert{ name = "iron-plate", count = 1000 } == 1000)
+      elseif d.state == "unloading" then
+        remote.call("utl","set_request", st.r.unit_number, 1, nil)
+        inv.clear()
+      end
+    end
+    if not d and st.seen["R12 unloading"] and not st.seen.r12_done then
+      st.seen.r12_done = true
+      check("R12 nach der lieferung sind die filter wieder weg", not inv.is_filtered(), serpent.line(inv.get_filter(1)))
+      check("R12 sperre wieder aufgehoben", inv.get_bar() == #inv + 1, inv.get_bar() .. " von " .. #inv)
+      -- Runde 13: eigener Filter des Spielers bleibt unangetastet.
+      st.round = 13
+      inv.set_filter(1, { name = "coal", quality = "normal", comparator = "=" })
+      remote.call("utl","set_request", st.r.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+    end
+  elseif st.round == 13 then
+    local inv = st.wagon.get_inventory(CARGO)
+    local d = remote.call("utl","get_deliveries")[1]
+    if d and not st.seen["R13 " .. d.state] then
+      st.seen["R13 " .. d.state] = true
+      if d.state == "to_provider" then
+        local f = inv.get_filter(1)
+        check("R13 eigener filter des spielers bleibt", f ~= nil and f.name == "coal", f and f.name or "kein filter")
+        check("R13 keine sperre gesetzt", inv.get_bar() == #inv + 1, inv.get_bar() .. " von " .. #inv)
+        -- Runde 14 gleich hier: Lieferung abbrechen (Handbetrieb) → Filter müssen weg sein.
+        inv.set_filter(1, nil)
+        st.train.manual_mode = true
+      end
+    end
+    if st.seen["R13 to_provider"] and not st.seen.r13_done and remote.call("utl","delivery_count") == 0 then
+      st.seen.r13_done = true
+      check("R14 abbruch räumt die filter", not inv.is_filtered() and inv.get_bar() == #inv + 1,
+        serpent.line(inv.get_filter(1)) .. " bar " .. inv.get_bar())
+      remote.call("utl","set_request", st.r.unit_number, 1, nil)
+      st.train.manual_mode = false
+      -- Runde 15: Auftrags-Ausgabe. Am Anbieter muss die Lieferung positiv anliegen,
+      -- am Abnehmer negativ; danach ist die Ausgabe wieder leer.
+      st.round = 15
+      st.r15_start = tick
+    end
+  elseif st.round == 15 then
+    local function output_signals(stop)
+      local found = stop.surface.find_entities_filtered{ name = "utl-station-output",
+        area = { { stop.position.x - 3, stop.position.y - 3 }, { stop.position.x + 3, stop.position.y + 3 } } }[1]
+      if not found then return nil end
+      local section = found.get_control_behavior().get_section(1)
+      local out = {}
+      for _, filter in pairs(section and section.filters or {}) do
+        if filter.value then out[filter.value.name] = filter.min end
+      end
+      return out
+    end
+    if not st.seen.r15_started and tick > st.r15_start + 120 then
+      st.seen.r15_started = true
+      check("R15 ausgabe neben der haltestelle vorhanden", output_signals(st.p) ~= nil)
+      remote.call("utl","set_request", st.r.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+    end
+    local d = st.seen.r15_started and remote.call("utl","get_deliveries")[1]
+    if d and not st.seen["R15 " .. d.state] then
+      st.seen["R15 " .. d.state] = true
+      if d.state == "to_provider" then
+        st.r15_sent = tick -- die Ausgabe schreibt der Heartbeat, also gleich danach prüfen
+      elseif d.state == "loading" then
+        local p = output_signals(st.p)
+        check("R15 zug am bahnsteig: nummer, länge, loks und wagen",
+          p and p["utl-train-id"] == st.train.id and p["utl-train-length"] == 3
+          and p["utl-train-locos"] == 2 and p["utl-train-wagons"] == 1, serpent.line(p))
+        st.wagon.get_inventory(CARGO).insert{ name = "iron-plate", count = 1000 }
+      elseif d.state == "unloading" then
+        remote.call("utl","set_request", st.r.unit_number, 1, nil)
+        st.wagon.get_inventory(CARGO).clear()
+      end
+    end
+    if st.r15_sent and not st.seen.r15_checked and tick > st.r15_sent + 60 then
+      st.seen.r15_checked = true
+      local p, r = output_signals(st.p), output_signals(st.r)
+      check("R15 anbieter zeigt den auftrag positiv", p and p["iron-plate"] == 1000, serpent.line(p))
+      check("R15 abnehmer zeigt den auftrag negativ", r and r["iron-plate"] == -1000, serpent.line(r))
+    end
+    if st.seen["R15 unloading"] and not d and not st.seen.r15_done then
+      st.seen.r15_done = true
+      local p, r = output_signals(st.p), output_signals(st.r)
+      check("R15 nach der lieferung ist die ausgabe leer", p and next(p) == nil and r and next(r) == nil,
+        serpent.line(p) .. " " .. serpent.line(r))
+      -- Runde 16: Zusatznetze. Eigenes Gleis bei x = 121 mit zwei getrennten Netzen „A“ und „B“
+      -- und einem Reserve-Depot (Heimatnetz „R“, Zusatznetze A und B).
+      build_network_test()
+      st.round = 16
+    end
+  elseif st.round == 16 then
     local d = remote.call("utl", "get_deliveries")[1]
     local cargo = st.nwagon.get_inventory(CARGO)
     if d then
@@ -514,10 +614,10 @@ function train_test_step()
       end
       if string.find(to, "UTL-RA", 1, true) and not st.seen.r12_a then
         st.seen.r12_a = true
-        check("R12 reserve-zug bedient netz A", d.train_id == st.ntrain.id, tostring(d.train_id))
+        check("R16 reserve-zug bedient netz A", d.train_id == st.ntrain.id, tostring(d.train_id))
       elseif string.find(to, "UTL-RB", 1, true) and not st.seen.r12_b then
         st.seen.r12_b = true
-        check("R12 derselbe reserve-zug bedient auch netz B", d.train_id == st.ntrain.id, tostring(d.train_id))
+        check("R16 derselbe reserve-zug bedient auch netz B", d.train_id == st.ntrain.id, tostring(d.train_id))
       end
     elseif st.seen.r12_a and not st.seen.r12_next then
       -- Netz A fertig: jetzt Bedarf in Netz B; derselbe Zug muss auch dorthin
@@ -525,21 +625,21 @@ function train_test_step()
       remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
       remote.call("utl", "set_request", st.rb.unit_number, 1, { type = "item", name = "copper-plate" }, 1000)
     elseif st.seen.r12_b and st.ntrain.station == st.nd then
-      check("R12 reserve-zug wieder im eigenen depot", true)
+      check("R16 reserve-zug wieder im eigenen depot", true)
       -- Gegenprobe: ein Depot nur in Netz A darf Netz B nicht bedienen
       remote.call("utl", "configure_station", st.nd.unit_number, { networks = {} })
       remote.call("utl", "set_request", st.rb.unit_number, 1, { type = "item", name = "copper-plate" }, 1000)
-      st.round = 13
+      st.round = 17
       st.wait_until = tick + 1200
     end
-  elseif st.round == 13 then
+  elseif st.round == 17 then
     if tick >= st.wait_until then
-      check("R13 ohne zusatznetz keine lieferung in netz B", remote.call("utl", "delivery_count") == 0,
+      check("R17 ohne zusatznetz keine lieferung in netz B", remote.call("utl", "delivery_count") == 0,
         tostring(remote.call("utl", "delivery_count")))
       st.done = true
     end
   end
-  if not st.done and tick >= 107900 then
+  if not st.done and tick >= 149900 then
     check("zugtest vollständig", false, "runde " .. st.round .. " " .. serpent.line(st.seen) .. " idle=" .. remote.call("utl","idle_train_count") .. " state=" .. st.train.state)
     st.done = true
   end

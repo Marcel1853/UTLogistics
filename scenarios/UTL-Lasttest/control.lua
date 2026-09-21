@@ -8,6 +8,7 @@ local function place(player)
   local surface = game.surfaces["utl-lasttest"]
   if not (surface and storage.start) then return end
   player.teleport(surface.find_non_colliding_position("character", storage.start, 20, 1) or storage.start, surface)
+  player.cheat_mode = true -- zum Ausprobieren: alles verfügbar, sofort bauen
   player.print({ "utl-lasttest.welcome" })
 end
 
@@ -17,8 +18,7 @@ local function setup()
   local surface = game.surfaces["utl-lasttest"]
   local force = game.forces["player"]
   for _, area in ipairs(storage.areas) do force.chart(surface, area) end
-  local tech = force.technologies["utl-train-logistics"]
-  if tech then tech.researched = true end
+  force.research_all_technologies() -- Testnetz: alles erforscht
   for _, player in pairs(game.players) do place(player) end
 end
 

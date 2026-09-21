@@ -33,6 +33,20 @@ local function add_row(grid, cfg, field)
   })
 end
 
+--- Schalterzeile (ja/nein) im selben Raster wie die Zahlen.
+local function add_toggle(grid, cfg, toggle)
+  local tooltip = { "utl-gui.value-" .. toggle.key .. "-tooltip" }
+  grid.add({ type = "empty-widget" })
+  grid.add({ type = "sprite", style = "utl_entry_sprite", sprite = "virtual-signal/" .. toggle.signal, tooltip = tooltip })
+  grid.add({ type = "label", style = "utl_entry_label", caption = { "utl-gui.value-" .. toggle.key }, tooltip = tooltip })
+  grid.add({
+    type = "checkbox",
+    state = cfg[toggle.key] == true,
+    tooltip = tooltip,
+    tags = { utl_action = "toggle", key = toggle.key },
+  })
+end
+
 function Values.build(parent, station)
   local cfg = station.config
   for _, group in ipairs(Fields.groups) do
@@ -45,6 +59,7 @@ function Values.build(parent, station)
       grid.style.cell_padding = 2
       grid.style.column_alignments[1] = "center"
       for _, field in ipairs(group.fields) do add_row(grid, cfg, field) end
+      for _, toggle in ipairs(group.toggles or {}) do add_toggle(grid, cfg, toggle) end
     end
   end
 end
@@ -62,6 +77,13 @@ function Values.reset(cfg, key)
   local field = Fields.by_key[key]
   if not field then return false end
   cfg[key] = Fields.default(field)
+  return true
+end
+
+--- Schalter umlegen. Liefert true bei Änderung.
+function Values.toggle(cfg, key, state)
+  if not Fields.toggles[key] then return false end
+  cfg[key] = state
   return true
 end
 

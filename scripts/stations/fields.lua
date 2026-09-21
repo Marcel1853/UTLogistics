@@ -14,6 +14,9 @@ Fields.groups = {
       { key = "max_train_length", signal = "utl-max-train-length", default = 0, min = 0 },
       { key = "max_trains", signal = "utl-max-trains", default = 0, min = 0 },
     },
+    toggles = {
+      { key = "output", signal = "utl-station-output", setting = "station_output" },
+    },
   },
   {
     name = "provider",
@@ -23,6 +26,10 @@ Fields.groups = {
       { key = "provide_stack_threshold", signal = "utl-provide-stack-threshold", default = 0, min = 0 },
       { key = "provide_priority", signal = "utl-provide-priority", default = 0 },
       { key = "locked_slots", signal = "utl-locked-slots", default = 0, min = 0 },
+    },
+    -- Schalter (ja/nein) unter den Zahlen desselben Abschnitts
+    toggles = {
+      { key = "filter_load", signal = "utl-filter-load", setting = "wagon_filters" },
     },
   },
   {
@@ -44,8 +51,16 @@ Fields.groups = {
 }
 
 Fields.by_key = {}
+Fields.toggles = {}
 for _, group in ipairs(Fields.groups) do
   for _, field in ipairs(group.fields) do Fields.by_key[field.key] = field end
+  for _, toggle in ipairs(group.toggles or {}) do Fields.toggles[toggle.key] = toggle end
+end
+
+--- Standardwert eines Schalters: die Map-Einstellung, solange die Station nichts eigenes sagt.
+function Fields.toggle_default(toggle)
+  local cfg = Config.get()
+  return cfg and cfg[toggle.setting] == true
 end
 
 --- Standardwert eines Feldes (Schwellen kommen aus den Map-Einstellungen).
@@ -65,6 +80,9 @@ end
 function Fields.fill(cfg)
   for key, field in pairs(Fields.by_key) do
     if cfg[key] == nil then cfg[key] = Fields.default(field) end
+  end
+  for key, toggle in pairs(Fields.toggles) do
+    if cfg[key] == nil then cfg[key] = Fields.toggle_default(toggle) end
   end
   cfg.requests = cfg.requests or {}       -- [slot] = { signal = SignalID, count = n }
   cfg.request_map = cfg.request_map or {} -- [key] = Menge (abgeleitet)

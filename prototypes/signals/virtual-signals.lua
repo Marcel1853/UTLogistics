@@ -2,6 +2,12 @@
 -- und können später auch per Schaltung gesetzt werden.
 local ICONS = "__base__/graphics/icons/"
 
+--- Eigene Zeichnung aus graphics/icons/signals (selbst gezeichnet, siehe
+--- tools/make_signal_icons.py).
+local function own(name)
+  return { { icon = "__UTLogistics__/graphics/icons/signals/" .. name .. ".png", icon_size = 64 } }
+end
+
 local function icon(base, overlay)
   return {
     { icon = ICONS .. base, icon_size = 64 },
@@ -17,11 +23,17 @@ local SIGNALS = {
   { "utl-provide-stack-threshold", icon("passive-provider-chest.png", "signal-stack-size.png") },
   { "utl-provide-priority", icon("passive-provider-chest.png", "signal-star.png") },
   { "utl-locked-slots", icon("cargo-wagon.png", "signal-lock.png") },
+  { "utl-filter-load", icon("cargo-wagon.png", "signal-checked-green.png") },
   { "utl-request-threshold", icon("requester-chest.png", "signal-greater-than-or-equal-to.png") },
   { "utl-request-stack-threshold", icon("requester-chest.png", "signal-stack-size.png") },
   { "utl-request-priority", icon("requester-chest.png", "signal-star.png") },
   { "utl-depot-priority", icon("train-stop.png", "signal-star.png") },
   { "utl-network", icon("radar.png", "signal_N.png") },
+  { "utl-station-output", icon("constant-combinator.png", "signal-lightning.png") },
+  { "utl-train-id", own("train-id") },
+  { "utl-train-length", own("train-length") },
+  { "utl-train-locos", own("train-locos") },
+  { "utl-train-wagons", own("train-wagons") },
   { "utl-cleanup-all-items", icon("cargo-wagon.png", "signal_everything.png") },
   { "utl-cleanup-all-fluids", icon("fluid-wagon.png", "signal_everything.png") },
 }
