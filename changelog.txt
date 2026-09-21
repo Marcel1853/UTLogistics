@@ -10,6 +10,7 @@ Date: 2026-09-21
     - New scenario "UTL network links (2 × 2 city blocks)": four networks – "Eisen" as the center of a star with the partners "Kupfer" (no trains of its own) and "Kohle" (own depot), plus "Stein" on its own. Everything researched, cheat mode on.
     - Display panels with short explanations in the tips & tricks scenes and in all three scenarios (in the player's language). The manager scene now shows an example alert.
   Changes:
+    - Tips & tricks, entry "Requests": no longer says one chest per good – a mixed chest works since the wagon filters.
     - Manager hotkey: Ctrl + Alt + U works as a second default key (on Linux, IBus can grab Ctrl + Shift + U).
     - Saves that already researched Unified Train Logistics get the new research automatically.
     - The manager shows links behind the station name, for example [Iron ↔ Copper, Coal] for a center and [Copper → Iron] for a partner.
