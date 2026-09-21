@@ -78,3 +78,21 @@ styles.utl_net_chip = {
   right_padding = 8,
   font = "default-small",
 }
+
+-- Stift neben der Netzwerk-Auswahl: so hoch wie die Auswahlliste.
+styles.utl_net_edit_button = {
+  type = "button_style",
+  parent = "tool_button",
+  size = 28,
+  padding = 2,
+}
+
+-- Knopf „Neu“ neben der Liste „Netz hinzufügen“.
+styles.utl_net_new_button = {
+  type = "button_style",
+  parent = "button",
+  height = 28,
+  minimal_width = 60,
+  left_padding = 8,
+  right_padding = 8,
+}

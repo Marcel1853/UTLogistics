@@ -15,7 +15,7 @@ Fields.groups = {
       { key = "max_trains", signal = "utl-max-trains", default = 0, min = 0 },
     },
     toggles = {
-      { key = "output", signal = "utl-station-output", setting = "station_output" },
+      { key = "output", signal = "utl-station-output", setting = "station_output", research = "utl-loading-control" },
     },
   },
   {
@@ -29,7 +29,7 @@ Fields.groups = {
     },
     -- Schalter (ja/nein) unter den Zahlen desselben Abschnitts
     toggles = {
-      { key = "filter_load", signal = "utl-filter-load", setting = "wagon_filters" },
+      { key = "filter_load", signal = "utl-filter-load", setting = "wagon_filters", research = "utl-loading-control" },
     },
   },
   {

@@ -1,6 +1,8 @@
 --- Remote-Schnittstelle „utl“ für andere Mods, Tests und die Konsole.
 --- Beispiel: /c game.print(serpent.line(remote.call("utl", "get_station", 123)))
 local Registry = require("scripts.stations.registry")
+local Networks = require("scripts.stations.networks")
+local Unlocks = require("scripts.core.unlocks")
 local Reader = require("scripts.stations.reader")
 local Roles = require("scripts.stations.roles")
 local Requests = require("scripts.stations.requests")
@@ -86,6 +88,7 @@ local interface = {
       end
     end
     Roles.derive(cfg)
+    Networks.trim(cfg, Unlocks.networks_limit(Unlocks.force_of(station)))
     Reader.read(station)
     Registry.config_changed(station)
     return true

@@ -14,6 +14,7 @@ local Log = require("scripts.lib.log")
 local Alerts = require("scripts.alerts.alerts")
 local Util = require("scripts.lib.util")
 local Filters = require("scripts.trains.wagon-filters")
+local Unlocks = require("scripts.core.unlocks")
 local Output = require("scripts.stations.output")
 
 local Deliveries = {}
@@ -102,7 +103,9 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop)
   count_train(provider.unit, 1)
   count_train(requester.unit, 1)
   -- Ladefilter: nur die Waren des Auftrags dürfen in die Wagen (Anbieter kann es abschalten).
-  if provider.config.filter_load then Filters.apply(delivery, provider.config.locked_slots) end
+  if provider.config.filter_load and Unlocks.loading(Unlocks.force_of(provider)) then
+    Filters.apply(delivery, provider.config.locked_slots)
+  end
   Heartbeat.update_registration()
   Log.debug("Lieferung " .. id .. " mit Zug " .. train.id .. ": " .. serpent.line(manifest))
   return delivery

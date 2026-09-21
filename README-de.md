@@ -7,7 +7,9 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 
 - Benötigt: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age ist optional.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
-  Schienenverkehr“ und „Schaltungsnetze“).
+  Schienenverkehr“ und „Schaltungsnetze“). Ausbaustufen: **„UTL: Ladesteuerung“** (Wagenfilter und
+  Auftrags-Ausgabe) und **„UTL: Zusatznetze I–III“** (1, 2 oder 3 Zusatznetze je Station). Mit der
+  Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
 > **Junger Mod, bisher klein getestet.** UTL läuft durch einen automatischen Selbsttest
 > (74 Prüfungen) und einen headless-Lasttest, und die neuen Ladefunktionen werden im
@@ -122,6 +124,8 @@ Tankstelle und eigenes Cleanup**. Wer nur ein großes Netz will, lässt das Feld
 
 ### Zusatznetze
 
+*Braucht Forschung: „UTL: Zusatznetze I“, II und III erlauben 1, 2 und 3 Zusatznetze je Station.*
+
 Neben ihrem Heimatnetz kann eine Station in **weiteren Netzwerken** mitarbeiten. Im Stationsfenster
 wählst du das Heimatnetz aus einer Liste aller Netze der Karte (mit ✎ benennst du es um oder trägst
 ein neues ein); darunter fügt „Netz hinzufügen …“ ein weiteres hinzu. Jedes Zusatznetz steht als
@@ -150,6 +154,32 @@ ihrem Heimatnetz steht oder nur als Zusatznetz mitarbeitet.
 - Tankstelle im falschen Netzwerk → knappe Züge fahren nicht los (siehe *Tanken*).
 - Ein Tippfehler oder ein großer Buchstabe ist ein anderes Netzwerk: `Erze` und `erze` gehören
   nicht zusammen.
+
+## Gemischte Anbieter
+
+*Braucht die Forschung „UTL: Ladesteuerung“.*
+
+Ein Anbieter darf mehrere Waren in **einer** Kiste haben. UTL sorgt dafür, dass ein Zug nur das
+mitnimmt, was sein Auftrag verlangt – auf zwei Wegen, die zusammenspielen:
+
+**1. Wagenfilter (ohne Kabel).** Während einer Lieferung stellt UTL die Slots der Güterwagen auf
+die Waren des Auftrags und sperrt den Rest. Ein gewöhnlicher Greifarm an einer gemischten Kiste
+lädt dann nur das Bestellte, alles andere passt schlicht nicht hinein. Abschaltbar je Station
+(„Nur den Auftrag laden“ im Reiter *Werte*) oder für die ganze Karte (Map-Einstellungen). Wagen,
+an denen **du** selbst Filter gesetzt hast, fasst UTL nie an.
+
+**2. Der Auftrag als Schaltsignal.** Neben jeder Haltestelle steht eine kleine
+**Auftrags-Ausgabe**. Dort liegen die laufenden Aufträge als Signale an: Waren, die hier geladen
+werden sollen, **positiv**; Waren, die hier ankommen, **negativ**. Solange ein Lieferzug am
+Bahnsteig steht, kommen vier Signale dazu: **Zug-Nummer**, **Zuglänge** (Teile), **Loks** und
+**Wagen im Zug**. Damit schaltest du
+Filter-Greifarme, Anzeigen – und Pumpen: Für Flüssigkeiten gibt es keine Slot-Filter, so öffnest
+du bei einem Anbieter mit mehreren Tanks die richtige Pumpe. Überschüssige Flüssigkeit ablassen
+bleibt deine Sache.
+
+Die Ausgabe setzt und entfernt UTL zusammen mit der Station; sie ist nicht baubar und nicht
+abbaubar. Kabele sie nicht an den Eingang der Station – der Auftrag liefe sonst als Bestand
+zurück.
 
 ## Wie die Züge fahren
 
@@ -270,6 +300,7 @@ Start-Einstellungen.
 | Neue Lieferungen pro Durchlauf | 2 | Höchstens so viele Züge pro Dispatcher-Durchlauf (alle 3 Takte, also bis zu 4 pro Sekunde). |
 | Nur den Auftrag laden | an | Wagenfilter während einer Lieferung. Je Station abschaltbar. |
 | Auftrags-Ausgabe an der Haltestelle | an | Der kleine Ausgang neben jeder Haltestelle. Aus: Er verschwindet. |
+| UTL-Funktionen brauchen Forschung | an | Ladesteuerung und Zusatznetze erst nach der Forschung. Aus: alles sofort frei. Alte Spielstände mit erforschtem UTL bekommen die neuen Forschungen automatisch. |
 | Tanken unter (%) | 40 | Tankgrenze, 0 = aus. |
 | Warnung „kein Zug“ nach (Minuten) | 5 | So lange darf eine Anfrage unbedient sein, bevor gewarnt wird. 0 = sofort. |
 | Standard-Angebots-/Bedarfs-Schwelle | 1000 | Startwerte für neue Stationen. |

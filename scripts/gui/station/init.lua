@@ -11,6 +11,7 @@ local RequestsSection = require("scripts.gui.station.section-requests")
 local CleanupSection = require("scripts.gui.station.section-cleanup")
 local Networks = require("scripts.stations.networks")
 local Nets = require("scripts.gui.station.section-networks")
+local Unlocks = require("scripts.core.unlocks")
 
 local function tags_of(element)
   if not (element and element.valid) then return nil end
@@ -66,16 +67,19 @@ Events.on(defines.events.on_gui_closed, function(event)
   end
 end)
 
+--- Darf diese Station noch ein Zusatznetz bekommen (Forschung)?
+local function can_add(station)
+  return Networks.extra_count(station.config) < Unlocks.networks_limit(Unlocks.force_of(station))
+end
+
 --- Eingegebenen Netznamen übernehmen: entweder als Heimatnetz oder als neues Zusatznetz.
-local function apply_network_name(event, gui, station)
+local function apply_network_name(event, gui, station, target)
   local refs = gui.main.net
-  local field = refs.field
-  local target = field.tags.target
-  local name = field.text
-  Nets.stop_edit(refs)
+  local name = Nets.edit_text(refs, target)
+  Nets.stop_edit(refs, target)
   if target == "home" then
     Nets.apply_home(station.config, name)
-  elseif not Networks.toggle(station.config, name ~= "" and name or nil) then
+  elseif not can_add(station) or not Networks.toggle(station.config, name ~= "" and name or nil) then
     return
   end
   Networks.invalidate()
@@ -110,10 +114,12 @@ Events.on(defines.events.on_gui_click, function(event)
     end
   elseif action == "network_rename" then
     Nets.start_edit(gui.main.net, "home", cfg.network)
+  elseif action == "network_new" then
+    Nets.start_edit(gui.main.net, "extra", "")
   elseif action == "network_confirm" then
-    apply_network_name(event, gui, station)
+    apply_network_name(event, gui, station, tags.target)
   elseif action == "network_cancel" then
-    Nets.stop_edit(gui.main.net)
+    Nets.stop_edit(gui.main.net, tags.target)
   end
 end)
 
@@ -156,12 +162,9 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
     end
   elseif action == "network_add_pick" then
     local index = element.selected_index
-    if index == #element.items then -- letzter Eintrag: „Neu …“
-      element.selected_index = 1
-      Nets.start_edit(gui.main.net, "extra", "")
-    elseif index > 1 then
+    if index > 0 then
       local name = element.get_item(index)
-      if type(name) == "string" and Networks.toggle(station.config, name) then
+      if type(name) == "string" and can_add(station) and Networks.toggle(station.config, name) then
         Networks.invalidate()
         changed(event, station, true)
       end
@@ -189,7 +192,7 @@ Events.on(defines.events.on_gui_confirmed, function(event)
   elseif action == "value" then
     changed(event, station, true) -- Reset-Knöpfe an/aus neu setzen
   elseif action == "network_name" then
-    apply_network_name(event, gui, station)
+    apply_network_name(event, gui, station, tags.target)
   end
 end)
 

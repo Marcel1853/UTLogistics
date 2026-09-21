@@ -49,6 +49,13 @@ data:extend({
     order = "a-f",
   },
   {
+    type = "bool-setting",
+    name = "utl-research-required",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "a-g",
+  },
+  {
     type = "int-setting",
     name = "utl-fuel-threshold",
     setting_type = "runtime-global",

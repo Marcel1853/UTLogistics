@@ -12,6 +12,7 @@ function Config.refresh()
     chaining = s["utl-chaining"].value,
     wagon_filters = s["utl-wagon-filters"].value,
     station_output = s["utl-station-output"].value,
+    research_required = s["utl-research-required"].value,
     alert_no_train_minutes = s["utl-alert-no-train-minutes"].value,
     default_provide_threshold = s["utl-default-provide-threshold"].value,
     default_request_threshold = s["utl-default-request-threshold"].value,

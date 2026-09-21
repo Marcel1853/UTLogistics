@@ -7,7 +7,9 @@ cleanup and an overview window in one mod**, built for high UPS.
 
 - Requires: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age is optional.
 - Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
-  circuit network).
+  circuit network). Upgrades: **“UTL: Loading control”** (wagon filters and job output) and
+  **“UTL: Additional networks I–III”** (1, 2 or 3 additional networks per station). The map
+  setting “UTL features need research” turns this off – then everything is available right away.
 
 > **Young mod, tested small.** UTL runs through an automated self test (74 checks) and a headless
 > load test, and the new loading features are shown in the example scenario. In real games it has
@@ -87,6 +89,8 @@ stations**. Leave the field empty everywhere if you just want one big network.
 
 ### Additional networks
 
+*Needs research: “UTL: Additional networks I”, II and III allow 1, 2 and 3 additional networks per station.*
+
 Besides its home network a station can take part in **further networks**. In the station window
 the home network is picked from a drop-down listing every network on the map (✎ renames it or
 types a new one); below it, "Add network …" adds another one, and each additional network appears
@@ -114,6 +118,29 @@ with its home network or only as an additional one.
 - Depot in the wrong network → alert "no free train in network …", although trains are waiting.
 - Fuel station in the wrong network → low trains are not sent (see *Refueling*).
 - A typo or a capital letter is a different network: `Ore` and `ore` do not work together.
+
+## Mixed providers
+
+*Needs research: “UTL: Loading control”.*
+
+A provider may keep several goods in **one** chest. UTL makes sure a train only takes what its
+job asks for – in two ways that work together:
+
+**1. Wagon filters (no wiring).** While a delivery runs, UTL sets the cargo wagon slots to the
+goods of that job and locks the remaining slots. A plain inserter pulling from a mixed chest
+then loads only the ordered item; everything else simply does not fit. Switch it off per station
+("Load only the current job" in the Values tab) or for the whole map (map settings). Wagons where
+**you** set filters yourself are never touched.
+
+**2. The job as circuit signals.** Next to every train stop sits a small **job output**. It
+carries the running jobs as signals: goods to be loaded here are **positive**, goods arriving
+here are **negative**. While a delivery train stands at the stop, four more signals are added:
+**train number**, **train length** (carriages), **locomotives** and **wagons in the train**. Wire it to filter inserters, to displays – and to pumps: for fluids there
+are no slot filters, so this is how you open the right pump at a provider with several tanks.
+Draining leftover fluid stays your job.
+
+The output is placed and removed by UTL together with the station; it cannot be built or mined.
+Do not wire it to the station's input – that would feed the job back in as stock.
 
 ## How trains run
 
@@ -184,7 +211,7 @@ other mods – get their own crafting tab (startup setting).
 
 Heartbeat (10 ticks), stations per heartbeat (20), new deliveries per cycle (2), next job right
 away (on), **load only the current job** (on, wagon filters), **job output at the train stop**
-(on), refuel below (40 %), “no train” alert after (5 minutes), default supply/demand threshold
+(on), **UTL features need research** (on), refuel below (40 %), “no train” alert after (5 minutes), default supply/demand threshold
 (1000), debug log (off).
 
 ## Performance

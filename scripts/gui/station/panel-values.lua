@@ -2,6 +2,7 @@
 --- „Depot“. Jede Zeile: Reset-Knopf | Symbol | Beschriftung | … | Zahlenfeld.
 local Fields = require("scripts.stations.fields")
 local Util = require("scripts.lib.util")
+local Unlocks = require("scripts.core.unlocks")
 
 local Values = {}
 
@@ -34,14 +35,17 @@ local function add_row(grid, cfg, field)
 end
 
 --- Schalterzeile (ja/nein) im selben Raster wie die Zahlen.
-local function add_toggle(grid, cfg, toggle)
-  local tooltip = { "utl-gui.value-" .. toggle.key .. "-tooltip" }
+local function add_toggle(grid, cfg, toggle, force)
+  local locked = toggle.research and not Unlocks.loading(force)
+  local tooltip = locked and { "utl-gui.research-needed", { "technology-name." .. toggle.research } }
+    or { "utl-gui.value-" .. toggle.key .. "-tooltip" }
   grid.add({ type = "empty-widget" })
   grid.add({ type = "sprite", style = "utl_entry_sprite", sprite = "virtual-signal/" .. toggle.signal, tooltip = tooltip })
   grid.add({ type = "label", style = "utl_entry_label", caption = { "utl-gui.value-" .. toggle.key }, tooltip = tooltip })
   grid.add({
     type = "checkbox",
-    state = cfg[toggle.key] == true,
+    state = cfg[toggle.key] == true and not locked,
+    enabled = not locked,
     tooltip = tooltip,
     tags = { utl_action = "toggle", key = toggle.key },
   })
@@ -59,7 +63,7 @@ function Values.build(parent, station)
       grid.style.cell_padding = 2
       grid.style.column_alignments[1] = "center"
       for _, field in ipairs(group.fields) do add_row(grid, cfg, field) end
-      for _, toggle in ipairs(group.toggles or {}) do add_toggle(grid, cfg, toggle) end
+      for _, toggle in ipairs(group.toggles or {}) do add_toggle(grid, cfg, toggle, Unlocks.force_of(station)) end
     end
   end
 end

@@ -7,6 +7,8 @@ local Reader = require("scripts.stations.reader")
 local Paste = require("scripts.stations.settings-paste") -- vor dem GUI-Handler anmelden
 local Blueprint = require("scripts.stations.blueprint")
 local Output = require("scripts.stations.output")
+local Unlocks = require("scripts.core.unlocks")
+local Config = require("scripts.core.config")
 
 -- UTL-Haltestelle ist ebenfalls vom Typ train-stop, der Typ-Filter deckt sie mit ab.
 local build_filter = {
@@ -45,6 +47,28 @@ Heartbeat.add_task("station-output", 1, Output.step)
 -- Auftrags-Ausgabe: anlegen, wenn eine Station eine Haltestelle bekommt, und mit ihr verschwinden.
 Registry.on_config_changed(Output.refresh)
 Registry.on_lost(Output.destroy)
+
+--- Ausgaben neu anlegen bzw. entfernen – für eine Force (Forschung) oder alle (Einstellung).
+local function refresh_outputs(force)
+  for _, station in pairs(storage.stations.by_unit) do
+    if not force or Unlocks.force_of(station) == force then Output.refresh(station) end
+  end
+end
+
+-- Forschung „Ladesteuerung“ fertig oder zurückgenommen: Ausgaben dieser Force anpassen.
+local function on_research(event)
+  local tech = event.research
+  if tech and tech.name == Unlocks.LOADING_TECH then refresh_outputs(tech.force) end
+end
+Events.on(defines.events.on_research_finished, on_research)
+Events.on(defines.events.on_research_reversed, on_research)
+
+-- Map-Einstellung „UTL-Funktionen brauchen Forschung“ umgestellt.
+Events.on(defines.events.on_runtime_mod_setting_changed, function(event)
+  if event.setting ~= "utl-research-required" then return end
+  Config.refresh() -- die Reihenfolge der Handler ist nicht festgelegt
+  refresh_outputs(nil)
+end)
 
 -- Nach Mod-Updates fehlende Stationswerte ergänzen (neue Felder bekommen ihren Standard).
 local Fields = require("scripts.stations.fields")

@@ -50,6 +50,22 @@ function Networks.toggle(cfg, name)
   return true
 end
 
+--- Wie viele Zusatznetze hat die Station?
+function Networks.extra_count(cfg)
+  return #Networks.list(cfg) - 1
+end
+
+--- Zusatznetze auf `limit` kürzen (die ersten in alphabetischer Reihenfolge bleiben). Für
+--- Blaupausen, eingefügte Einstellungen und die Remote-Schnittstelle. Liefert true bei Änderung.
+function Networks.trim(cfg, limit)
+  local list = Networks.list(cfg)
+  if #list - 1 <= limit then return false end
+  local keep = {}
+  for i = 2, limit + 1 do keep[list[i]] = true end
+  cfg.networks = keep
+  return true
+end
+
 -- Alle im Spielstand vorhandenen Netznamen; nur ein Lua-Zwischenspeicher, aus storage abgeleitet.
 local known = nil
 

@@ -50,6 +50,23 @@ script.on_nth_tick(10, function(e)
     st.uchest.insert{name="coal", count=500}
     st.uchest.get_wire_connector(W.circuit_red, true).connect_to(st.ustop.get_wire_connector(W.circuit_red, true))
     remote.call("utl","configure_station", st.ustop.unit_number, {mode="station", provide=true, request=false, provide_threshold=100})
+    -- Forschung: ohne „Zusatznetze I“ keine Zusatznetze, mit Stufe I genau eins.
+    local function extra_count()
+      local info = station_info(st.ustop.unit_number)
+      local n = 0
+      for _ in pairs(info and info.config.networks or {}) do n = n + 1 end
+      return n
+    end
+    remote.call("utl","configure_station", st.ustop.unit_number, {networks = {A = true, B = true}})
+    check("forschung: ohne zusatznetze-forschung kein zusatznetz", extra_count() == 0, tostring(extra_count()))
+    force.technologies["utl-networks-1"].researched = true
+    remote.call("utl","configure_station", st.ustop.unit_number, {networks = {A = true, B = true}})
+    check("forschung: stufe I erlaubt genau ein zusatznetz", extra_count() == 1, tostring(extra_count()))
+    remote.call("utl","configure_station", st.ustop.unit_number, {networks = {}})
+    -- Für die übrigen Runden alles freischalten (Ladesteuerung, Zusatznetze II/III).
+    for _, name in ipairs({ "utl-train-logistics", "utl-loading-control", "utl-networks-2", "utl-networks-3" }) do
+      force.technologies[name].researched = true
+    end
     check("station_count == 2", remote.call("utl","station_count") == 2, tostring(remote.call("utl","station_count")))
     remote.call("utl","configure_station", st.comb.unit_number, {mode="station", provide=true, request=true})
   elseif e.tick == 190 then

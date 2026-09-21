@@ -11,6 +11,7 @@ local C = require("scripts.core.constants")
 local Config = require("scripts.core.config")
 local Registry = require("scripts.stations.registry")
 local Util = require("scripts.lib.util")
+local Unlocks = require("scripts.core.unlocks")
 
 local Output = {}
 
@@ -133,7 +134,7 @@ function Output.step()
   for unit in pairs(dirty) do
     dirty[unit] = nil
     local station = Registry.get(unit)
-    if station then Output.write(station) end
+    if station and Unlocks.loading(Unlocks.force_of(station)) then Output.write(station) end
     done = done + 1
     if done >= PER_TICK then return end
   end
@@ -141,7 +142,7 @@ end
 
 --- Einstellung geändert oder Haltestelle neu verbunden: Ausgabe anlegen bzw. entfernen.
 function Output.refresh(station)
-  if station.config.output and Config.get().station_output then
+  if station.config.output and Config.get().station_output and Unlocks.loading(Unlocks.force_of(station)) then
     Output.write(station)
   else
     Output.destroy(station)
