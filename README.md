@@ -183,8 +183,10 @@ other mods – get their own crafting tab (startup setting).
 
 ## Map settings
 
-Heartbeat (10 ticks), stations per heartbeat (20), new deliveries per cycle (2), refuel below
-(40 %), “no train” alert after (5 minutes), default supply/demand threshold (1000), debug log (off).
+Heartbeat (10 ticks), stations per heartbeat (20), new deliveries per cycle (2), next job right
+away (on), **load only the current job** (on, wagon filters), **job output at the train stop**
+(on), refuel below (40 %), “no train” alert after (5 minutes), default supply/demand threshold
+(1000), debug log (off).
 
 ## Performance
 
@@ -253,7 +255,8 @@ the manager.
 
 ## Not yet included
 
-Loading/unloading timeouts.
+Loading/unloading timeouts. Topping up a delivery that is already being loaded (the load list is
+fixed when the train is sent), and collecting from a second provider on the way.
 
 **Surfaces (Space Age):** every surface is handled on its own. UTL only matches stations, depots,
 fuel and cleanup stations **on the same surface**, so Nauvis and Vulcanus each need their own
@@ -540,6 +543,8 @@ Start-Einstellungen.
 | Takt (Ticks) | 10 | Alle wie viele Ticks UTL arbeitet. Höher = weniger CPU. |
 | Stationen pro Takt | 20 | So viele Stationen werden pro Takt gelesen, alle kommen reihum dran. |
 | Neue Lieferungen pro Durchlauf | 2 | Höchstens so viele Züge pro Dispatcher-Durchlauf (alle 3 Takte, also bis zu 4 pro Sekunde). |
+| Nur den Auftrag laden | an | Wagenfilter während einer Lieferung. Je Station abschaltbar. |
+| Auftrags-Ausgabe an der Haltestelle | an | Der kleine Ausgang neben jeder Haltestelle. Aus: Er verschwindet. |
 | Tanken unter (%) | 40 | Tankgrenze, 0 = aus. |
 | Warnung „kein Zug“ nach (Minuten) | 5 | So lange darf eine Anfrage unbedient sein, bevor gewarnt wird. 0 = sofort. |
 | Standard-Angebots-/Bedarfs-Schwelle | 1000 | Startwerte für neue Stationen. |
@@ -623,7 +628,8 @@ Depots, Einstellungen kopieren/Blaupausen und Manager.
 
 ## Noch nicht enthalten
 
-Zeitlimits beim Laden/Entladen.
+Zeitlimits beim Laden/Entladen. Nachladen, während der Zug schon am Anbieter steht (die Ladeliste
+steht beim Losschicken fest), und Einsammeln bei einem zweiten Anbieter auf dem Weg.
 
 **Oberflächen (Space Age):** Jede Oberfläche arbeitet für sich. UTL bringt nur Stationen, Depots,
 Tankstellen und Cleanups **derselben Oberfläche** zusammen. Auf Nauvis und auf Vulcanus brauchst
