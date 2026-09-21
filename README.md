@@ -9,6 +9,12 @@ cleanup and an overview window in one mod**, built for high UPS.
 - Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
   circuit network).
 
+> **Young mod, tested small.** UTL runs through an automated self test (74 checks) and a headless
+> load test, and the new loading features are shown in the example scenario. In real games it has
+> so far only been played on small networks. If something goes wrong, please report it in the
+> [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save and
+> what you did. Keep a backup of your save before adding it to a long-running base.
+
 ## Quick start
 
 1. **Depot:** place a **UTL train stop**, open it, tick **Depot**.
@@ -103,7 +109,8 @@ then loads only the ordered item; everything else simply does not fit. Switch it
 
 **2. The job as circuit signals.** Next to every train stop sits a small **job output**. It
 carries the running jobs as signals: goods to be loaded here are **positive**, goods arriving
-here are **negative**. Wire it to filter inserters, to displays – and to pumps: for fluids there
+here are **negative**. While a delivery train stands at the stop, four more signals are added:
+**train number**, **train length** (carriages), **locomotives** and **wagons in the train**. Wire it to filter inserters, to displays – and to pumps: for fluids there
 are no slot filters, so this is how you open the right pump at a provider with several tanks.
 Draining leftover fluid stays your job.
 
@@ -200,9 +207,11 @@ UPS of a whole megabase.
 
 **New game → Scenarios → UTL examples (mixed provider)**: a small practice network on Marcel's
 ring with sidings. One provider keeps iron plates, copper plates and gears in **one** chest with a
-single plain inserter – only the ordered item is loaded. One requester needs iron **and** copper
-and gets both in one trip. A fluid provider has two tanks whose pumps are switched by the **job
-output**, so only the ordered fluid flows. Two trains, no measuring – made for trying things out.
+provider keeps iron plates, copper plates and gears in three chests with three inserters, and
+the job output enables only the one whose good is ordered. One requester needs iron **and**
+copper and gets both in one trip. A fluid provider has two tanks,
+oil and water have their own requesters, and the pumps are switched by the **job output**. Two
+depots in a row, a fuel station and a cleanup. Two trains, no measuring – made for trying out.
 
 ## Load test scenario
 
@@ -268,6 +277,14 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 - Benötigt: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age ist optional.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
   Schienenverkehr“ und „Schaltungsnetze“).
+
+> **Junger Mod, bisher klein getestet.** UTL läuft durch einen automatischen Selbsttest
+> (74 Prüfungen) und einen headless-Lasttest, und die neuen Ladefunktionen werden im
+> Beispiel-Szenario vorgeführt. Im echten Spiel ist er bisher nur in kleinen Netzen gelaufen.
+> Wenn etwas schiefgeht: bitte in der
+> [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion) melden, am besten mit
+> Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem gewachsenen Spielstand
+> vorher sichern.
 
 ---
 
@@ -398,7 +415,9 @@ an denen **du** selbst Filter gesetzt hast, fasst UTL nie an.
 
 **2. Der Auftrag als Schaltsignal.** Neben jeder Haltestelle steht eine kleine
 **Auftrags-Ausgabe**. Dort liegen die laufenden Aufträge als Signale an: Waren, die hier geladen
-werden sollen, **positiv**; Waren, die hier ankommen, **negativ**. Damit schaltest du
+werden sollen, **positiv**; Waren, die hier ankommen, **negativ**. Solange ein Lieferzug am
+Bahnsteig steht, kommen vier Signale dazu: **Zug-Nummer**, **Zuglänge** (Teile), **Loks** und
+**Wagen im Zug**. Damit schaltest du
 Filter-Greifarme, Anzeigen – und Pumpen: Für Flüssigkeiten gibt es keine Slot-Filter, so öffnest
 du bei einem Anbieter mit mehreren Tanks die richtige Pumpe. Überschüssige Flüssigkeit ablassen
 bleibt deine Sache.
@@ -548,10 +567,11 @@ also, was UTL und die Züge selbst brauchen, nicht die UPS einer ganzen Megabase
 
 **Neues Spiel → Szenarien → UTL-Beispiele (gemischter Anbieter)**: ein kleines Übungsnetz auf
 Marcels Rundkurs mit Ausbuchtungen. Ein Anbieter hat Eisenplatten, Kupferplatten und Zahnräder in
-**einer** Kiste an **einem** gewöhnlichen Greifarm – geladen wird trotzdem nur die bestellte Ware.
-Eine Werkstatt braucht Eisen **und** Kupfer und bekommt beides in **einer** Fahrt. Ein
-Flüssigkeits-Anbieter hat zwei Tanks, deren Pumpen über die **Auftrags-Ausgabe** geschaltet werden,
-es fließt also nur die bestellte Flüssigkeit. Zwei Züge, keine Messung – zum Anschauen.
+drei Kisten mit drei Greifarmen, von denen die Auftrags-Ausgabe immer nur den freigibt, dessen
+Ware gerade bestellt ist. Eine Werkstatt braucht Eisen **und** Kupfer und bekommt beides in
+**einer** Fahrt. Beim Flüssigkeits-Anbieter stehen zwei Tanks, Öl und Wasser haben eigene Abnehmer, und die
+Pumpen schaltet die **Auftrags-Ausgabe**. Dazu zwei Depots hintereinander, Tankstelle und Cleanup.
+Zwei Züge, keine Messung – zum Anschauen.
 
 ## Lasttest-Szenario
 

@@ -532,6 +532,10 @@ function train_test_step()
       if d.state == "to_provider" then
         st.r15_sent = tick -- die Ausgabe schreibt der Heartbeat, also gleich danach prüfen
       elseif d.state == "loading" then
+        local p = output_signals(st.p)
+        check("R15 zug am bahnsteig: nummer, länge, loks und wagen",
+          p and p["utl-train-id"] == st.train.id and p["utl-train-length"] == 3
+          and p["utl-train-locos"] == 2 and p["utl-train-wagons"] == 1, serpent.line(p))
         st.wagon.get_inventory(CARGO).insert{ name = "iron-plate", count = 1000 }
       elseif d.state == "unloading" then
         remote.call("utl","set_request", st.r.unit_number, 1, nil)

@@ -2,9 +2,11 @@
 Version: 0.0.3
 Date: 2026-09-20
   Features:
-    - New scenario "UTL examples (mixed provider)": a small ring where one chest with three goods and a single inserter serve three stations, and two pumps are switched by the job output.
+    - New scenario "UTL examples (mixed provider)": a ring with ten stations – a provider with three chests and three inserters where the job output enables only the right one, a workshop that gets two goods in one trip, oil and water requesters with switched pumps, plus two depots, a fuel station and a cleanup. Everything researched, cheat mode on.
     - Mixed providers: while a delivery runs, UTL filters the cargo wagon slots to the goods of that job and locks the rest, so one chest with several goods and plain inserters are enough. Can be switched off per station or for the whole map, and wagons you filtered yourself are left alone.
-    - Job output: a small output next to every train stop carries the running jobs as circuit signals – positive for goods to load here, negative for goods arriving here. Use it for filter inserters, displays and, for fluids, to open the right pump.
+    - Job output: a small output next to every train stop carries the running jobs as circuit signals – positive for goods to load here, negative for goods arriving here, plus train number, train length, locomotive and wagon count while a delivery train stands there. Use it for filter inserters, displays and, for fluids, to open the right pump.
+  Changes:
+    - Note: this version is tested by the automated self test, a headless load test and the example scenario, but has only been played on small networks so far. Please report problems in the mod portal discussion.
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.2
 Date: 2026-09-20

@@ -49,6 +49,8 @@ function State.init()
   deliveries.incoming = deliveries.incoming or {} -- [station] = { [key] = Menge unterwegs }
   deliveries.trains_at = deliveries.trains_at or {} -- [station] = Züge auf dem Weg dorthin
   deliveries.output_dirty = deliveries.output_dirty or {} -- [station] = Auftrags-Ausgabe neu schreiben
+  -- [station] = { id, length, wagons }: Zug, der gerade an dieser Station steht (für die Ausgabe)
+  deliveries.at_station = deliveries.at_station or {}
   storage.deliveries = deliveries
 
   -- Dispatcher: Anbieter-Index pro Ware und Menge der Abnehmer.

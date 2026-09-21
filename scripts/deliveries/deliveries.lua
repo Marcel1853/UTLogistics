@@ -135,6 +135,14 @@ end
 local function remove(delivery, canceled)
   record_history(delivery, canceled)
   Filters.clear(delivery)
+  -- Abbruch mitten im Laden: den Zug auch aus der Ausgabe nehmen.
+  local at = storage.deliveries.at_station
+  for _, unit in ipairs({ delivery.provider, delivery.requester }) do
+    if at[unit] and at[unit].id == delivery.train_id then
+      at[unit] = nil
+      Output.mark(unit)
+    end
+  end
   local deliveries = storage.deliveries
   release_provider(delivery)
   for key, amount in pairs(delivery.manifest) do add(deliveries.incoming, delivery.requester, key, -amount) end
@@ -156,14 +164,33 @@ local function stop_unit_of(unit)
   return station and station.stop_unit
 end
 
+--- Zug an einer Station vermerken (für die Auftrags-Ausgabe) bzw. wieder löschen.
+local function train_at(unit, train)
+  local at = storage.deliveries.at_station
+  if train and train.valid then
+    local wagons = #train.cargo_wagons + #train.fluid_wagons
+    at[unit] = {
+      id = train.id,
+      length = #train.carriages,
+      locos = #train.locomotives.front_movers + #train.locomotives.back_movers,
+      wagons = wagons,
+    }
+  else
+    at[unit] = nil
+  end
+  Output.mark(unit)
+end
+
 --- Zug wartet an einer Haltestelle.
 function Deliveries.on_arrive(delivery, stop)
   local unit = stop.unit_number
   if delivery.state == "to_provider" and unit == stop_unit_of(delivery.provider) then
     delivery.state = "loading"
     Filters.repair(delivery) -- Slots, die beim Losschicken noch belegt waren
+    train_at(delivery.provider, delivery.train)
   elseif delivery.state == "to_requester" and unit == stop_unit_of(delivery.requester) then
     delivery.state = "unloading"
+    train_at(delivery.requester, delivery.train)
   end
 end
 
@@ -172,6 +199,7 @@ end
 function Deliveries.on_depart(delivery)
   if delivery.state == "loading" then
     delivery.state = "to_requester"
+    train_at(delivery.provider, nil)
     release_provider(delivery)
     reread(delivery.provider)
     -- Weniger geladen als bestellt (Wartebedingung von Hand/Interrupt beendet)?
@@ -190,6 +218,7 @@ function Deliveries.on_depart(delivery)
       end
     end
   elseif delivery.state == "unloading" then
+    train_at(delivery.requester, nil)
     remove(delivery)
     reread(delivery.requester)
     Log.debug("Lieferung " .. delivery.id .. " fertig")
