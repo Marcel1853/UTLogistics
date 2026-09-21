@@ -33,6 +33,10 @@ local function upgrade(name, icon, prerequisites, count, packs, effect)
     type = "technology",
     name = name,
     icons = { { icon = icon, icon_size = 256, tint = C.tint } },
+    -- Endet der Name auf „-<Zahl>“, sucht Factorio sonst die Übersetzung ohne die Zahl
+    -- (technology-name.utl-networks) – deshalb die Texte ausdrücklich setzen.
+    localised_name = { "technology-name." .. name },
+    localised_description = { "technology-description." .. name },
     effects = { { type = "nothing", effect_description = effect } },
     prerequisites = prerequisites,
     unit = { count = count, ingredients = ingredients, time = 30 },

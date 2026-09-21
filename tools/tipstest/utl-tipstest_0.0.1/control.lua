@@ -8,6 +8,8 @@ script.on_nth_tick(30, function(e)
     game.surfaces[1].request_to_generate_chunks({ 0, 0 }, 3)
     game.surfaces[1].force_generate_chunk_requests()
     assert(load(code[scene]))()
+    log(("[TIPS] %s Anzeigefelder %d, Texte %d"):format(scene,
+      game.surfaces[1].count_entities_filtered({ name = "display-panel" }), #rendering.get_all_objects()))
     return
   end
   for _, d in pairs(remote.call("utl", "get_deliveries")) do

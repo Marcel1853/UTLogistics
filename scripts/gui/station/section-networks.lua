@@ -1,7 +1,7 @@
 --- Abschnitt „Netzwerk“ im linken Kasten (Vorbild LTN Combinator, aber mit Namen statt Zahlen):
---- oben das Heimatnetz als Auswahlliste mit Umbenennen-Knopf, darunter nur die Zusatznetze, die an
---- dieser Station wirklich an sind. Die Höhe hängt damit nicht daran, wie viele Netze es auf der
---- Karte gibt.
+--- oben das Heimatnetz als Auswahlliste mit Umbenennen-Knopf, darunter der Kasten „Verbunden mit“.
+--- Verbindungen gelten für das ganze Netz auf dieser Oberfläche (Stern, siehe
+--- scripts/stations/networks.lua), nicht nur für diese Station.
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
 
@@ -9,39 +9,39 @@ local Nets = {}
 
 local DEFAULT_NETWORK = "default"
 
---- Netze, die diese Station noch nicht hat (für die Liste „Netz hinzufügen“).
-local function available(cfg)
+--- Netze, die sich mit dem Heimatnetz verbinden lassen (frei, nicht schon in einem Stern).
+local function candidates(surface, home, limit)
   local list = {}
-  local extra = cfg.networks or {}
   for _, name in ipairs(Networks.known()) do
-    if name ~= cfg.network and not extra[name] then list[#list + 1] = name end
+    if name ~= home and Networks.can_link(surface, home, name, math.max(limit, 1)) == true then
+      list[#list + 1] = name
+    end
   end
   return list
 end
 
---- Zusatznetze als Knöpfe; ein Klick nimmt das Netz wieder heraus.
-function Nets.fill_chips(chips, cfg)
+--- Verbundene Netze als Knöpfe; ein Klick löst die Verbindung. Ist das Heimatnetz selbst Partner,
+--- steht hier sein Zentrum.
+function Nets.fill_chips(chips, star)
   chips.clear()
-  local list = Networks.list(cfg)
-  chips.visible = #list > 1 -- ohne Zusatznetze keine leere Zeile
-  for i = 2, #list do
-    local name = list[i]
+  local names = star.role == "partner" and { star.center } or star.partners
+  chips.visible = #names > 0 -- ohne Verbindungen keine leere Zeile
+  for _, name in ipairs(names) do
+    local center = star.role == "partner"
     chips.add({
       type = "button",
       style = "utl_net_chip",
-      caption = name .. "  ×",
-      tooltip = { "utl-gui.networks-chip-tooltip", name },
+      caption = center and { "utl-gui.link-center-chip", name } or (name .. "  ×"),
+      tooltip = { center and "utl-gui.link-leave-tooltip" or "utl-gui.networks-chip-tooltip", name },
       mouse_button_filter = { "left" },
       tags = { utl_action = "network_chip", network = name },
     })
   end
 end
 
---- Einträge der Liste „Netz hinzufügen“: nur die Netze, die es schon gibt und die hier noch fehlen.
---- Kein Platzhalter-Eintrag (sonst stünde er in der aufgeklappten Liste noch einmal); ohne freie
---- Netze ist die Liste abgeschaltet – dann hilft der Knopf „Neu“.
-function Nets.fill_add(add, cfg)
-  local items = available(cfg)
+--- Einträge der Liste „Netz hinzufügen“: nur Netze, die sich verbinden lassen. Kein Platzhalter-
+--- Eintrag (sonst stünde er in der aufgeklappten Liste noch einmal).
+function Nets.fill_add(add, items)
   add.items = items
   add.selected_index = 0
   add.enabled = #items > 0
@@ -102,24 +102,27 @@ function Nets.build(parent, station)
     tooltip = { "utl-gui.network-rename-tooltip" }, tags = { utl_action = "network_rename" } })
   refs.home_edit, refs.home_field = edit_row(parent, "home")
 
-  -- Zusatznetze: Kasten über die volle Breite, darin die aktiven Netze als Knöpfe und darunter
-  -- die Zeile zum Hinzufügen (vorhandenes Netz wählen oder mit „Neu“ einen Namen eintragen).
+  -- Verbunden mit: Kasten über die volle Breite, darin die verbundenen Netze als Knöpfe und
+  -- darunter die Zeile zum Hinzufügen (vorhandenes Netz wählen oder mit „Neu“ anlegen).
   local box = parent.add({ type = "frame", style = "flib_shallow_frame_in_shallow_frame", direction = "vertical" })
   box.style.padding = 8
   box.style.top_margin = 4
   box.style.horizontally_stretchable = true
+  local stop = station.stop
+  local surface = stop and stop.valid and stop.surface_index
   local limit = Unlocks.networks_limit(Unlocks.force_of(station))
-  local count = Networks.extra_count(cfg)
+  local star = surface and Networks.star(surface, cfg.network) or { partners = {} }
   local caption = box.add({ type = "label",
-    caption = { "utl-gui.networks-extra-count", count, limit },
-    tooltip = { "utl-gui.networks-extra-tooltip" } })
+    caption = star.role == "partner" and { "utl-gui.links" }
+      or { "utl-gui.links-count", #star.partners, limit },
+    tooltip = { "utl-gui.links-tooltip" } })
   caption.style.font_color = { 0.7, 0.7, 0.7 }
   caption.style.bottom_margin = 4
   refs.chips = box.add({ type = "table", column_count = 3 })
   refs.chips.style.horizontal_spacing = 4
   refs.chips.style.vertical_spacing = 4
   refs.chips.style.bottom_margin = 4
-  Nets.fill_chips(refs.chips, cfg)
+  Nets.fill_chips(refs.chips, star)
 
   local add_row = box.add({ type = "flow", direction = "horizontal" })
   add_row.style.vertical_align = "center"
@@ -127,15 +130,24 @@ function Nets.build(parent, station)
   refs.add = add_row.add({ type = "drop-down", tags = { utl_action = "network_add_pick" } })
   refs.add.style.horizontally_stretchable = true
   refs.add.style.minimal_width = 120
-  Nets.fill_add(refs.add, cfg)
+  Nets.fill_add(refs.add, surface and candidates(surface, cfg.network, limit) or {})
   refs.new = add_row.add({ type = "button", style = "utl_net_new_button", caption = { "utl-gui.networks-new" },
     tooltip = { "utl-gui.networks-new-tooltip" }, tags = { utl_action = "network_new" } })
-  -- Limit erreicht bzw. noch nicht erforscht: Hinzufügen sperren und sagen, warum.
-  if count >= limit then
-    local why = limit == 0 and { "utl-gui.research-needed", { "technology-name.utl-networks-1" } }
+
+  -- Hinzufügen sperren und sagen, warum: Partner (kein eigener Stern), Grenze erreicht bzw. noch
+  -- nicht erforscht, oder die Station hat keine Haltestelle (keine Oberfläche).
+  local why
+  if not surface then
+    why = { "utl-gui.status-no-stop" }
+  elseif star.role == "partner" then
+    why = { "utl-gui.link-own-partner", star.center }
+  elseif #star.partners >= limit then
+    why = limit == 0 and { "utl-gui.research-needed", { "technology-name.utl-networks-1" } }
       or limit < Unlocks.MAX_NETWORKS and { "utl-gui.networks-limit-research", limit,
         { "technology-name." .. Unlocks.NETWORK_TECHS[limit + 1] } }
       or { "utl-gui.networks-limit", limit }
+  end
+  if why then
     refs.add.enabled, refs.new.enabled = false, false
     refs.add.tooltip, refs.new.tooltip = why, why
   end
@@ -173,7 +185,6 @@ end
 function Nets.apply_home(cfg, text)
   local name = text and text:match("^%s*(.-)%s*$") or ""
   cfg.network = name ~= "" and name or DEFAULT_NETWORK
-  if cfg.networks then cfg.networks[cfg.network] = nil end
 end
 
 return Nets

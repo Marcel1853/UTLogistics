@@ -1,9 +1,10 @@
---- 0.0.4: Stationen bekommen Zusatznetze (`cfg.networks`). Bestehende Spielstände kennen das Feld
---- nicht; eine leere Menge bedeutet „verhält sich wie bisher“.
---- Läuft einmal je Spielstand und vor on_configuration_changed, deshalb prüfen wir alle Tabellen.
-if not (storage and storage.stations and storage.stations.by_unit) then return end
-
-for _, station in pairs(storage.stations.by_unit) do
-  local cfg = station.config
-  if cfg and cfg.networks == nil then cfg.networks = {} end
+--- 0.0.4: Netzwerke werden als Stern verbunden (storage.network_links, je Oberfläche). Eine frühe
+--- Entwicklerfassung speicherte Zusatznetze je Station (`cfg.networks`) – das Feld fällt weg.
+--- Läuft einmal je Spielstand und vor on_configuration_changed, deshalb alles vorher prüfen.
+if not storage then return end
+storage.network_links = storage.network_links or {}
+if storage.stations and storage.stations.by_unit then
+  for _, station in pairs(storage.stations.by_unit) do
+    if station.config then station.config.networks = nil end
+  end
 end

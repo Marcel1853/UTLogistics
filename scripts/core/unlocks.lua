@@ -19,7 +19,7 @@ local function researched(force, name)
   return tech ~= nil and tech.researched
 end
 
---- Wie viele Zusatznetze darf eine Station dieser Force haben (0 … 3)?
+--- Wie viele Partner darf ein Netz dieser Force haben (0 … 3)?
 function Unlocks.networks_limit(force)
   if not research_required() then return Unlocks.MAX_NETWORKS end
   local limit = 0

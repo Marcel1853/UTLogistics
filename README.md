@@ -8,12 +8,13 @@ cleanup and an overview window in one mod**, built for high UPS.
 - Requires: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age is optional.
 - Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
   circuit network). Upgrades: **“UTL: Loading control”** (wagon filters and job output) and
-  **“UTL: Additional networks I–III”** (1, 2 or 3 additional networks per station). The map
+  **“UTL: Network links I–III”** (link a network with 1, 2 or 3 partner networks). The map
   setting “UTL features need research” turns this off – then everything is available right away.
 
-> **Young mod, tested small.** UTL runs through an automated self test (74 checks) and a headless
-> load test, and the new loading features are shown in the example scenario. In real games it has
-> so far only been played on small networks. If something goes wrong, please report it in the
+> **Young mod, tested small.** UTL runs through an automated self test (85 checks) and a headless
+> load test, and the new loading features and network links are shown in the example scenarios. In
+> real games it has so far only been played on small networks. **Network links (0.0.4) are brand
+> new** – errors may still show up there. If something goes wrong, please report it in the
 > [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save and
 > what you did. Keep a backup of your save before adding it to a long-running base.
 
@@ -85,33 +86,60 @@ Example: two separate systems on one map.
 | Plate storage, plate consumers, depot "Plate depot" | `Plates` |
 
 Ore trains never take a plate job, and each system needs **its own depot, fuel and cleanup
-stations**. Leave the field empty everywhere if you just want one big network.
+stations** – unless you link the networks (see below). Leave the field empty everywhere if you just
+want one big network.
 
-### Additional networks
+### Linking networks
 
-*Needs research: “UTL: Additional networks I”, II and III allow 1, 2 and 3 additional networks per station.*
+*Needs research: “UTL: Network links I”, II and III allow 1, 2 and 3 partners per network.*
 
-Besides its home network a station can take part in **further networks**. In the station window
-the home network is picked from a drop-down listing every network on the map (✎ renames it or
-types a new one); below it, "Add network …" adds another one, and each additional network appears
-as a small button – a click takes it out again.
+**How many networks you create is not limited** – name as many as you like. Research only limits
+how many networks you can **link** with each other.
 
-Two stations work together as soon as their networks **overlap**. That way a reserve depot serves
-several networks without merging them:
+Linked networks **help each other**: trains, depots, fuel stations and cleanups of one also serve
+the other. A link is a **star**:
 
-| Station | Home network | also in |
+- One network is the **center**, the networks linked to it are its **partners**.
+- Center and partner help each other in **both directions**.
+- **Partners do not help each other.** They only share the center.
+- A network belongs to **at most one star**: a partner cannot get partners of its own and cannot be
+  linked to a second center. This keeps everything clear – no chains where half the map ends up in
+  one network by accident.
+- Links count **per surface**. Networks on Nauvis and on Vulcanus are linked separately, even if they
+  have the same name; each planet can have its own stars.
+
+Example: an iron network as center with three partners (needs “Network links III”).
+
+| Network | Role | helps / gets help from |
 |---|---|---|
-| Provider/requester ore | `Ore` | – |
-| Provider/requester plates | `Plates` | – |
-| Reserve depot (10 trains) | `Reserve` | `Ore`, `Plates` |
+| `Iron` | center | `Copper`, `Coal`, `Stone` |
+| `Copper` | partner | `Iron` only |
+| `Coal` | partner | `Iron` only |
+| `Stone` | partner | `Iron` only |
 
-The depot's trains then take ore jobs and plate jobs, while ore and plate stations still ignore
-each other.
+A free train from the iron depot takes copper, coal and stone jobs, and a copper train may take an
+iron job – but a copper train never takes a coal job. `Copper`, `Coal` and `Stone` cannot be linked to
+any further network while they belong to `Iron`.
+
+This also makes a **reserve depot** easy: put a depot in its own network `Reserve`, link `Ore` and
+`Plates` to it. Its trains serve both, while ore and plate stations still ignore each other.
+
+**Where to set it up** – both ways do the same thing, a link always applies to the whole network on
+that surface, not just to one station:
+
+- **Station window:** the box “Linked with” below the home network. Pick a network from the list or
+  create a new one with “New”; each partner appears as a button, a click removes the link. If the
+  network is a partner itself, the button shows its center, and a click leaves that star.
+- **UTL Manager, “Networks” tab:** pick a network on the left; above the station list you add and
+  remove partners the same way.
+
+The counter shows how many partners are used and allowed, e.g. `Linked with (2 / 3)`. When the
+limit is reached, the tooltip names the research that allows more.
 
 The UTL Manager shows the network in brackets behind the station name when it is not `default`,
-with additional networks as `[Reserve +Ore +Plates]`. Its **Networks** tab lists every network on
-the map with free trains, running deliveries and all its stations – and whether a station is there
-with its home network or only as an additional one.
+links as `[Iron ↔ Copper, Coal]` for a center and `[Copper → Iron]` for a partner. The **Networks**
+tab lists every network per surface with free trains, running deliveries and the stations of the
+star.
 
 **Typical mistakes**
 
@@ -187,7 +215,7 @@ and remains available.
 
 ## UTL Manager
 
-Open with the **locomotive button in the shortcut bar** or **Ctrl + Shift + U**. Tabs:
+Open with the **locomotive button in the shortcut bar** or **Ctrl + Shift + U** (or **Ctrl + Alt + U** – on Linux, IBus sometimes grabs Ctrl + Shift + U). Tabs:
 **Depots** (trains with composition, status, cargo), **Stations** (role, provided/requested,
 in transit, trains), **Networks** (every network with its stations, free trains and deliveries),
 **Inventory** (network totals; click an item for details), **History**
@@ -234,12 +262,22 @@ UPS of a whole megabase.
 ## Scenarios
 
 **New game → Scenarios → UTL examples (mixed provider)**: a small practice network on Marcel's
-ring with sidings. One provider keeps iron plates, copper plates and gears in **one** chest with a
-provider keeps iron plates, copper plates and gears in three chests with three inserters, and
-the job output enables only the one whose good is ordered. One requester needs iron **and**
+ring with sidings. One provider keeps iron plates, copper plates and gears in three chests with
+three inserters, and the job output enables only the one whose good is ordered. One requester needs iron **and**
 copper and gets both in one trip. A fluid provider has two tanks,
 oil and water have their own requesters, and the pumps are switched by the **job output**. Two
 depots in a row, a fuel station and a cleanup. Two trains, no measuring – made for trying out.
+
+**New game → Scenarios → UTL network links (2 × 2 city blocks)**: four networks on 2 × 2 city
+blocks, each in its own part of the map. `Eisen` (iron, middle) is the center of a star with a
+depot (4 trains), fuel station and cleanup. Its partners: `Kupfer` (copper) has **no trains of its
+own** – the iron trains run its jobs – and `Kohle` (coal) has its own depot with 2 trains, which
+also help iron but **never** copper, because partners do not help each other. `Stein` (stone) is
+linked to nobody and only runs its own trains. Open the UTL Manager, tab **Networks**, to remove
+a link or add `Stein`, and watch in **History** who goes where.
+
+All scenarios and the tips & tricks scenes carry **display panels** with short explanations next to
+the stations (in your game language).
 
 ## Load test scenario
 
@@ -256,14 +294,16 @@ infinity chests, infinity pipes and power sources are part of the base game.
 
 ## Tips & tricks
 
-The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: twelve entries
+The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: fifteen entries
 explaining how to use the mod, each with a running example scene (some with an open UTL window,
 the manager and shift-click copying), among them: a UTL stop with provider, requester and depot; the same
 line with normal stops and UTL station combinators (wires visible); a train that refuels
 first and then delivers; a train with leftover cargo that is emptied at a cleanup station first;
-**two separate networks** side by side with a camera tour.
-Plus explanations of roles, requests, values and network, depots, copying settings/blueprints and
-the manager.
+**two separate networks** side by side with a camera tour; linking two networks in the station
+window (pick from the list, create one with “New”); the manager tab by tab, its Networks tab with a
+link being made, and the Inventory tab where a click on a good lists stations and trains.
+Plus explanations of roles, requests, values and network, linking networks (star, research
+“Network links”), depots, copying settings/blueprints and the manager.
 
 ## FAQ
 

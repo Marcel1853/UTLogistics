@@ -39,8 +39,9 @@ end
 function ServiceStops.exists(network, role)
   for unit in pairs(set_of(role)) do
     local station = Registry.get(unit)
-    if station and station.config.roles[role] and Networks.matches(station.config, network)
-      and station.stop and station.stop.valid then
+    local stop = station and station.stop
+    if station and station.config.roles[role] and stop and stop.valid
+      and Networks.related(stop.surface_index, station.config.network, network) then
       return true
     end
   end
@@ -63,8 +64,8 @@ function ServiceStops.candidates(train, network, role)
       local stop, cfg = station.stop, station.config
       -- Zuglimit der Haltestelle beachten: UTL fährt per Schienen-Wegpunkt direkt davor, da
       -- greift das Vanilla-Limit nicht – ein Stau würde sonst die Hauptstrecke blockieren.
-      if stop and stop.valid and cfg.roles[role] and Networks.matches(cfg, network)
-        and stop.surface_index == surface and length_ok(cfg, length)
+      if stop and stop.valid and cfg.roles[role] and stop.surface_index == surface
+        and Networks.related(surface, cfg.network, network) and length_ok(cfg, length)
         and stop.trains_count < stop.trains_limit then
         list[#list + 1] = { stop = stop, config = cfg }
       end

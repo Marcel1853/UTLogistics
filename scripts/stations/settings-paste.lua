@@ -6,8 +6,6 @@ local Registry = require("scripts.stations.registry")
 local Reader = require("scripts.stations.reader")
 local Roles = require("scripts.stations.roles")
 local Fields = require("scripts.stations.fields")
-local Networks = require("scripts.stations.networks")
-local Unlocks = require("scripts.core.unlocks")
 local util = require("util")
 
 local Paste = {}
@@ -17,8 +15,6 @@ function Paste.apply(station, config)
   local cfg = util.table.deepcopy(config)
   Fields.fill(cfg)
   Roles.derive(cfg)
-  -- Mehr Zusatznetze, als die Forschung erlaubt (z. B. Blaupause aus einem anderen Spielstand)?
-  Networks.trim(cfg, Unlocks.networks_limit(Unlocks.force_of(station)))
   station.config = cfg
   Reader.read(station)
   Registry.config_changed(station)

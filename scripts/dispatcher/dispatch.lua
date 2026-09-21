@@ -98,7 +98,7 @@ local function find_providers(request)
     if not provider then
       set[unit] = nil
     elseif unit ~= requester.unit and usable(provider) and provider.config.roles.provider
-      and Networks.matches(provider.config, network) and provider.stop.surface_index == surface
+      and provider.stop.surface_index == surface and Networks.related(surface, provider.config.network, network)
       and has_room(provider) then
       local available = (provider.provide[request.key] or 0) - Deliveries.outgoing(unit, request.key)
       if available > 0 then
@@ -176,12 +176,27 @@ local function keep_best(best, record, amount, distance)
   best[i] = { record = record, amount = amount, distance = distance }
 end
 
+--- Zug-Pools, die einem Abnehmer helfen dürfen: sein eigenes Netz und – im Stern – das Zentrum
+--- bzw. die Partner. Liefert eine Liste (leer, wenn nirgends ein freier Zug steht).
+local function pools_for(station)
+  local pools = {}
+  local idle = storage.trains.idle
+  local stop = station.stop
+  local surface = stop and stop.valid and stop.surface_index
+  for _, name in ipairs(surface and Networks.related_list(surface, station.config.network)
+      or { station.config.network }) do
+    local pool = idle[name]
+    if pool and next(pool) ~= nil then pools[#pools + 1] = pool end
+  end
+  return pools
+end
+
 --- Freier Zug für Anbieter → Abnehmer. Liefert Zug-Eintrag und Menge.
 --- Die Vorauswahl nutzt nur gespeicherte Werte (Position, Länge, Laderaum) – keine
 --- API-Aufrufe je Zug. Erst die besten Kandidaten werden beim Spiel geprüft.
 local function find_train(request, provider, wanted)
-  local pool = storage.trains.idle[request.station.config.network]
-  if not pool then return nil end
+  local pools = pools_for(request.station)
+  if #pools == 0 then return nil end
   local p_cfg, r_cfg = provider.station.config, request.station.config
   local p_stop = provider.station.stop
   local surface, position = p_stop.surface_index, p_stop.position
@@ -189,20 +204,22 @@ local function find_train(request, provider, wanted)
   local by_id = storage.trains.by_id
   local best = {}
   local scanned = 0
-  for id in pairs(pool) do
-    scanned = scanned + 1
-    if scanned > TRAIN_SCAN then break end
-    local record = by_id[id]
-    if not record then
-      pool[id] = nil
-    elseif record.surface_index == surface
-      and length_ok(p_cfg, record.length) and length_ok(r_cfg, record.length) then
-      local capacity = capacity_of(record, request.key, locked)
-      if capacity > 0 then
-        local amount = wanted < capacity and wanted or capacity
-        -- Keine Kleinstfahrten: mindestens die Abnehmer-Schwelle oder ein voller Zug.
-        if amount >= request.minimum or amount == capacity then
-          keep_best(best, record, amount, dist2(record.position, position))
+  for _, pool in ipairs(pools) do
+    for id in pairs(pool) do
+      scanned = scanned + 1
+      if scanned > TRAIN_SCAN then break end
+      local record = by_id[id]
+      if not record then
+        pool[id] = nil
+      elseif record.surface_index == surface
+        and length_ok(p_cfg, record.length) and length_ok(r_cfg, record.length) then
+        local capacity = capacity_of(record, request.key, locked)
+        if capacity > 0 then
+          local amount = wanted < capacity and wanted or capacity
+          -- Keine Kleinstfahrten: mindestens die Abnehmer-Schwelle oder ein voller Zug.
+          if amount >= request.minimum or amount == capacity then
+            keep_best(best, record, amount, dist2(record.position, position))
+          end
         end
       end
     end
@@ -277,8 +294,7 @@ local function warn_no_train(request, provider)
   local since = waiting_since(unit, key)
   if game.tick - since < storage.cfg.alert_no_train_minutes * 3600 then return end
   local cfg = requester.config
-  local pool = storage.trains.idle[cfg.network]
-  if not pool or next(pool) == nil then
+  if #pools_for(requester) == 0 then
     -- Kein freier Zug im ganzen Netzwerk: nicht je Abnehmer warnen (sonst blinkt die halbe Karte),
     -- sondern sammeln – Dispatch.starving_alerts meldet eine Warnung je Netzwerk.
     local starving = storage.dispatch.starving
@@ -326,8 +342,7 @@ local function try_request(request)
   -- Kein einziger freier Zug im Netzwerk: nicht nach Anbietern suchen (spart im Dauerbetrieb den
   -- Großteil der Zeit). Nur die Wartezeit für die Warnung mitführen; erst wenn gewarnt würde,
   -- wird ein Anbieter für den Text gesucht.
-  local pool = storage.trains.idle[request.station.config.network]
-  if not pool or next(pool) == nil then
+  if #pools_for(request.station) == 0 then
     local unit, key = request.station.unit, request.key
     if Deliveries.incoming(unit, key) > 0 then
       waiting_since(unit, key, true)
@@ -373,7 +388,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   Index.update()
   local best
   for _, request in ipairs(collect_requests()) do
-    if Networks.matches(request.station.config, network) then
+    if Networks.related(record.surface_index, request.station.config.network, network) then
       local providers = find_providers(request) or {}
       for i = 1, math.min(#providers, PROVIDER_TRIES) do
         local provider = providers[i]

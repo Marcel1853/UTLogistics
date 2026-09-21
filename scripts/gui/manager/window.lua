@@ -15,7 +15,7 @@ local Manager = {}
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 3
+local GUI_VERSION = 4
 local ORDER = { "depots", "stations", "networks", "inventory", "history", "alerts" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste).
 local AUTO_REFRESH = { depots = true, stations = true, networks = true, history = true, alerts = true }
@@ -111,6 +111,7 @@ function Manager.open(player)
 
   storage.managers[player.index] = {
     version = GUI_VERSION,
+    player_index = player.index,
     frame = frame,
     tabs = tabs,
     search_field = search,

@@ -3,6 +3,8 @@ local Events = require("scripts.core.events")
 local Heartbeat = require("scripts.core.heartbeat")
 local C = require("scripts.core.constants")
 local Manager = require("scripts.gui.manager.window")
+local Networks = require("scripts.stations.networks")
+local Unlocks = require("scripts.core.unlocks")
 
 local SHORTCUT = "utl-toggle-manager"
 
@@ -37,11 +39,33 @@ local function remote_view(player, manager, surface, position, entity)
   if manager.frame.valid then player.opened = manager.frame end
 end
 
+--- Gewähltes Netz im Reiter „Netzwerke“ mit `partner` verbinden (Grenze aus der Forschung).
+local function link_selected(player, manager, partner)
+  local net = Manager.tab("networks").selected(manager)
+  if not (net and partner and partner ~= "") then return end
+  local ok = Networks.link(net.surface, net.name, partner, Unlocks.networks_limit(player.force))
+  if ok ~= true then
+    player.create_local_flying_text({ text = { "utl-gui." .. ok, partner }, create_at_cursor = true })
+  end
+  Manager.refresh(player.index)
+end
+
 Events.on(defines.events.on_gui_click, function(event)
   local action, tags, manager = context(event)
   if not (action and tags and manager) then return end
   local player = game.get_player(event.player_index)
   if not player then return end
+  if action == "link_chip" then
+    local net = Manager.tab("networks").selected(manager)
+    if net then Networks.unlink(net.surface, net.name, tags.network) end
+    Manager.refresh(event.player_index)
+    return
+  elseif action == "link_confirm" then
+    local field = manager.refs.networks.field
+    link_selected(player, manager, field.text)
+    field.text = ""
+    return
+  end
   if action == "close" then
     Manager.close(event.player_index)
   elseif action == "refresh" then
@@ -86,10 +110,26 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
     Manager.tab("depots").select(manager.refs.depots, manager, event.element.selected_index)
   elseif action == "network_list" then
     Manager.tab("networks").select(manager.refs.networks, manager, event.element.selected_index)
+  elseif action == "link_add" then
+    local element = event.element
+    local name = element.selected_index > 0 and element.get_item(element.selected_index)
+    local player = game.get_player(event.player_index)
+    if player and type(name) == "string" then link_selected(player, manager, name) end
+    return
   else
     return
   end
   Manager.refresh(event.player_index)
+end)
+
+Events.on(defines.events.on_gui_confirmed, function(event)
+  local action, _, manager = context(event)
+  if action ~= "link_name" or not manager then return end
+  local player = game.get_player(event.player_index)
+  if player then
+    link_selected(player, manager, event.element.text)
+    event.element.text = ""
+  end
 end)
 
 Events.on(defines.events.on_gui_closed, function(event)

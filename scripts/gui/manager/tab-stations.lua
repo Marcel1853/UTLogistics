@@ -24,9 +24,10 @@ local function role_caption(station)
     end
   end
   if #caption == 1 then caption[2] = { "utl-manager.role-none" } end
-  local extra = Networks.extra_text(cfg)
-  if cfg.network ~= "default" or extra ~= "" then
-    caption = { "", caption, "  [", cfg.network, extra ~= "" and (" " .. extra) or "", "]" }
+  local stop = station.stop
+  local links = stop and stop.valid and Networks.link_text(stop.surface_index, cfg.network) or ""
+  if cfg.network ~= "default" or links ~= "" then
+    caption = { "", caption, "  [", cfg.network, links ~= "" and (" " .. links) or "", "]" }
   end
   return caption
 end

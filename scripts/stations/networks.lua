@@ -1,69 +1,134 @@
---- Netzwerke einer Station: ein Heimatnetz (`cfg.network`, Standard „default“) und optionale
---- Zusatznetze (`cfg.networks`, Menge von Namen). Zwei Stationen arbeiten zusammen, sobald sich
---- ihre Netzmengen überschneiden. Damit kann z. B. ein Reserve-Depot in mehrere Netze liefern,
---- ohne dass die Netze selbst zusammenwachsen.
+--- Netzwerke: Jede Station hat ein Heimatnetz (`cfg.network`, Standard „default“). Netze lassen
+--- sich zu einem **Stern** verbinden: ein Zentrum und bis zu drei Partner (je nach Forschung).
+---
+---   * Zentrum und Partner helfen sich gegenseitig: Züge, Depots, Tankstellen und Cleanups des
+---     einen bedienen auch den anderen.
+---   * Partner helfen sich **nicht** untereinander.
+---   * Ein Netz gehört zu höchstens einem Stern – als Zentrum oder als Partner. Ein Partner kann
+---     keine eigenen Partner haben und nirgends sonst Partner sein. So entstehen keine Ketten.
+---   * Die Zahl der Netze ist frei; begrenzt ist nur die Zahl der Partner je Zentrum.
+---   * Sterne gelten je Oberfläche – auf Vulcanus kann man eigene bilden.
+---
+--- Speicher: storage.network_links[surface_index] = {
+---   partners = { [zentrum] = { [partner] = true } },
+---   center_of = { [partner] = zentrum },
+--- }
 local Networks = {}
 
---- Gehört `name` zu den Netzen dieser Station?
-function Networks.matches(cfg, name)
-  if cfg.network == name then return true end
-  local extra = cfg.networks
-  return extra ~= nil and extra[name] == true
+local function links_of(surface_index, create)
+  local all = storage.network_links
+  if not all then
+    if not create then return nil end
+    all = {}
+    storage.network_links = all
+  end
+  local links = all[surface_index]
+  if not links and create then
+    links = { partners = {}, center_of = {} }
+    all[surface_index] = links
+  end
+  return links
 end
 
---- Haben zwei Stationen mindestens ein gemeinsames Netz?
-function Networks.shared(a, b)
-  if Networks.matches(b, a.network) then return true end
-  for name in pairs(a.networks or {}) do
-    if Networks.matches(b, name) then return true end
-  end
-  return false
+local function count(set)
+  local n = 0
+  for _ in pairs(set or {}) do n = n + 1 end
+  return n
 end
 
---- Alle Netze einer Station als Liste (Heimatnetz zuerst, Rest alphabetisch) – für Anzeige,
---- Zug-Pools und Vergleiche.
-function Networks.list(cfg)
-  local list = { cfg.network }
-  local extra = {}
-  for name in pairs(cfg.networks or {}) do
-    if name ~= cfg.network then extra[#extra + 1] = name end
+--- Arbeiten zwei Netze zusammen? Gleiches Netz oder Zentrum ↔ Partner.
+function Networks.related(surface_index, a, b)
+  if a == b then return true end
+  local links = links_of(surface_index)
+  if not links then return false end
+  local center_of = links.center_of
+  return center_of[a] == b or center_of[b] == a
+end
+
+--- Das Netz selbst und alle Netze, die ihm helfen (für die Zug-Pools des Dispatchers).
+function Networks.related_list(surface_index, name)
+  local list = { name }
+  local links = links_of(surface_index)
+  if not links then return list end
+  local center = links.center_of[name]
+  if center then
+    list[#list + 1] = center
+  else
+    for partner in pairs(links.partners[name] or {}) do list[#list + 1] = partner end
   end
-  table.sort(extra)
-  for _, name in ipairs(extra) do list[#list + 1] = name end
   return list
 end
 
---- Zusatznetze als Text für Fenster und Manager, z. B. „+Erze +Platten“ (leer, wenn keine).
-function Networks.extra_text(cfg)
-  local parts = {}
-  for i, name in ipairs(Networks.list(cfg)) do
-    if i > 1 then parts[#parts + 1] = "+" .. name end
+--- Rolle eines Netzes: { role = "center" | "partner" | nil, center = …, partners = { … } }.
+--- Partner alphabetisch sortiert.
+function Networks.star(surface_index, name)
+  local links = links_of(surface_index)
+  local result = { partners = {} }
+  if not links then return result end
+  local center = links.center_of[name]
+  if center then
+    result.role, result.center = "partner", center
+    return result
   end
-  return table.concat(parts, " ")
+  for partner in pairs(links.partners[name] or {}) do result.partners[#result.partners + 1] = partner end
+  table.sort(result.partners)
+  if #result.partners > 0 then result.role, result.center = "center", name end
+  return result
 end
 
---- Zusatznetz an- oder abschalten (das Heimatnetz lässt sich nicht als Zusatz setzen).
-function Networks.toggle(cfg, name)
-  if name == nil or name == "" or name == cfg.network then return false end
-  cfg.networks = cfg.networks or {}
-  cfg.networks[name] = not cfg.networks[name] or nil
+--- Kann `partner` mit `center` verbunden werden? Liefert true oder einen Locale-Schlüssel mit
+--- dem Grund (utl-gui.link-…).
+function Networks.can_link(surface_index, center, partner, limit)
+  if not partner or partner == "" or partner == center then return "link-self" end
+  local links = links_of(surface_index)
+  if links then
+    if links.center_of[center] then return "link-center-is-partner" end
+    if links.center_of[partner] then return "link-partner-taken" end
+    if count(links.partners[partner]) > 0 then return "link-partner-is-center" end
+    if count(links.partners[center]) >= limit then return "link-limit" end
+  elseif limit < 1 then
+    return "link-limit"
+  end
   return true
 end
 
---- Wie viele Zusatznetze hat die Station?
-function Networks.extra_count(cfg)
-  return #Networks.list(cfg) - 1
+--- Zwei Netze verbinden (Zentrum ↔ Partner). Liefert true oder den Grund.
+function Networks.link(surface_index, center, partner, limit)
+  local ok = Networks.can_link(surface_index, center, partner, limit)
+  if ok ~= true then return ok end
+  local links = links_of(surface_index, true)
+  if not links then return "link-limit" end
+  links.partners[center] = links.partners[center] or {}
+  links.partners[center][partner] = true
+  links.center_of[partner] = center
+  Networks.invalidate()
+  return true
 end
 
---- Zusatznetze auf `limit` kürzen (die ersten in alphabetischer Reihenfolge bleiben). Für
---- Blaupausen, eingefügte Einstellungen und die Remote-Schnittstelle. Liefert true bei Änderung.
-function Networks.trim(cfg, limit)
-  local list = Networks.list(cfg)
-  if #list - 1 <= limit then return false end
-  local keep = {}
-  for i = 2, limit + 1 do keep[list[i]] = true end
-  cfg.networks = keep
+--- Verbindung zwischen zwei Netzen lösen (egal in welcher Richtung angegeben).
+function Networks.unlink(surface_index, a, b)
+  local links = links_of(surface_index)
+  if not links then return false end
+  local center, partner = a, b
+  if links.center_of[a] == b then center, partner = b, a end
+  if links.center_of[partner] ~= center then return false end
+  links.center_of[partner] = nil
+  local set = links.partners[center]
+  if set then
+    set[partner] = nil
+    if next(set) == nil then links.partners[center] = nil end
+  end
+  Networks.invalidate()
   return true
+end
+
+--- Text für Manager und Stationsliste, z. B. „Eisen ↔ Kupfer, Kohle“ oder „Kupfer → Eisen“;
+--- leer, wenn das Netz in keinem Stern ist.
+function Networks.link_text(surface_index, name)
+  local star = Networks.star(surface_index, name)
+  if star.role == "partner" then return "→ " .. star.center end
+  if star.role == "center" then return "↔ " .. table.concat(star.partners, ", ") end
+  return ""
 end
 
 -- Alle im Spielstand vorhandenen Netznamen; nur ein Lua-Zwischenspeicher, aus storage abgeleitet.
@@ -73,15 +138,18 @@ function Networks.invalidate()
   known = nil
 end
 
---- Sortierte Liste aller Netznamen, die irgendeine Station benutzt (für die Schalter im Fenster).
+--- Sortierte Liste aller Netznamen: Heimatnetze der Stationen und alle verbundenen Netze.
 function Networks.known()
   if known then return known end
   local set = { default = true }
   for _, station in pairs(storage.stations.by_unit) do
     local cfg = station.config
-    if cfg then
-      set[cfg.network] = true
-      for name in pairs(cfg.networks or {}) do set[name] = true end
+    if cfg and cfg.network then set[cfg.network] = true end
+  end
+  for _, links in pairs(storage.network_links or {}) do
+    for center, partners in pairs(links.partners) do
+      set[center] = true
+      for partner in pairs(partners) do set[partner] = true end
     end
   end
   known = {}

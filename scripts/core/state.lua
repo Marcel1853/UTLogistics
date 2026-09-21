@@ -53,6 +53,9 @@ function State.init()
   deliveries.at_station = deliveries.at_station or {}
   storage.deliveries = deliveries
 
+  -- Verbundene Netze (Stern je Oberfläche), siehe scripts/stations/networks.lua
+  storage.network_links = storage.network_links or {}
+
   -- Dispatcher: Anbieter-Index pro Ware und Menge der Abnehmer.
   local dispatch = storage.dispatch or {}
   dispatch.providers = dispatch.providers or {}         -- [key] = { [station] = true }

@@ -67,9 +67,20 @@ Events.on(defines.events.on_gui_closed, function(event)
   end
 end)
 
---- Darf diese Station noch ein Zusatznetz bekommen (Forschung)?
-local function can_add(station)
-  return Networks.extra_count(station.config) < Unlocks.networks_limit(Unlocks.force_of(station))
+--- Heimatnetz dieser Station mit einem anderen Netz verbinden (Stern, je Oberfläche). Die Grenze
+--- kommt aus der Forschung; Networks.link prüft auch, dass keine Kette entsteht. Einen Grund für
+--- ein Nein zeigt der Spieler als Hinweis.
+local function link_home(event, station, partner)
+  local stop = station.stop
+  if not (stop and stop.valid and partner and partner ~= "") then return false end
+  local limit = Unlocks.networks_limit(Unlocks.force_of(station))
+  local ok = Networks.link(stop.surface_index, station.config.network, partner, limit)
+  if ok ~= true then
+    local player = game.get_player(event.player_index)
+    if player then player.create_local_flying_text({ text = { "utl-gui." .. ok, partner }, create_at_cursor = true }) end
+    return false
+  end
+  return true
 end
 
 --- Eingegebenen Netznamen übernehmen: entweder als Heimatnetz oder als neues Zusatznetz.
@@ -79,7 +90,7 @@ local function apply_network_name(event, gui, station, target)
   Nets.stop_edit(refs, target)
   if target == "home" then
     Nets.apply_home(station.config, name)
-  elseif not can_add(station) or not Networks.toggle(station.config, name ~= "" and name or nil) then
+  elseif not link_home(event, station, name) then
     return
   end
   Networks.invalidate()
@@ -108,8 +119,9 @@ Events.on(defines.events.on_gui_click, function(event)
   elseif action == "cleanup_all" then
     if CleanupSection.toggle(cfg, tags.key) then changed(event, station, true) end
   elseif action == "network_chip" then
-    if Networks.toggle(cfg, tags.network) then
-      Networks.invalidate()
+    -- Verbindung lösen (bei einem Partner: aus dem Stern seines Zentrums austreten)
+    local stop = station.stop
+    if stop and stop.valid and Networks.unlink(stop.surface_index, cfg.network, tags.network) then
       changed(event, station, true)
     end
   elseif action == "network_rename" then
@@ -164,8 +176,7 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
     local index = element.selected_index
     if index > 0 then
       local name = element.get_item(index)
-      if type(name) == "string" and can_add(station) and Networks.toggle(station.config, name) then
-        Networks.invalidate()
+      if type(name) == "string" and link_home(event, station, name) then
         changed(event, station, true)
       end
     end

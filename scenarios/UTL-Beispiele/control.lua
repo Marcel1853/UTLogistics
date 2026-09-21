@@ -2,6 +2,7 @@
 --- Gebaut wird im ersten Tick – Szenario-Scripte laufen vor den Mods, deren Speicher wird beim
 --- Start der Mod geleert.
 local Build = require("__UTLogistics__/scenarios/UTL-Beispiele/build")
+local place_signs = require("__UTLogistics__/scenarios/UTL-Beispiele/signs")
 
 local function place(player)
   local surface = game.surfaces["utl-beispiele"]
@@ -30,8 +31,9 @@ local function setup()
   local force = game.forces["player"]
   force.chart(made.surface, made.area)
   force.research_all_technologies() -- Übungsnetz: alles erforscht
-  log(("[BEISPIELE] gebaut: Züge %s/%s, %d Objekte nicht gesetzt")
-    :format(tostring(made.train ~= nil), tostring(made.fluid_train ~= nil), made.failed))
+  local signs = place_signs(made.stops)
+  log(("[BEISPIELE] gebaut: Züge %s/%s, %d Objekte nicht gesetzt, %d Anzeigefelder")
+    :format(tostring(made.train ~= nil), tostring(made.fluid_train ~= nil), made.failed, signs))
   for _, player in pairs(game.players) do place(player) end
 end
 

@@ -3,7 +3,7 @@
 set -euo pipefail
 MOD_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 FACTORIO="${FACTORIO:-/mnt/6459bc3a-dd91-42e5-8723-71427d99d0ba/SteamLibrary/steamapps/common/Factorio/bin/x64/factorio}"
-for scene in ${SCENES:-basic stop_window combinator roles requests values networks depots fuel cleanup copy manager}; do
+for scene in ${SCENES:-basic stop_window combinator roles requests values networks links depots fuel cleanup copy manager manager_networks manager_inventory}; do
   WORK="$(mktemp -d)"
   mkdir -p "$WORK/mods" "$WORK/data"
   ln -s "$MOD_DIR" "$WORK/mods/$(basename "$MOD_DIR")"
@@ -13,7 +13,7 @@ for scene in ${SCENES:-basic stop_window combinator roles requests values networ
   printf '[path]\nread-data=__PATH__executable__/../../data\nwrite-data=%s/data\n' "$WORK" > "$WORK/config.ini"
   "$FACTORIO" -c "$WORK/config.ini" --mod-directory "$WORK/mods" --create "$WORK/t.zip" > /dev/null
   "$FACTORIO" -c "$WORK/config.ini" --mod-directory "$WORK/mods" --benchmark "$WORK/t.zip" --benchmark-ticks ${TICKS:-10900} > /dev/null || true
-  { grep -o "\[TIPS\] MANIFEST.*" "$WORK/data/factorio-current.log" || true; grep -o "\[TIPS\] .* erstes .*" "$WORK/data/factorio-current.log" || true; grep -o "\[TIPS\].*tick.*\|Error.*" "$WORK/data/factorio-current.log" | tail -1; }
+  { grep -o "\[TIPS\] MANIFEST.*" "$WORK/data/factorio-current.log" || true; grep -o "\[TIPS\] .* erstes .*\|\[TIPS\] .* Anzeigefelder.*" "$WORK/data/factorio-current.log" || true; grep -o "\[TIPS\].*tick.*\|Error.*" "$WORK/data/factorio-current.log" | tail -1; }
   grep -A6 "Error while" "$WORK/data/factorio-current.log" | head -8 || true
   rm -rf "$WORK"
 done

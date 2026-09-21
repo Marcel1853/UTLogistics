@@ -8,12 +8,13 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 - Benötigt: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age ist optional.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
   Schienenverkehr“ und „Schaltungsnetze“). Ausbaustufen: **„UTL: Ladesteuerung“** (Wagenfilter und
-  Auftrags-Ausgabe) und **„UTL: Zusatznetze I–III“** (1, 2 oder 3 Zusatznetze je Station). Mit der
+  Auftrags-Ausgabe) und **„UTL: Netzverbund I–III“** (ein Netz mit 1, 2 oder 3 Partnernetzen verbinden). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
 > **Junger Mod, bisher klein getestet.** UTL läuft durch einen automatischen Selbsttest
-> (74 Prüfungen) und einen headless-Lasttest, und die neuen Ladefunktionen werden im
-> Beispiel-Szenario vorgeführt. Im echten Spiel ist er bisher nur in kleinen Netzen gelaufen.
+> (85 Prüfungen) und einen headless-Lasttest, und die Ladefunktionen und der Netzverbund werden in
+> den Beispiel-Szenarien vorgeführt. Im echten Spiel ist er bisher nur in kleinen Netzen gelaufen.
+> **Der Netzverbund (0.0.4) ist ganz neu** – dort können noch Fehler auftauchen.
 > Wenn etwas schiefgeht: bitte in der
 > [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion) melden, am besten mit
 > Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem gewachsenen Spielstand
@@ -120,33 +121,62 @@ Beispiel: zwei getrennte Systeme auf einer Karte.
 | Plattenlager, Plattenverbraucher, Depot „Platten-Depot“ | `Platten` |
 
 Erz-Züge nehmen dann nie einen Platten-Auftrag an. Jedes System braucht **eigenes Depot, eigene
-Tankstelle und eigenes Cleanup**. Wer nur ein großes Netz will, lässt das Feld überall leer.
+Tankstelle und eigenes Cleanup** – es sei denn, du verbindest die Netze (siehe unten). Wer nur ein
+großes Netz will, lässt das Feld überall leer.
 
-### Zusatznetze
+### Netze verbinden
 
-*Braucht Forschung: „UTL: Zusatznetze I“, II und III erlauben 1, 2 und 3 Zusatznetze je Station.*
+*Braucht Forschung: „UTL: Netzverbund I“, II und III erlauben 1, 2 und 3 Partner je Netz.*
 
-Neben ihrem Heimatnetz kann eine Station in **weiteren Netzwerken** mitarbeiten. Im Stationsfenster
-wählst du das Heimatnetz aus einer Liste aller Netze der Karte (mit ✎ benennst du es um oder trägst
-ein neues ein); darunter fügt „Netz hinzufügen …“ ein weiteres hinzu. Jedes Zusatznetz steht als
-kleiner Knopf darunter – ein Klick nimmt es wieder heraus.
+**Wie viele Netze du anlegst, ist nicht begrenzt** – benenne so viele, wie du willst. Die Forschung
+begrenzt nur, wie viele Netze du **miteinander verbinden** kannst.
 
-Zwei Stationen arbeiten zusammen, sobald sich ihre Netze **überschneiden**. Ein Reserve-Depot
-bedient damit mehrere Netze, ohne dass die Netze zusammenwachsen:
+Verbundene Netze **helfen sich gegenseitig**: Züge, Depots, Tankstellen und Cleanups des einen
+bedienen auch den anderen. Ein Verbund ist ein **Stern**:
 
-| Station | Heimatnetz | zusätzlich |
+- Ein Netz ist das **Zentrum**, die damit verbundenen Netze sind seine **Partner**.
+- Zentrum und Partner helfen sich in **beide Richtungen**.
+- **Partner helfen sich nicht untereinander.** Sie teilen sich nur das Zentrum.
+- Ein Netz gehört zu **höchstens einem Stern**: Ein Partner kann keine eigenen Partner bekommen und
+  nicht zusätzlich mit einem zweiten Zentrum verbunden werden. So bleibt es übersichtlich – keine
+  Ketten, über die versehentlich die halbe Karte zu einem Netz wird.
+- Verbindungen gelten **je Oberfläche**. Netze auf Nauvis und auf Vulcanus werden getrennt verbunden,
+  auch wenn sie gleich heißen; jeder Planet kann eigene Sterne haben.
+
+Beispiel: ein Eisen-Netz als Zentrum mit drei Partnern (braucht „Netzverbund III“).
+
+| Netz | Rolle | hilft / bekommt Hilfe von |
 |---|---|---|
-| Anbieter/Abnehmer Erz | `Erze` | – |
-| Anbieter/Abnehmer Platten | `Platten` | – |
-| Reserve-Depot (10 Züge) | `Reserve` | `Erze`, `Platten` |
+| `Eisen` | Zentrum | `Kupfer`, `Kohle`, `Stein` |
+| `Kupfer` | Partner | nur `Eisen` |
+| `Kohle` | Partner | nur `Eisen` |
+| `Stein` | Partner | nur `Eisen` |
 
-Die Züge dieses Depots nehmen dann Erz- und Platten-Aufträge an, während Erz- und Platten-Stationen
+Ein freier Zug aus dem Eisen-Depot nimmt Kupfer-, Kohle- und Stein-Aufträge an, ein Kupfer-Zug darf
+einen Eisen-Auftrag übernehmen – aber ein Kupfer-Zug nimmt nie einen Kohle-Auftrag. `Kupfer`, `Kohle`
+und `Stein` lassen sich mit keinem weiteren Netz verbinden, solange sie zu `Eisen` gehören.
+
+So geht auch ein **Reserve-Depot** ganz einfach: ein Depot in ein eigenes Netz `Reserve` stellen und
+`Erze` und `Platten` damit verbinden. Seine Züge bedienen beide, während Erz- und Platten-Stationen
 einander weiterhin nicht kennen.
 
+**Wo man es einstellt** – beide Wege machen dasselbe; eine Verbindung gilt immer für das ganze Netz
+auf dieser Oberfläche, nicht nur für eine Station:
+
+- **Stationsfenster:** der Kasten „Verbunden mit“ unter dem Heimatnetz. Ein Netz aus der Liste wählen
+  oder mit „Neu“ ein neues anlegen; jeder Partner steht als Knopf darunter, ein Klick löst die
+  Verbindung. Ist das Netz selbst Partner, zeigt der Knopf sein Zentrum, und ein Klick tritt aus dem
+  Stern aus.
+- **UTL-Manager, Reiter „Netzwerke“:** links ein Netz wählen; über der Stationsliste fügst du Partner
+  genauso hinzu oder löst sie.
+
+Der Zähler zeigt, wie viele Partner belegt und erlaubt sind, z. B. `Verbunden mit (2 / 3)`. Ist die
+Grenze erreicht, nennt der Tooltip die Forschung, die mehr erlaubt.
+
 Im UTL-Manager steht das Netzwerk in eckigen Klammern hinter dem Stationsnamen, sobald es nicht
-`default` ist, Zusatznetze als `[Reserve +Erze +Platten]`. Der Reiter **Netzwerke** zeigt alle Netze
-der Karte mit freien Zügen, laufenden Lieferungen und ihren Stationen – und ob eine Station dort mit
-ihrem Heimatnetz steht oder nur als Zusatznetz mitarbeitet.
+`default` ist, Verbindungen als `[Eisen ↔ Kupfer, Kohle]` beim Zentrum und `[Kupfer → Eisen]` beim
+Partner. Der Reiter **Netzwerke** zeigt alle Netze je Oberfläche mit freien Zügen, laufenden
+Lieferungen und den Stationen des Sterns.
 
 **Typische Fehler**
 
@@ -253,15 +283,15 @@ er stehen und ist trotzdem verfügbar.
 
 ## Übersicht: UTL-Manager
 
-Öffnen mit dem **Lok-Knopf in der Shortcut-Leiste** oder **Strg + Umschalt + U**.
+Öffnen mit dem **Lok-Knopf in der Shortcut-Leiste** oder **Strg + Umschalt + U** (oder **Strg + Alt + U** – unter Linux fängt IBus Strg + Umschalt + U manchmal ab).
 
 - **Depots:** alle Depots mit freien/gesamten Zügen; pro Zug Zusammensetzung (z. B. `<LCCL>`),
   Zustand („Lädt bei …“, „Fährt tanken“ …) und Ladung.
 - **Stationen:** Rolle, Angebot (grün) / Bedarf (rot), Unterwegs (blau = kommt, gelb = wird
   abgeholt), Anzahl Züge.
 - **Netzwerke:** alle Netzwerke der Karte mit Stationszahl, freien Zügen und laufenden
-  Lieferungen; rechts die Stationen des gewählten Netzes mit Rolle und der Angabe, ob sie dort
-  ihr Heimatnetz haben oder nur als Zusatznetz mitarbeiten.
+  Lieferungen; rechts oben die Partner des gewählten Netzes (hinzufügen und lösen), darunter die
+  Stationen des Sterns mit Rolle und Netz.
 - **Inventar:** alles, was im Netz angeboten, angefordert und unterwegs ist. Klick auf eine
   Ware zeigt Stationen und Züge.
 - **Verlauf:** die letzten 100 Lieferungen mit Laufzeit; abgebrochene stehen rot mit Grund.
@@ -300,7 +330,7 @@ Start-Einstellungen.
 | Neue Lieferungen pro Durchlauf | 2 | Höchstens so viele Züge pro Dispatcher-Durchlauf (alle 3 Takte, also bis zu 4 pro Sekunde). |
 | Nur den Auftrag laden | an | Wagenfilter während einer Lieferung. Je Station abschaltbar. |
 | Auftrags-Ausgabe an der Haltestelle | an | Der kleine Ausgang neben jeder Haltestelle. Aus: Er verschwindet. |
-| UTL-Funktionen brauchen Forschung | an | Ladesteuerung und Zusatznetze erst nach der Forschung. Aus: alles sofort frei. Alte Spielstände mit erforschtem UTL bekommen die neuen Forschungen automatisch. |
+| UTL-Funktionen brauchen Forschung | an | Ladesteuerung und Netzverbund erst nach der Forschung. Aus: alles sofort frei. Alte Spielstände mit erforschtem UTL bekommen die neuen Forschungen automatisch. |
 | Tanken unter (%) | 40 | Tankgrenze, 0 = aus. |
 | Warnung „kein Zug“ nach (Minuten) | 5 | So lange darf eine Anfrage unbedient sein, bevor gewarnt wird. 0 = sofort. |
 | Standard-Angebots-/Bedarfs-Schwelle | 1000 | Startwerte für neue Stationen. |
@@ -334,6 +364,17 @@ Ware gerade bestellt ist. Eine Werkstatt braucht Eisen **und** Kupfer und bekomm
 Pumpen schaltet die **Auftrags-Ausgabe**. Dazu zwei Depots hintereinander, Tankstelle und Cleanup.
 Zwei Züge, keine Messung – zum Anschauen.
 
+**Neues Spiel → Szenarien → UTL-Netzverbund (2 × 2 City Blocks)**: vier Netze auf 2 × 2 City
+Blocks, jedes in seinem Teil der Karte. `Eisen` (Mitte) ist das Zentrum eines Sterns mit Depot
+(4 Züge), Tankstelle und Cleanup. Seine Partner: `Kupfer` hat **keine eigenen Züge** – die
+Eisen-Züge fahren seine Aufträge – und `Kohle` hat ein eigenes Depot mit 2 Zügen, die auch Eisen
+helfen, aber **nie** Kupfer, denn Partner helfen sich nicht untereinander. `Stein` ist mit niemandem
+verbunden und fährt nur mit seinen eigenen Zügen. Im UTL-Manager, Reiter **Netzwerke**, eine
+Verbindung lösen oder `Stein` dazunehmen und im **Verlauf** zusehen, wer wohin fährt.
+
+In allen Szenarien und in den Tipps-&-Tricks-Szenen stehen **Anzeigefelder** mit kurzen
+Erklärungen neben den Bahnhöfen (in deiner Spielsprache).
+
 ## Lasttest-Szenario
 
 **Neues Spiel → Szenarien → UTL-Lasttest (384 Züge)**: ein fertiges City-Block-Gitter (12 × 12,
@@ -354,13 +395,16 @@ ganzen Zug, Depots gebündelt in einem Abstellbahnhof.
 
 ## Tipps & Tricks im Spiel
 
-Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: zwölf Einträge,
+Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: fünfzehn Einträge,
 die die Bedienung erklären, jeder mit einer laufenden Beispielszene (teils mit geöffnetem
 UTL-Fenster, Manager und Umschalt-Klick zum Kopieren). Darunter: eine UTL-Haltestelle mit Anbieter, Abnehmer und Depot;
 dieselbe Strecke mit normalen Haltestellen und UTL-Stations-Combinatoren (Kabel sichtbar); und
 ein Zug, der zuerst zur Tankstelle fährt und dann liefert; ein Zug mit Restladung, der erst an
-der Cleanup-Station geleert wird; **zwei getrennte Netzwerke übereinander** mit Kamerafahrt. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
-Depots, Einstellungen kopieren/Blaupausen und Manager.
+der Cleanup-Station geleert wird; **zwei getrennte Netzwerke übereinander** mit Kamerafahrt; zwei Netze im Stationsfenster
+verbinden (aus der Liste wählen, mit „Neu“ anlegen); der Manager Reiter für Reiter, sein Reiter
+Netzwerke mit einer neuen Verbindung und der Reiter Inventar, in dem ein Klick auf eine Ware
+Stationen und Züge zeigt. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
+Netze verbinden (Stern, Forschung „Netzverbund“), Depots, Einstellungen kopieren/Blaupausen und Manager.
 
 ## Häufige Fragen
 

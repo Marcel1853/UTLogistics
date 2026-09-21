@@ -456,8 +456,12 @@ local function clear_signals(o, pa)
 end
 
 --- Alles bauen. Liefert Oberfläche, Stationen, Züge und Bereich.
+--- Optional (andere Szenarien): `cfg.surface` = Name der Oberfläche; `cfg.assign(places, span)`
+--- belegt die Bahnhofsplätze selbst (Liste von Specs je Platz, nil = Platz bleibt frei); ein Spec
+--- mit kind = "depot" und `cars` wird ein Depot auf dem Nebengleis mit einem Zug.
 function Builder.build(cfg)
-  surface = game.surfaces["utl-lasttest"] or game.create_surface("utl-lasttest")
+  local name = cfg.surface or "utl-lasttest"
+  surface = game.surfaces[name] or game.create_surface(name)
   surface.generate_with_lab_tiles = true
   surface.always_day = true
   force = game.forces["player"]
@@ -506,13 +510,19 @@ function Builder.build(cfg)
 
   -- Stationen auf die Bahnhofsplätze (Reihenfolge der Plätze: zeilenweise)
   local places = slots(n, skip)
-  local specs = assign(cfg, places, BLOCK * n)
+  local specs = cfg.assign and cfg.assign(places, BLOCK * n) or assign(cfg, places, BLOCK * n)
   for i, place in ipairs(places) do
     local spec = specs[i]
-    spec.combinator = next_combinator()
-    clear_signals(place.o, place.pa)
-    siding(place.o, place.pa, spec)
-    built.stations[#built.stations + 1] = spec
+    if spec then
+      spec.combinator = next_combinator()
+      clear_signals(place.o, place.pa)
+      local front = siding(place.o, place.pa, spec)
+      built.stations[#built.stations + 1] = spec
+      if spec.kind == "depot" and spec.cars then
+        local t = train(front, spec.cars, spec.name, spec.wagon)
+        if t then built.trains[#built.trains + 1] = t end
+      end
+    end
   end
 
   for kx = 0, n - 1 do

@@ -88,10 +88,26 @@ local interface = {
       end
     end
     Roles.derive(cfg)
-    Networks.trim(cfg, Unlocks.networks_limit(Unlocks.force_of(station)))
     Reader.read(station)
     Registry.config_changed(station)
     return true
+  end,
+
+  --- Netze zu einem Stern verbinden: `partner` hilft `center` und umgekehrt (je Oberfläche).
+  --- Grenze wie im Spiel aus der Forschung der Force. Liefert true oder den Grund als Text.
+  link_networks = function(surface_index, center, partner, force)
+    local limit = Unlocks.networks_limit(force and game.forces[force] or game.forces["player"])
+    return Networks.link(surface_index, center, partner, limit)
+  end,
+
+  --- Verbindung zweier Netze lösen.
+  unlink_networks = function(surface_index, a, b)
+    return Networks.unlink(surface_index, a, b)
+  end,
+
+  --- Stern eines Netzes: { role, center, partners }.
+  get_network_star = function(surface_index, name)
+    return Networks.star(surface_index, name)
   end,
 
   --- Alle Einstellungen einer Station auf eine andere kopieren (wie Shift-Klick).
@@ -135,12 +151,19 @@ local interface = {
     return true
   end,
 
-  --- UTL-Manager öffnen, optional mit Reiter: depots, stations, inventory, history, alerts.
-  open_manager = function(player_index, tab)
+  --- UTL-Manager öffnen, optional mit Reiter: depots, stations, networks, inventory, history,
+  --- alerts. `select` wählt wie ein Klick etwas aus (Tipps-Szenen): { network = "<oberfläche>|<name>" }
+  --- im Reiter „Netzwerke“, { ware = "item|iron-plate|normal" } im Reiter „Inventar“.
+  open_manager = function(player_index, tab, select)
     local player = game.get_player(player_index)
     if not player then return false end
     if not Manager.get(player_index) then Manager.open(player) end
-    if tab then Manager.select(player_index, tab) end
+    local manager = Manager.get(player_index)
+    if manager and select then
+      if select.network then manager.network = select.network end
+      if select.ware then manager.ware = select.ware end
+    end
+    if tab then Manager.select(player_index, tab) else Manager.refresh(player_index) end
     return true
   end,
 

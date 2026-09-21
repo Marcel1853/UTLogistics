@@ -2,13 +2,17 @@
 Version: 0.0.4
 Date: 2026-09-21
   Features:
-    - Research: "UTL: Additional networks I–III" allow 1, 2 and 3 additional networks per station; "UTL: Loading control" unlocks wagon filters and the job output. Map setting "UTL features need research" turns this off.
-    - Additional networks: besides its home network a station can now work in further networks. Two stations work together as soon as their networks overlap – a reserve depot can serve several networks without merging them.
-    - Station window, new network section: the home network is picked from a drop-down of every network on the map and renamed with the pencil button; additional networks are added from a list and shown as small buttons that a click removes.
-    - UTL Manager: new tab "Networks" – every network with its stations, free trains and running deliveries, and whether a station is in it with its home network or as an additional one.
+    - Research: "UTL: Network links I–III" allow a network 1, 2 and 3 partner networks; "UTL: Loading control" unlocks wagon filters and the job output. Map setting "UTL features need research" turns this off.
+    - Network links: networks can now help each other. A link is a star – one center network with up to three partners (per research tier). Center and partner share trains, depots, fuel stations and cleanups in both directions; partners do not help each other, and a network belongs to at most one star. Links apply per surface. The number of networks stays unlimited.
+    - Station window, new network section: the home network is picked from a drop-down of every network on the map and renamed with the pencil button; the box "Linked with" adds partners from a list or creates a new one, and shows them as buttons that a click unlinks.
+    - UTL Manager: new tab "Networks" – every network per surface with its stations, free trains and running deliveries; partners can be added and removed there as well.
+    - Tips & tricks: new entries "Linking networks" (station window: pick a network or create one with "New"), "Manager: Networks" and "Manager: Inventory", each with a scene; the manager entry now explains every tab.
+    - New scenario "UTL network links (2 × 2 city blocks)": four networks – "Eisen" as the center of a star with the partners "Kupfer" (no trains of its own) and "Kohle" (own depot), plus "Stein" on its own. Everything researched, cheat mode on.
+    - Display panels with short explanations in the tips & tricks scenes and in all three scenarios (in the player's language). The manager scene now shows an example alert.
   Changes:
+    - Manager hotkey: Ctrl + Alt + U works as a second default key (on Linux, IBus can grab Ctrl + Shift + U).
     - Saves that already researched Unified Train Logistics get the new research automatically.
-    - The manager shows the additional networks behind the station name, for example [Reserve +Erze +Platten].
+    - The manager shows links behind the station name, for example [Iron ↔ Copper, Coal] for a center and [Copper → Iron] for a partner.
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.3
 Date: 2026-09-20

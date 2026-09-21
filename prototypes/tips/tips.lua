@@ -28,9 +28,12 @@ data:extend({
   item("utl-requests", "e", "requests"),
   item("utl-values", "f", "values"),
   item("utl-networks", "f2", "networks", { tag = "[virtual-signal=utl-network]" }),
+  item("utl-network-links", "f3", "links", { indent = 2 }),
   item("utl-depots", "g", "depots"),
   item("utl-fuel", "h", "fuel", { tag = "[item=coal]" }),
   item("utl-cleanup", "i", "cleanup"),
   item("utl-copy", "j", "copy", { tag = "[item=blueprint]" }),
-  item("utl-manager", "k", "manager"),
+  item("utl-manager", "k", "manager", { tag = "[img=utility/search]" }),
+  item("utl-manager-networks", "k2", "manager_networks", { indent = 2 }),
+  item("utl-manager-inventory", "k3", "manager_inventory", { indent = 2 }),
 })

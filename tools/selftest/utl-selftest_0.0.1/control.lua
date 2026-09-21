@@ -50,19 +50,21 @@ script.on_nth_tick(10, function(e)
     st.uchest.insert{name="coal", count=500}
     st.uchest.get_wire_connector(W.circuit_red, true).connect_to(st.ustop.get_wire_connector(W.circuit_red, true))
     remote.call("utl","configure_station", st.ustop.unit_number, {mode="station", provide=true, request=false, provide_threshold=100})
-    -- Forschung: ohne „Zusatznetze I“ keine Zusatznetze, mit Stufe I genau eins.
-    local function extra_count()
-      local info = station_info(st.ustop.unit_number)
-      local n = 0
-      for _ in pairs(info and info.config.networks or {}) do n = n + 1 end
-      return n
-    end
-    remote.call("utl","configure_station", st.ustop.unit_number, {networks = {A = true, B = true}})
-    check("forschung: ohne zusatznetze-forschung kein zusatznetz", extra_count() == 0, tostring(extra_count()))
+    -- Forschung: ohne „Netzverbund I“ keine Verbindung, mit Stufe I genau ein Partner. Ein Partner
+    -- darf nirgends sonst Partner sein und keine eigenen Partner haben.
+    local surf = st.ustop.surface_index
+    check("forschung: ohne netzverbund keine verbindung",
+      remote.call("utl","link_networks", surf, "X", "Y") == "link-limit")
     force.technologies["utl-networks-1"].researched = true
-    remote.call("utl","configure_station", st.ustop.unit_number, {networks = {A = true, B = true}})
-    check("forschung: stufe I erlaubt genau ein zusatznetz", extra_count() == 1, tostring(extra_count()))
-    remote.call("utl","configure_station", st.ustop.unit_number, {networks = {}})
+    check("forschung: stufe I erlaubt einen partner", remote.call("utl","link_networks", surf, "X", "Y") == true)
+    check("forschung: stufe I erlaubt keinen zweiten",
+      remote.call("utl","link_networks", surf, "X", "Z") == "link-limit")
+    check("stern: partner kann nicht partner eines anderen werden",
+      remote.call("utl","link_networks", surf, "Z", "Y") == "link-partner-taken")
+    check("stern: partner bekommt keine eigenen partner",
+      remote.call("utl","link_networks", surf, "Y", "Z") == "link-center-is-partner")
+    remote.call("utl","unlink_networks", surf, "X", "Y")
+    check("stern: verbindung gelöst", (remote.call("utl","get_network_star", surf, "X") --[[@as table]]).role == nil)
     -- Für die übrigen Runden alles freischalten (Ladesteuerung, Zusatznetze II/III).
     for _, name in ipairs({ "utl-train-logistics", "utl-loading-control", "utl-networks-2", "utl-networks-3" }) do
       force.technologies[name].researched = true
@@ -221,11 +223,14 @@ function build_network_test()
   remote.call("utl", "configure_station", st.pb.unit_number, { mode = "station", provide = true, request = false, network = "B", provide_threshold = 100 })
   remote.call("utl", "configure_station", st.ra.unit_number, { mode = "station", provide = false, request = true, network = "A", request_threshold = 100 })
   remote.call("utl", "configure_station", st.rb.unit_number, { mode = "station", provide = false, request = true, network = "B", request_threshold = 100 })
-  -- Reserve-Depot: Heimatnetz R, dazu die Zusatznetze A und B
-  remote.call("utl", "configure_station", st.nd.unit_number, { mode = "depot", network = "R", networks = { A = true, B = true } })
-  local info = remote.call("utl", "get_station", st.nd.unit_number)
-  check("R16 zusatznetze gespeichert", info and info.config.networks and info.config.networks.A and info.config.networks.B,
-    info and serpent.line(info.config.networks))
+  -- Reserve-Depot im Netz R; R wird Zentrum eines Sterns mit den Partnern A und B
+  remote.call("utl", "configure_station", st.nd.unit_number, { mode = "depot", network = "R" })
+  local surf = st.nd.surface_index
+  local ok_a = remote.call("utl", "link_networks", surf, "R", "A")
+  local ok_b = remote.call("utl", "link_networks", surf, "R", "B")
+  local star = remote.call("utl", "get_network_star", surf, "R") --[[@as table]]
+  check("R16 stern R mit A und B", ok_a == true and ok_b == true and star.role == "center" and #star.partners == 2,
+    serpent.line(star))
   local l1 = s.create_entity{ name = "locomotive", position = { 121, 0 }, direction = defines.direction.north, force = force }
   st.nwagon = s.create_entity{ name = "cargo-wagon", position = { 121, 7 }, direction = defines.direction.north, force = force }
   local l2 = s.create_entity{ name = "locomotive", position = { 121, 14 }, direction = defines.direction.south, force = force }
@@ -632,32 +637,36 @@ function train_test_step()
       if string.find(to, "UTL-RA", 1, true) and not st.seen.r12_a then
         st.seen.r12_a = true
         check("R16 reserve-zug bedient netz A", d.train_id == st.ntrain.id, tostring(d.train_id))
+        -- Anfrage in A sofort zurücknehmen, sonst verkettet der Zug Lieferung an Lieferung nach A
+        remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
       elseif string.find(to, "UTL-RB", 1, true) and not st.seen.r12_b then
         st.seen.r12_b = true
         check("R16 derselbe reserve-zug bedient auch netz B", d.train_id == st.ntrain.id, tostring(d.train_id))
+        remote.call("utl", "set_request", st.rb.unit_number, 1, nil)
       end
     elseif st.seen.r12_a and not st.seen.r12_next then
       -- Netz A fertig: jetzt Bedarf in Netz B; derselbe Zug muss auch dorthin
       st.seen.r12_next = true
-      remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
       remote.call("utl", "set_request", st.rb.unit_number, 1, { type = "item", name = "copper-plate" }, 1000)
     elseif st.seen.r12_b and st.ntrain.station == st.nd then
       check("R16 reserve-zug wieder im eigenen depot", true)
-      -- Gegenprobe: ein Depot nur in Netz A darf Netz B nicht bedienen
-      remote.call("utl", "configure_station", st.nd.unit_number, { networks = {} })
+      -- Gegenprobe: ohne Verbindung zu B darf der Reserve-Zug Netz B nicht bedienen
+      remote.call("utl", "unlink_networks", st.nd.surface_index, "R", "B")
       remote.call("utl", "set_request", st.rb.unit_number, 1, { type = "item", name = "copper-plate" }, 1000)
       st.round = 17
       st.wait_until = tick + 1200
     end
   elseif st.round == 17 then
     if tick >= st.wait_until then
-      check("R17 ohne zusatznetz keine lieferung in netz B", remote.call("utl", "delivery_count") == 0,
+      check("R17 ohne verbindung keine lieferung in netz B", remote.call("utl", "delivery_count") == 0,
         tostring(remote.call("utl", "delivery_count")))
       st.done = true
     end
   end
   if not st.done and tick >= 149900 then
-    check("zugtest vollständig", false, "runde " .. st.round .. " " .. serpent.line(st.seen) .. " idle=" .. remote.call("utl","idle_train_count") .. " state=" .. st.train.state)
+    check("zugtest vollständig", false, "runde " .. st.round .. " " .. serpent.line(st.seen) .. " idle=" .. remote.call("utl","idle_train_count") .. " state=" .. st.train.state
+      .. " deliveries=" .. serpent.line(remote.call("utl","get_deliveries"))
+      .. (st.ntrain and st.ntrain.valid and (" ntrain=" .. st.ntrain.state .. " " .. tostring(st.ntrain.station and st.ntrain.station.backer_name)) or ""))
     st.done = true
   end
   if st.done then
