@@ -9,7 +9,6 @@
 --- Abzweig-/Einmündungsstücke (Factorio 2.x) wurden per Suche im Spiel ermittelt (docs/PLAN.md).
 --- Angaben relativ zu einem geraden Gleisstück (ungerade Koordinaten).
 local CityBlock = require("__UTLogistics__/scenarios/UTL-Lasttest/cityblock")
-local DepotBlock = require("__UTLogistics__/scenarios/UTL-Lasttest/cityblock-depot")
 
 local Builder = {}
 
@@ -22,6 +21,16 @@ local O = {
 }
 
 -- { Name, Richtung, dx, dy } – die ersten 4 Stücke; *_END = Lage des folgenden geraden Stücks
+-- 90°-Rechtskurve (nur N→E für die Einfahrt und E→S für die Ausfahrt des Abstellbahnhofs)
+local RIGHT = {
+  N = { { "curved-rail-a", 2, 0, -3 }, { "curved-rail-b", 2, 2, -8 }, { "curved-rail-b", 12, 6, -12 }, { "curved-rail-a", 12, 11, -14 } },
+  E = { { "curved-rail-a", 6, 3, 0 }, { "curved-rail-b", 6, 8, 2 }, { "curved-rail-b", 0, 12, 6 }, { "curved-rail-a", 0, 14, 11 } },
+}
+-- Schräge Weichenstraße: waagerecht (Osten) → schräg (Südost) und Abzweig schräg → Osten.
+local E_TO_SE = { { "curved-rail-a", 6, 3, 0 }, { "curved-rail-b", 6, 8, 2 } }       -- danach Schräge bei (11, 5)
+local SE_TO_E = { { "curved-rail-b", 14, 3, 3 }, { "curved-rail-a", 14, 8, 5 } }     -- danach Gerade bei (11, 5)
+local DIAGONAL_SE = 6 -- Richtung schräger gerader Gleise (Schritt 2, 2)
+
 local DIVERGE = {
   N = { { "curved-rail-a", 2, 0, -3 }, { "half-diagonal-rail", 2, 2, -8 }, { "half-diagonal-rail", 2, 4, -12 }, { "curved-rail-a", 10, 6, -17 } },
   E = { { "curved-rail-a", 6, 3, 0 }, { "half-diagonal-rail", 6, 8, 2 }, { "half-diagonal-rail", 6, 12, 4 }, { "curved-rail-a", 14, 17, 6 } },
@@ -45,6 +54,8 @@ end
 local SPAN = 160     -- Abzweig bis Einmündung: Bahnsteig + 2 Warteplätze (Züge bis 5 Teile)
 local GAP = 6        -- Platz für das Kettensignal vor dem Abzweig
 local BLOCK = 224    -- Rastermaß der City Blocks
+local YARD_TRACKS = 12 -- Depotgleise je Abstellbahnhof (passt in das Blockinnere)
+local YARD_LENGTH = 48 -- Länge eines Depotgleises (Züge bis 5 Teile)
 
 local stats = { rails = 0, failed = 0, signals = 0, signals_failed = 0, equipment = 0, wires_failed = 0, blocks = 0 }
 local surface, force
@@ -224,71 +235,18 @@ local function siding(o, pa, spec)
   return { head = head, back = { -f[1], -f[2] }, dir = O[o].dir }
 end
 
---- Einen Zug setzen: Lok mit `cars` Wagen dahinter, Fahrplan „zum Depot“. Bleibt ein Teil
---- stecken (unter den Hochgleisen der Depot-Blöcke ist kein Platz), wird alles wieder abgeräumt
---- und nil geliefert – der Aufrufer rückt den Zug dann ein paar Felder nach hinten.
 local function train(front, cars, depot_name, wagon)
-  local parts = {}
-  -- Alle Teile mit auto_connect = false: sonst hängt sich ein Teil an einen fremden Zug daneben
-  -- (an den Kreuzungen mit den Hochgleisen passiert das) und reißt ihn beim Abräumen auseinander –
-  -- ein so geteilter Zug steht danach im Handbetrieb. Gekuppelt wird gleich von Hand.
-  local loco = surface.create_entity({ name = "locomotive", position = front.head, direction = front.dir,
-    force = force, auto_connect = false })
+  local loco = surface.create_entity({ name = "locomotive", position = front.head, direction = front.dir, force = force })
   if not loco then return nil end
-  parts[1] = loco
-  local function give_up()
-    for _, part in ipairs(parts) do part.destroy() end
-    stats.trains_retried = (stats.trains_retried or 0) + 1
-    return nil
-  end
   for i = 1, cars do
-    local car = surface.create_entity({ name = wagon or "cargo-wagon", position = add(front.head, front.back, 7 * i),
-      direction = front.dir, force = force, auto_connect = false })
-    if not car then return give_up() end
-    parts[#parts + 1] = car
-    -- nach vorn an das Teil davor kuppeln
-    if not car.connect_rolling_stock(defines.rail_direction.front) then return give_up() end
+    surface.create_entity({ name = wagon or "cargo-wagon", position = add(front.head, front.back, 7 * i),
+      direction = front.dir, force = force })
   end
-  -- Sicherheitsnetz: der Zug muss genau aus Lok und seinen Wagen bestehen.
-  if #loco.train.carriages ~= cars + 1 then return give_up() end
   loco.insert({ name = "coal", count = 150 })
   local schedule = loco.train.get_schedule()
   schedule.add_record({ station = depot_name, wait_conditions = { { type = "inactivity", ticks = 300 } } })
   schedule.go_to_station(1)
-  loco.train.manual_mode = false -- sonst bleibt der Zug stehen, bis man ihn von Hand startet
   return loco.train
-end
-
---- Wartestelle für den nächsten Zug: das erste Signal hinter dem Zug am Bahnsteig. Dort hält der
---- zweite Zug, bis der erste das Depotgleis verlässt. Liefert nil, wenn in Reichweite keins liegt
---- (dann bleibt es bei einem Zug im Gleis).
-local function wait_spot(front, cars)
-  local back = front.back
-  local least = 7 * (cars + 1) + 4 -- hinter dem Zug am Bahnsteig
-  local from = add(front.head, back, least)
-  local to = add(front.head, back, 260)
-  local area = { { math.min(from[1], to[1]) - 3, math.min(from[2], to[2]) - 3 },
-    { math.max(from[1], to[1]) + 3, math.max(from[2], to[2]) + 3 } }
-  local side_of = function(p) return math.abs(dot({ p.x - front.head[1], p.y - front.head[2] }, { -back[2], back[1] })) end
-  --- Hängt das Signal an unserem Gleis? Die Hochgleise kreuzen die ebenerdigen Depotgleise, und
-  --- ihre Signale stehen genau 1,5 Felder daneben – nach der Lage allein wären sie nicht von den
-  --- eigenen zu unterscheiden. Deshalb über die Gleise gehen, an denen das Signal hängt.
-  local function on_our_track(sig)
-    for _, rail in pairs(sig.get_connected_rails()) do
-      if side_of(rail.position) <= 0.6 then return true end
-    end
-    return false
-  end
-  local best
-  for _, sig in pairs(surface.find_entities_filtered({ area = area, type = "rail-signal" })) do
-    local along = dot({ sig.position.x - front.head[1], sig.position.y - front.head[2] }, back)
-    if along >= least and (not best or along < best) and side_of(sig.position) <= 2.5 and on_our_track(sig) then
-      best = along
-    end
-  end
-  if not best then return nil end
-  -- Züge stehen vor dem Signal; Gleise liegen auf ungeraden Feldern, also in Zweierschritten.
-  return add(front.head, back, math.ceil((best + 1) / 2) * 2)
 end
 
 --- Reihenfolge der Stationen: je Depot 40 Plätze, dazwischen Tankstellen, Anbieter/Abnehmer
@@ -363,99 +321,93 @@ local function assign(cfg, places, span)
   return specs
 end
 
-local NAMES = { S = "straight-rail", A = "curved-rail-a", B = "curved-rail-b", H = "half-diagonal-rail",
-  G = "rail-signal", K = "rail-chain-signal", P = "big-electric-pole", R = "radar" }
-local EXTRAS = { P = true, R = true } -- Masten/Radare erst nach den Bahnhöfen (die haben Vorrang)
--- Der Depot-Block bringt zusätzlich Rampen, Stützen und Hochgleise mit, dazu seine Haltestellen.
-local DEPOT_NAMES = { U = "rail-support", M = "rail-ramp", E = "elevated-straight-rail",
-  EA = "elevated-curved-rail-a", EB = "elevated-curved-rail-b", EH = "elevated-half-diagonal-rail",
-  T = "utl-train-stop" }
-for code, name in pairs(NAMES) do DEPOT_NAMES[code] = name end
-
--- Richtung (16er) → Himmelsrichtung, für die Haltestellen aus der Blaupause
-local DIR_TO_O = { [0] = "N", [4] = "E", [8] = "S", [12] = "W" }
-
---- Strom für Radare und Masten eines Blocks: Energiequelle mit Mittelmast neben einem Großmast
---- der Blockmitte.
-local function power(x0, y0)
-  local eei = surface.create_entity({ name = "electric-energy-interface", position = { x0 + 48, y0 + 90 }, force = force })
-  if eei then
-    eei.power_production = 2000000
-    eei.electric_buffer_size = 20000000
+--- Abstellbahnhof im Inneren des Blocks mit Ecke (X, Y): Einfahrt vom Nord-Außengleis des
+--- West-Korridors (Rechtskurve nach Osten), schräge Weichenstraße auf YARD_TRACKS parallele
+--- Depotgleise, schräge Sammelstraße, Ausfahrt ins Süd-Außengleis des Ost-Korridors.
+--- Liefert die Depot-Haltestellen (mit Zugposition).
+local function yard(X, Y, spec_of)
+  local row = Y + 101             -- Zufahrt (waagerecht)
+  local ya = row + 14             -- Abzweig am Korridorgleis
+  local K = YARD_TRACKS
+  local row_exit = row + 20 + 6 * (K - 1)
+  -- Blocksignale des City Blocks an Ein- und Ausfahrt entfernen
+  for _, area in ipairs({
+    { { X + 62, ya - 24 }, { X + 63, ya + 10 } },
+    { { X + 257, row_exit - 4 }, { X + 258, row_exit + 24 } },
+  }) do
+    for _, sig in pairs(surface.find_entities_filtered({ area = area, type = { "rail-signal", "rail-chain-signal" } })) do sig.destroy() end
   end
-  surface.create_entity({ name = "medium-electric-pole", position = { x0 + 48.5, y0 + 86.5 }, force = force })
-end
-
---- Ein Depot-Block aus Marcels Blaupause „City Block 4 Depo“ (docs/blaupausen/cityblock_depo.txt):
---- ein City Block, dessen Inneres ein Abstellbahnhof mit 27 Haltestellen ist – zwölf ebenerdige
---- Gleise und fünfzehn über Rampen und Hochgleise angebundene. Liefert die Haltestellen mit der
---- Lage des ersten Zuges (`front`); die Züge selbst setzt build().
---- Liegt ein Punkt im Bereich eines Depot-Blocks? Dort baut nur die Depot-Blaupause.
-local function in_boxes(x, y, boxes)
-  for _, b in ipairs(boxes or {}) do
-    if x >= b[1] and x <= b[3] and y >= b[2] and y <= b[4] then return true end
-  end
-  return false
-end
-
---- Die Depot-Blöcke werden vor den gewöhnlichen City Blocks gebaut: Im Depot-Block gilt das
---- Signalbild der Blaupause (Marcel hat eigens Signale mitten in die Depotgleise gesetzt, damit
---- dahinter noch ein Zug Platz hat). Die gewöhnlichen Blöcke lassen diesen Bereich danach aus.
-local function depot_block(X, Y, spec_of)
+  -- Einfahrt
+  signal("N", { X + 62.5, ya + 4.5 }, true, true, true)            -- Kettensignal vor dem Abzweig
+  pieces(RIGHT.N, { X + 61, ya })
+  local xd = X + 77
+  straight("E", { X + 75, row }, 2)
+  signal("E", { X + 75.5, row + 1.5 })
+  pieces(E_TO_SE, { xd, row })
+  local d0 = { xd + 11, row + 5 }
+  for j = 0, 3 * (K - 1) do rail("straight-rail", DIAGONAL_SE, add(d0, { 1, 1 }, 2 * j)) end
+  -- Sammelstraße
+  local c0 = { xd + 22 + YARD_LENGTH + 11, row + 15 }
+  for j = 0, 3 * (K - 1) do rail("straight-rail", DIAGONAL_SE, add(c0, { 1, 1 }, 2 * j)) end
+  local clast = add(c0, { 1, 1 }, 6 * (K - 1))
+  pieces(SE_TO_E, clast)
+  local x_exit = clast[1] + 11
+  straight("E", { x_exit, row_exit }, X + 245 - x_exit)
+  signal("E", { X + 243.5, row_exit + 1.5 })                        -- vor der Einmündung in den Korridor
+  pieces(RIGHT.E, { X + 245, row_exit })
+  -- Depotgleise
   local stops = {}
-  for _, e in ipairs(DepotBlock) do
-    local name = DEPOT_NAMES[e[1]]
-    if e[1] == "T" then
-      local spec = spec_of()
-      local stop = surface.create_entity({ name = name, position = { X + e[2], Y + e[3] },
-        direction = e[4], force = force, raise_built = true })
-      if stop then
-        stop.backer_name = spec.name
-        -- Nur ein Zug darf den Bahnsteig anfahren; der zweite wartet dahinter, bis der erste
-        -- weg ist. Mit einem höheren Limit würde er auffahren und ankuppeln.
-        stop.trains_limit = 1
-        spec.stop = stop
-        -- Fahrtrichtung der Haltestelle: der Zug steht 2 Felder links und 3 Felder dahinter.
-        local o = DIR_TO_O[e[4]]
-        local f, r = O[o].f, O[o].r
-        stops[#stops + 1] = { spec = spec,
-          front = { head = add(add({ X + e[2], Y + e[3] }, r, -2), f, -3), back = { -f[1], -f[2] }, dir = O[o].dir } }
-      end
-    else
-      -- e[5] = 1: das Objekt gehört zum Hochgleis (Signale der Hochbahn müssen an deren Ebene
-      -- hängen, sonst sperren sie das Bodengleis und die Hochbahn bleibt ein einziger Block).
-      local built = surface.create_entity({ name = name, position = { X + e[2], Y + e[3] },
-        direction = e[4], force = force,
-        rail_layer = e[5] == 1 and defines.rail_layer.elevated or nil })
-      if built then
-        if e[1] == "P" then stats.poles = (stats.poles or 0) + 1
-        elseif e[1] == "R" then stats.radars = (stats.radars or 0) + 1
-        elseif e[1] == "G" or e[1] == "K" then stats.signals = stats.signals + 1
-        else stats.rails = stats.rails + 1 end
-      else
-        -- Der Depot-Block bringt die Korridore des City Blocks mit; an den Rändern stehen sie
-        -- schon vom Nachbarblock. Solche Doppelstücke sind kein Fehler.
-        stats.depot_dup = (stats.depot_dup or 0) + 1
+  for k = 0, K - 1 do
+    local dk = add(d0, { 1, 1 }, 6 * k)
+    pieces(SE_TO_E, dk)
+    local yk, xs = row + 10 + 6 * k, xd + 22 + 6 * k
+    local xe = xs + YARD_LENGTH
+    straight("E", { xs, yk }, YARD_LENGTH)
+    pieces(E_TO_SE, { xe, yk })
+    signal("E", { xs + 1.5, yk + 1.5 })                             -- Einfahrt Depotgleis
+    signal("E", { xe - 0.5, yk + 1.5 })                             -- Ausfahrt Depotgleis
+    local spec = spec_of(k)
+    local stop = surface.create_entity({ name = spec.combinator and "train-stop" or "utl-train-stop",
+      position = { xe - 3, yk + 2 }, direction = O.E.dir, force = force, raise_built = true })
+    stop.backer_name = spec.name
+    stop.trains_limit = 1
+    spec.stop = stop
+    if spec.combinator then
+      spec.combinator_entity = surface.create_entity({ name = "utl-station-combinator",
+        position = { xe - 5, yk + 2 }, direction = O.E.dir, force = force, raise_built = true })
+      if spec.combinator_entity then
+        stats.combinators = (stats.combinators or 0) + 1
+        spec.combinator_entity.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
+          .connect_to(stop.get_wire_connector(defines.wire_connector_id.circuit_green, true))
       end
     end
+    stops[#stops + 1] = { spec = spec, front = { head = { xe - 6, yk }, back = { -1, 0 }, dir = O.E.dir } }
   end
-  power(X, Y)
-  stats.blocks = stats.blocks + 1
   stats.yards = (stats.yards or 0) + 1
   return stops
 end
 
+local NAMES = { S = "straight-rail", A = "curved-rail-a", B = "curved-rail-b", H = "half-diagonal-rail",
+  G = "rail-signal", K = "rail-chain-signal", P = "big-electric-pole", R = "radar" }
+local EXTRAS = { P = true, R = true } -- Masten/Radare erst nach den Bahnhöfen (die haben Vorrang)
+
 --- Einen City Block mit Ecke (x0, y0) setzen. Überlappende Stücke des Nachbarblocks (gemeinsame
 --- Korridore) gibt es schon – create_entity schlägt dann einfach fehl.
-local function city_block(x0, y0, extras, depot_boxes)
+local function city_block(x0, y0, extras)
   for _, e in ipairs(CityBlock) do
-    if (EXTRAS[e[1]] or false) == extras and not in_boxes(x0 + e[2], y0 + e[3], depot_boxes) then
+    if (EXTRAS[e[1]] or false) == extras then
       local ok = surface.create_entity({ name = NAMES[e[1]], position = { x0 + e[2], y0 + e[3] }, direction = e[4], force = force })
       if extras and ok then stats[e[1] == "R" and "radars" or "poles"] = (stats[e[1] == "R" and "radars" or "poles"] or 0) + 1 end
     end
   end
   if extras then
-    power(x0, y0)
+    -- Strom für Radare und Masten: Energiequelle mit Mittelmast neben einem Großmast der Blockmitte
+    local eei = surface.create_entity({ name = "electric-energy-interface", position = { x0 + 48, y0 + 90 }, force = force })
+    if eei then
+      eei.power_production = 2000000
+      eei.electric_buffer_size = 20000000
+    end
+    surface.create_entity({ name = "medium-electric-pole", position = { x0 + 48.5, y0 + 86.5 }, force = force })
   else
     stats.blocks = stats.blocks + 1
   end
@@ -464,23 +416,11 @@ end
 --- Alle Bahnhofsplätze des Gitters (n × n Blöcke): je Korridorstück zwei (eine je Außenseite).
 --- Senkrecht: Gleis x+35 nach Süden (Bahnhof westlich), x+61 nach Norden (östlich).
 --- Waagerecht: Gleis y+35 nach Westen (nördlich), y+61 nach Osten (südlich).
-local function slots(n, depot_boxes)
+local function slots(n, skip)
   local list = {}
-  --- Liegt das Nebengleis (Abzweig bis Einmündung, 8 Felder breit) an einem Depot-Block?
-  --- Dort sollen keine Bahnhöfe stehen – weder im Block noch in seinen Korridoren.
-  local function at_depot(o, pa)
-    local f, r = O[o].f, O[o].r
-    local pb = add(add(pa, f, SPAN + 20), r, 10)
-    local pc = add(add(pa, f, -10), r, -2)
-    local x1, x2 = math.min(pb[1], pc[1]), math.max(pb[1], pc[1])
-    local y1, y2 = math.min(pb[2], pc[2]), math.max(pb[2], pc[2])
-    for _, b in ipairs(depot_boxes) do
-      if x1 <= b[3] and x2 >= b[1] and y1 <= b[4] and y2 >= b[2] then return true end
-    end
-    return false
-  end
   local function add_slot(o, pa)
-    if not at_depot(o, pa) then list[#list + 1] = { o = o, pa = pa } end
+    local key = o .. ":" .. pa[1] .. ":" .. pa[2]
+    if not skip[key] then list[#list + 1] = { o = o, pa = pa } end
   end
   for k = 0, n do
     for l = 0, n - 1 do
@@ -526,15 +466,20 @@ function Builder.build(cfg)
   surface.request_to_generate_chunks({ size / 2, size / 2 }, math.ceil(size / 64) + 1)
   surface.force_generate_chunk_requests()
 
+  for kx = 0, n - 1 do
+    for ky = 0, n - 1 do city_block(BLOCK * kx, BLOCK * ky, false) end
+  end
+
   -- Depot-Blöcke sind reine Depot-Blöcke (Wunsch Marcel): an keiner ihrer vier Seiten liegen
-  -- Bahnhöfe (die Nebengleise lägen im Blockinneren), und statt des gewöhnlichen City Blocks
-  -- kommt Marcels Blaupause „City Block 4 Depo“ hinein.
-  local depot_boxes, is_depot = {}, {}
+  -- Bahnhöfe (die Nebengleise lägen im Blockinneren).
+  local skip = {}
   for _, depot in ipairs(cfg.depots) do
     for _, b in ipairs(depot.blocks) do
       local X, Y = BLOCK * b[1], BLOCK * b[2]
-      is_depot[X .. ":" .. Y] = true
-      depot_boxes[#depot_boxes + 1] = { X, Y, X + 320, Y + 320 }
+      skip["N:" .. (X + 61) .. ":" .. (Y + 239)] = true
+      skip["S:" .. (X + BLOCK + 35) .. ":" .. (Y + 81)] = true
+      skip["E:" .. (X + 81) .. ":" .. (Y + 61)] = true
+      skip["W:" .. (X + 239) .. ":" .. (Y + BLOCK + 35)] = true
     end
   end
 
@@ -545,54 +490,22 @@ function Builder.build(cfg)
     return count % 4 == 0 -- jede vierte Station: normale Haltestelle + UTL-Combinator
   end
 
-  -- Depots in ihren Blöcken: je Haltestelle stehen mehrere Züge hintereinander im Gleis.
+  -- Depots in ihren Blöcken
   for d, depot in ipairs(cfg.depots) do
     for _, b in ipairs(depot.blocks) do
-      local stops = depot_block(BLOCK * b[1], BLOCK * b[2], function()
-        return { kind = "depot", depot = d, name = depot.name }
+      local stops = yard(BLOCK * b[1], BLOCK * b[2], function()
+        return { kind = "depot", depot = d, name = depot.name, combinator = next_combinator() }
       end)
       for _, entry in ipairs(stops) do
         built.stations[#built.stations + 1] = entry.spec
-        local front = entry.front
-        for k = 1, depot.trains_per_stop or 2 do
-          -- Der erste Zug steht am Bahnsteig, jeder weitere vor dem nächsten Signal dahinter.
-          if k > 1 then
-            local head = wait_spot(front, depot.cars)
-            if not head then break end
-            front = { head = head, back = front.back, dir = front.dir }
-          end
-          -- Passt der Zug nicht (Stütze, Hochgleis oder Zug davor im Weg), ein paar Felder weiter
-          -- hinten versuchen. Gleise liegen auf ungeraden Feldern, deshalb in Zweierschritten.
-          local placed
-          for shift = 0, 12, 2 do
-            local head = add(front.head, front.back, shift)
-            placed = train({ head = head, back = front.back, dir = front.dir }, depot.cars, depot.name, depot.wagon)
-            if placed then
-              front = { head = head, back = front.back, dir = front.dir }
-              break
-            end
-          end
-          if placed then
-            built.trains[#built.trains + 1] = placed
-          else
-            stats.trains_failed = (stats.trains_failed or 0) + 1
-            stats.trains_fail_at = (stats.trains_fail_at or "") .. (" %s %d/%d"):format(depot.name, front.head[1], front.head[2])
-          end
-        end
+        local t = train(entry.front, depot.cars, depot.name, depot.wagon)
+        if t then built.trains[#built.trains + 1] = t end
       end
     end
   end
 
-  -- Erst jetzt die gewöhnlichen City Blocks: Die Bereiche der Depot-Blöcke bleiben frei, sonst
-  -- setzten sie Signale dorthin, wo die Blaupause bewusst keine hat.
-  for kx = 0, n - 1 do
-    for ky = 0, n - 1 do
-      if not is_depot[(BLOCK * kx) .. ":" .. (BLOCK * ky)] then city_block(BLOCK * kx, BLOCK * ky, false, depot_boxes) end
-    end
-  end
-
   -- Stationen auf die Bahnhofsplätze (Reihenfolge der Plätze: zeilenweise)
-  local places = slots(n, depot_boxes)
+  local places = slots(n, skip)
   local specs = assign(cfg, places, BLOCK * n)
   for i, place in ipairs(places) do
     local spec = specs[i]
@@ -603,9 +516,7 @@ function Builder.build(cfg)
   end
 
   for kx = 0, n - 1 do
-    for ky = 0, n - 1 do
-      if not is_depot[(BLOCK * kx) .. ":" .. (BLOCK * ky)] then city_block(BLOCK * kx, BLOCK * ky, true, depot_boxes) end
-    end
+    for ky = 0, n - 1 do city_block(BLOCK * kx, BLOCK * ky, true) end
   end
 
   force.bulk_inserter_capacity_bonus = 11

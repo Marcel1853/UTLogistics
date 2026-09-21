@@ -1,34 +1,31 @@
 --- UTL-Lasttest (Szenario und headless-Lasttest nutzen denselben Code):
---- City-Block-Gitter 12 × 12, neun Depot-Blöcke aus Marcels Blaupause „City Block 4 Depo“ mit je
---- 27 Haltestellen und zwei Zügen je Haltestelle, dazu zwei Depot-Blöcke für Flüssigkeitszüge,
---- 64 Anbieter + 8 für Flüssigkeiten, übrige Plätze Abnehmer, 16 Tankstellen und 6 Cleanup
---- gleichmäßig verteilt. Be-/Entladen und Tanken mit echten Greifarmen an Unendlich-Kisten
---- (Anbieter: Nachschub, Abnehmer/Cleanup: Kisten vernichten alles).
+--- City-Block-Gitter 12 × 12, 5 Depots × 72 Züge in reinen Depot-Blöcken, ein Depot mit 24
+--- Flüssigkeitszügen, 64 Anbieter + 6 für Flüssigkeiten, übrige Plätze Abnehmer, 16 Tankstellen und
+--- 6 Cleanup gleichmäßig verteilt. Be-/Entladen und Tanken mit echten Greifarmen an
+--- Unendlich-Kisten (Anbieter: Nachschub, Abnehmer/Cleanup: Kisten vernichten alles).
 local Builder = require("__UTLogistics__/scenarios/UTL-Lasttest/builder")
 
 local Lasttest = {}
 
 Lasttest.CFG = {
   grid = 12, -- 12 × 12 City Blocks
-  -- Depot-Blöcke aus Marcels Blaupause „City Block 4 Depo“: je Block 27 Haltestellen, an jeder
-  -- stehen zwei Züge hintereinander (Flüssigkeitsdepots: einer). Die vier äußeren Depots haben je
-  -- zwei Blöcke, dazu ein Depot in der Mitte und zwei Flüssigkeitsdepots gegenüber voneinander.
+  -- Depots gebündelt in reinen Depot-Blöcken ohne Bahnhöfe (Abstellbahnhof mit 12 Gleisen je Block):
+  -- oben links, oben rechts, unten links, unten rechts, Mitte; dazu ein Depot für Flüssigkeitszüge.
   -- Block = { Spalte, Zeile } ab 0.
   depots = {
-    { name = "Depot 1", cars = 1, blocks = { { 0, 0 }, { 1, 0 } } },
-    { name = "Depot 2", cars = 2, blocks = { { 11, 0 }, { 10, 0 } } },
-    { name = "Depot 3", cars = 2, blocks = { { 0, 11 }, { 1, 11 } } },
-    { name = "Depot 4", cars = 3, blocks = { { 11, 11 }, { 10, 11 } } },
-    { name = "Depot 5", cars = 4, blocks = { { 5, 5 } } },
-    { name = "Depot Flüssig", cars = 2, wagon = "fluid-wagon", trains_per_stop = 1,
-      blocks = { { 6, 0 }, { 6, 11 } } },
+    { name = "Depot 1", cars = 1, blocks = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 }, { 0, 2 }, { 1, 2 } } },
+    { name = "Depot 2", cars = 2, blocks = { { 10, 0 }, { 11, 0 }, { 10, 1 }, { 11, 1 }, { 10, 2 }, { 11, 2 } } },
+    { name = "Depot 3", cars = 2, blocks = { { 0, 9 }, { 1, 9 }, { 0, 10 }, { 1, 10 }, { 0, 11 }, { 1, 11 } } },
+    { name = "Depot 4", cars = 3, blocks = { { 10, 9 }, { 11, 9 }, { 10, 10 }, { 11, 10 }, { 10, 11 }, { 11, 11 } } },
+    { name = "Depot 5", cars = 4, blocks = { { 5, 4 }, { 6, 4 }, { 5, 5 }, { 6, 5 }, { 5, 6 }, { 6, 6 } } },
+    { name = "Depot Flüssig", cars = 2, wagon = "fluid-wagon", blocks = { { 5, 0 }, { 6, 0 } } },
   },
   items = { "iron-plate", "copper-plate", "steel-plate", "plastic-bar", "electronic-circuit", "coal", "stone",
     "iron-gear-wheel" },
   -- Flüssigkeiten: Pumpen und Tanks an den Wagen, fahren nur mit den Zügen aus „Depot Flüssig“
   fluids = { "crude-oil", "petroleum-gas" },
-  providers_per_fluid = 4,
-  requesters_per_fluid = 16,
+  providers_per_fluid = 3,
+  requesters_per_fluid = 6,
   fluid_request_amount = 50000,
   providers_per_item = 8,
   requesters_per_item = 8,
@@ -78,9 +75,9 @@ function Lasttest.setup()
     storage.kinds[spec.stop.unit_number] = { kind = spec.kind, item = spec.item }
   end
   local s = built.stats
-  L(("gebaut: %d City Blocks (%d × %d), %d Stationen, %d Züge, Nebengleis-Stücke %d (%d fehlgeschlagen), Signale %d (%d fehlgeschlagen), %d Geräte, %d Drähte fehlgeschlagen, %d Großmasten, %d Radare, %d Combinator-Stationen, %d Depot-Blöcke (%d Doppelstücke), %d Züge fehlgeschlagen, %d × %d Felder")
+  L(("gebaut: %d City Blocks (%d × %d), %d Stationen, %d Züge, Nebengleis-Stücke %d (%d fehlgeschlagen), Signale %d (%d fehlgeschlagen), %d Geräte, %d Drähte fehlgeschlagen, %d Großmasten, %d Radare, %d Combinator-Stationen, %d Abstellbahnhöfe, %d × %d Felder")
     :format(s.blocks, built.blocks, built.blocks, #built.stations, #built.trains, s.rails, s.failed, s.signals,
-      s.signals_failed, s.equipment, s.wires_failed, s.poles or 0, s.radars or 0, s.combinators or 0, s.yards or 0, s.depot_dup or 0, s.trains_failed or 0, built.size, built.size))
+      s.signals_failed, s.equipment, s.wires_failed, s.poles or 0, s.radars or 0, s.combinators or 0, s.yards or 0, built.size, built.size))
   -- Lage der Tankstellen und Cleanups als Block (Spalte, Zeile) – zeigt die Verteilung
   local where = { fuel = {}, cleanup = {} }
   for _, spec in ipairs(built.stations) do
@@ -90,20 +87,12 @@ function Lasttest.setup()
       list[#list + 1] = ("%d/%d"):format(math.floor(p.x / 224), math.floor(p.y / 224))
     end
   end
-  if (s.trains_retried or 0) > 0 then L(("Zug-Setzversuche verworfen: %d"):format(s.trains_retried)) end
-  if s.trains_fail_at then L("Zug nicht gesetzt bei:" .. s.trains_fail_at) end
   if s.wire_fail_at then L("Kabel fehlgeschlagen an:" .. s.wire_fail_at) end
   L("Tankstellen in Block " .. table.concat(where.fuel, " ") .. " | Cleanup in Block " .. table.concat(where.cleanup, " "))
-  local first_train
-  for _, t in ipairs(built.trains) do
-    if t.valid then first_train = t break end
-  end
   local goals = {}
   for _, spec in ipairs(built.stations) do goals[#goals + 1] = { train_stop = spec.stop } end
-  if first_train then
-    local result = game.train_manager.request_train_path({ type = "all-goals-accessible", train = first_train, goals = goals })
-    L(("erreichbar vom ersten Zug: %d von %d Stationen"):format(result.amount_accessible, #goals))
-  end
+  local result = game.train_manager.request_train_path({ type = "all-goals-accessible", train = built.trains[1], goals = goals })
+  L(("erreichbar vom ersten Zug: %d von %d Stationen"):format(result.amount_accessible, #goals))
   return built
 end
 
@@ -116,22 +105,6 @@ function Lasttest.on_train_changed_state(event)
   if not info or not count or info.kind == "depot" then return end
   count[info.kind] = (count[info.kind] or 0) + 1
   if info.kind == "requester" and prototypes.fluid[info.item] then count.fluid = (count.fluid or 0) + 1 end
-end
-
--- Zugzustände als Text, sonst steht im Log nur eine Zahlenreihe.
-local STATE_NAME = {}
-for name, value in pairs(defines.train_state) do STATE_NAME[value] = name end
-
---- Zustände als „wait_station=105 on_the_path=93 …“, häufigste zuerst.
-local function state_text(states)
-  local list = {}
-  for state, count in pairs(states) do
-    list[#list + 1] = { name = STATE_NAME[state] or tostring(state), count = count }
-  end
-  table.sort(list, function(a, b) return a.count > b.count end)
-  local parts = {}
-  for _, entry in ipairs(list) do parts[#parts + 1] = entry.name .. "=" .. entry.count end
-  return table.concat(parts, " ")
 end
 
 --- Jede Minute Zwischenstand ins Log.
@@ -154,7 +127,7 @@ function Lasttest.on_nth_tick_60(event)
     local c = storage.count
     L(("min %d: frei %d, Lieferungen %d, Ankünfte Anbieter %d, Abnehmer %d (davon Flüssigkeit %d), Tankstelle %d, Cleanup %d, Warnungen %d, ohne Treibstoff %d, an Depots wartend %d, Zustände %s")
       :format(event.tick / 3600, remote.call("utl", "idle_train_count"), remote.call("utl", "delivery_count"),
-        c.provider, c.requester, c.fluid or 0, c.fuel, c.cleanup, #remote.call("utl", "get_alerts"), empty, at_depot, state_text(states)))
+        c.provider, c.requester, c.fluid or 0, c.fuel, c.cleanup, #remote.call("utl", "get_alerts"), empty, at_depot, serpent.line(states)))
   end
 end
 

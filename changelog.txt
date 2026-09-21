@@ -7,7 +7,6 @@ Date: 2026-09-21
     - UTL Manager: new tab "Networks" – every network with its stations, free trains and running deliveries, and whether a station is in it with its home network or as an additional one.
   Changes:
     - The manager shows the additional networks behind the station name, for example [Reserve +Erze +Platten].
-    - Load test scenario: the depot blocks are now built from the blueprint "City Block 4 Depo" – 27 stops per block with two trains behind each other per stop (297 trains, 678 stations).
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.3
 Date: 2026-09-20

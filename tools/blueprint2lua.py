@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Blaupause (Textdatei) in eine Lua-Tabelle für das Szenario umwandeln.
 
-Aufruf: tools/blueprint2lua.py docs/blaupausen/cityblock_depo.txt scenarios/UTL-Lasttest/cityblock-depot.lua
+Aufruf: tools/blueprint2lua.py <blaupause.txt> <ziel.lua>
+(so entstand scenarios/UTL-Beispiele/rundkurs.lua aus docs/blaupausen/rundkurs_scenarios.txt)
 Positionen bleiben so, wie sie in der Blaupause stehen (Blockecke = 0/0).
 Reihenfolge: erst Stützen und Rampen, dann die Hochgleise, danach alles Übrige –
 Hochgleise brauchen ihre Stütze, bevor sie gesetzt werden können.
