@@ -6,6 +6,7 @@ local Registry = require("scripts.stations.registry")
 local Reader = require("scripts.stations.reader")
 local Paste = require("scripts.stations.settings-paste") -- vor dem GUI-Handler anmelden
 local Blueprint = require("scripts.stations.blueprint")
+local Output = require("scripts.stations.output")
 
 -- UTL-Haltestelle ist ebenfalls vom Typ train-stop, der Typ-Filter deckt sie mit ab.
 local build_filter = {
@@ -17,6 +18,7 @@ local build_filter = {
 local function on_built(event)
   local station = Registry.on_built(event.entity)
   if event.tags then Blueprint.apply_tags(station, event.tags) end
+  if station then Output.refresh(station) end
 end
 
 Events.on(defines.events.on_built_entity, on_built, build_filter)
@@ -38,11 +40,19 @@ Events.on(defines.events.on_object_destroyed, function(event)
 end)
 
 Heartbeat.add_task("stations-read", 1, Reader.step)
+Heartbeat.add_task("station-output", 1, Output.step)
+
+-- Auftrags-Ausgabe: anlegen, wenn eine Station eine Haltestelle bekommt, und mit ihr verschwinden.
+Registry.on_config_changed(Output.refresh)
+Registry.on_lost(Output.destroy)
 
 -- Nach Mod-Updates fehlende Stationswerte ergänzen (neue Felder bekommen ihren Standard).
 local Fields = require("scripts.stations.fields")
 Events.on_configuration_changed(function()
   for _, station in pairs(storage.stations.by_unit) do
-    if station.config then Fields.fill(station.config) end
+    if station.config then
+      Fields.fill(station.config)
+      Output.refresh(station) -- bestehende Spielstände bekommen ihre Ausgabe
+    end
   end
 end)

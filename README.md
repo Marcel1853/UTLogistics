@@ -9,6 +9,12 @@ cleanup and an overview window in one mod**, built for high UPS.
 - Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
   circuit network).
 
+> **Young mod, tested small.** UTL runs through an automated self test (74 checks) and a headless
+> load test, and the new loading features are shown in the example scenario. In real games it has
+> so far only been played on small networks. If something goes wrong, please report it in the
+> [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save and
+> what you did. Keep a backup of your save before adding it to a long-running base.
+
 ## Quick start
 
 1. **Depot:** place a **UTL train stop**, open it, tick **Depot**.
@@ -89,6 +95,27 @@ The UTL Manager shows the network in brackets behind the station name when it is
 
 Today a station belongs to exactly one network. Letting a few trains serve several networks
 (a "reserve" pool) is planned.
+
+## Mixed providers
+
+A provider may keep several goods in **one** chest. UTL makes sure a train only takes what its
+job asks for – in two ways that work together:
+
+**1. Wagon filters (no wiring).** While a delivery runs, UTL sets the cargo wagon slots to the
+goods of that job and locks the remaining slots. A plain inserter pulling from a mixed chest
+then loads only the ordered item; everything else simply does not fit. Switch it off per station
+("Load only the current job" in the Values tab) or for the whole map (map settings). Wagons where
+**you** set filters yourself are never touched.
+
+**2. The job as circuit signals.** Next to every train stop sits a small **job output**. It
+carries the running jobs as signals: goods to be loaded here are **positive**, goods arriving
+here are **negative**. While a delivery train stands at the stop, four more signals are added:
+**train number**, **train length** (carriages), **locomotives** and **wagons in the train**. Wire it to filter inserters, to displays – and to pumps: for fluids there
+are no slot filters, so this is how you open the right pump at a provider with several tanks.
+Draining leftover fluid stays your job.
+
+The output is placed and removed by UTL together with the station; it cannot be built or mined.
+Do not wire it to the station's input – that would feed the job back in as stock.
 
 ## How trains run
 
@@ -176,7 +203,17 @@ biters, just rails, stations, inserters at infinity chests, poles and radars. In
 factory costs extra UPS and FPS; the numbers show what UTL and the trains themselves need, not the
 UPS of a whole megabase.
 
-## Scenario
+## Scenarios
+
+**New game → Scenarios → UTL examples (mixed provider)**: a small practice network on Marcel's
+ring with sidings. One provider keeps iron plates, copper plates and gears in **one** chest with a
+provider keeps iron plates, copper plates and gears in three chests with three inserters, and
+the job output enables only the one whose good is ordered. One requester needs iron **and**
+copper and gets both in one trip. A fluid provider has two tanks,
+oil and water have their own requesters, and the pumps are switched by the **job output**. Two
+depots in a row, a fuel station and a cleanup. Two trains, no measuring – made for trying out.
+
+## Load test scenario
 
 **New game → Scenarios → UTL load test (384 trains)**: a ready-made city-block grid (12 × 12, 4
 tracks per corridor, chain-signalled crossings, radars); 5 depots with 72 trains each in depot-only
@@ -240,6 +277,14 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 - Benötigt: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age ist optional.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
   Schienenverkehr“ und „Schaltungsnetze“).
+
+> **Junger Mod, bisher klein getestet.** UTL läuft durch einen automatischen Selbsttest
+> (74 Prüfungen) und einen headless-Lasttest, und die neuen Ladefunktionen werden im
+> Beispiel-Szenario vorgeführt. Im echten Spiel ist er bisher nur in kleinen Netzen gelaufen.
+> Wenn etwas schiefgeht: bitte in der
+> [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion) melden, am besten mit
+> Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem gewachsenen Spielstand
+> vorher sichern.
 
 ---
 
@@ -356,6 +401,30 @@ Im UTL-Manager steht das Netzwerk in eckigen Klammern hinter dem Stationsnamen, 
 
 Heute gehört eine Station zu genau einem Netzwerk. Dass ein paar Züge mehrere Netzwerke
 bedienen können (ein „Reserve“-Pool), ist geplant.
+
+## Gemischte Anbieter
+
+Ein Anbieter darf mehrere Waren in **einer** Kiste haben. UTL sorgt dafür, dass ein Zug nur das
+mitnimmt, was sein Auftrag verlangt – auf zwei Wegen, die zusammenspielen:
+
+**1. Wagenfilter (ohne Kabel).** Während einer Lieferung stellt UTL die Slots der Güterwagen auf
+die Waren des Auftrags und sperrt den Rest. Ein gewöhnlicher Greifarm an einer gemischten Kiste
+lädt dann nur das Bestellte, alles andere passt schlicht nicht hinein. Abschaltbar je Station
+(„Nur den Auftrag laden“ im Reiter *Werte*) oder für die ganze Karte (Map-Einstellungen). Wagen,
+an denen **du** selbst Filter gesetzt hast, fasst UTL nie an.
+
+**2. Der Auftrag als Schaltsignal.** Neben jeder Haltestelle steht eine kleine
+**Auftrags-Ausgabe**. Dort liegen die laufenden Aufträge als Signale an: Waren, die hier geladen
+werden sollen, **positiv**; Waren, die hier ankommen, **negativ**. Solange ein Lieferzug am
+Bahnsteig steht, kommen vier Signale dazu: **Zug-Nummer**, **Zuglänge** (Teile), **Loks** und
+**Wagen im Zug**. Damit schaltest du
+Filter-Greifarme, Anzeigen – und Pumpen: Für Flüssigkeiten gibt es keine Slot-Filter, so öffnest
+du bei einem Anbieter mit mehreren Tanks die richtige Pumpe. Überschüssige Flüssigkeit ablassen
+bleibt deine Sache.
+
+Die Ausgabe setzt und entfernt UTL zusammen mit der Station; sie ist nicht baubar und nicht
+abbaubar. Kabele sie nicht an den Eingang der Station – der Auftrag liefe sonst als Bestand
+zurück.
 
 ## Wie die Züge fahren
 
@@ -494,7 +563,17 @@ Fließbänder, keine Beißer, nur Gleise, Bahnhöfe, Greifarme an Unendlich-Kist
 Radare. In einem echten Spielstand kostet die Fabrik zusätzlich UPS und FPS; die Zahlen zeigen
 also, was UTL und die Züge selbst brauchen, nicht die UPS einer ganzen Megabase.
 
-## Szenario zum Ausprobieren
+## Szenarien zum Ausprobieren
+
+**Neues Spiel → Szenarien → UTL-Beispiele (gemischter Anbieter)**: ein kleines Übungsnetz auf
+Marcels Rundkurs mit Ausbuchtungen. Ein Anbieter hat Eisenplatten, Kupferplatten und Zahnräder in
+drei Kisten mit drei Greifarmen, von denen die Auftrags-Ausgabe immer nur den freigibt, dessen
+Ware gerade bestellt ist. Eine Werkstatt braucht Eisen **und** Kupfer und bekommt beides in
+**einer** Fahrt. Beim Flüssigkeits-Anbieter stehen zwei Tanks, Öl und Wasser haben eigene Abnehmer, und die
+Pumpen schaltet die **Auftrags-Ausgabe**. Dazu zwei Depots hintereinander, Tankstelle und Cleanup.
+Zwei Züge, keine Messung – zum Anschauen.
+
+## Lasttest-Szenario
 
 **Neues Spiel → Szenarien → UTL-Lasttest (384 Züge)**: ein fertiges Netz aus einem City-Block-Gitter
 (12 × 12 Blöcke, 4 Gleise je Korridor, Kreuzungen mit Kettensignalen, Radare). 5 Depots mit je 72 Zügen

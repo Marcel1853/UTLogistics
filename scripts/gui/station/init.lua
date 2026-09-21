@@ -104,9 +104,13 @@ end)
 
 Events.on(defines.events.on_gui_checked_state_changed, function(event)
   local tags, _, station = context(event)
-  if not (tags and station and tags.utl_action == "role") then return end
-  Main.apply_role(station.config, tags.role, event.element.state)
-  changed(event, station, true)
+  if not (tags and station) then return end
+  if tags.utl_action == "role" then
+    Main.apply_role(station.config, tags.role, event.element.state)
+    changed(event, station, true)
+  elseif tags.utl_action == "toggle" then
+    if Values.toggle(station.config, tags.key, event.element.state) then changed(event, station, false) end
+  end
 end)
 
 Events.on(defines.events.on_gui_text_changed, function(event)
