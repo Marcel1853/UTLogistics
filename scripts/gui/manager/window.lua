@@ -9,13 +9,14 @@ local Tabs = {
   history = require("scripts.gui.manager.tab-history"),
   alerts = require("scripts.gui.manager.tab-alerts"),
 }
+local Filter = require("scripts.gui.manager.surface-filter")
 
 local Manager = {}
 
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 4
+local GUI_VERSION = 5
 local ORDER = { "depots", "stations", "networks", "inventory", "history", "alerts" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste).
 local AUTO_REFRESH = { depots = true, stations = true, networks = true, history = true, alerts = true }
@@ -66,6 +67,7 @@ function Manager.refresh(player_index, auto)
   end
   local name = selected_name(manager)
   if auto and not AUTO_REFRESH[name] then return end
+  Filter.apply(manager, manager.surface_pick) -- gewählte Oberfläche für diesen Durchlauf
   Tabs[name].refresh(manager.refs[name], manager)
 end
 
@@ -90,6 +92,12 @@ function Manager.open(player)
     clear_and_focus_on_right_click = true,
     tags = { utl_mgr = "search" },
   })
+  -- Planeten-Auswahl (nur mit Space Age sichtbar)
+  local surface_pick = bar.add({ type = "drop-down", visible = false, tooltip = { "utl-manager.surface-tooltip" },
+    tags = { utl_mgr = "surface" } })
+  surface_pick.style.width = 170
+  surface_pick.style.height = 24
+  surface_pick.style.top_margin = -2
   frame_button(bar, "utility/search", { "utl-manager.search" }, "toggle_search")
   frame_button(bar, "utility/refresh", { "utl-manager.refresh" }, "refresh")
   frame_button(bar, "utility/close", { "utl-manager.close" }, "close")
@@ -115,6 +123,7 @@ function Manager.open(player)
     frame = frame,
     tabs = tabs,
     search_field = search,
+    surface_pick = surface_pick,
     search = "",
     refs = refs,
   }

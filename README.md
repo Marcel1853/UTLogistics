@@ -222,6 +222,12 @@ in transit, trains), **Networks** (every network with its stations, free trains 
 (last 100 deliveries, canceled ones in red), **Alerts** (last 100 alerts, repeats merged). Search by station name; click a station to view it
 on the map, click a train to follow it.
 
+**Several planets (Space Age only):** a drop-down next to the
+magnifier picks what is shown – *Automatic* (the planet you are on or looking at, default – empty if it has no UTL stations yet), *All
+planets*, or one planet (planets from other mods included). Depots with the same name on different
+planets stay separate; inventory counts only the chosen planet. Without Space Age the drop-down is
+hidden.
+
 ## Alerts
 
 UTL reports problems as regular Factorio alerts (bottom right; click to see the spot) in three

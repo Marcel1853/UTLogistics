@@ -77,6 +77,7 @@ function State.init()
   -- Offene Fenster pro Spieler: Stationsfenster (guis) und Manager (managers).
   storage.guis = storage.guis or {}
   storage.managers = storage.managers or {}
+  storage.manager_prefs = storage.manager_prefs or {} -- [player_index] = { surface = "auto" | "all" | Index }
 end
 
 --- Für Aufrufe, die *vor* UTLs on_init kommen können: Factorio startet das Script eines

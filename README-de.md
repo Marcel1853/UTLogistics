@@ -285,6 +285,12 @@ er stehen und ist trotzdem verfügbar.
 
 Öffnen mit dem **Lok-Knopf in der Shortcut-Leiste** oder **Strg + Umschalt + U** (oder **Strg + Alt + U** – unter Linux fängt IBus Strg + Umschalt + U manchmal ab).
 
+**Mehrere Planeten (nur mit Space Age):** Eine Auswahl neben
+der Lupe legt fest, was angezeigt wird – *Automatisch* (der Planet, auf dem du bist oder den du dir
+ansiehst, Standard – leer, solange dort keine UTL-Station steht), *Alle Planeten* oder ein bestimmter Planet (auch Planeten anderer Mods).
+Gleichnamige Depots auf verschiedenen Planeten bleiben getrennt, das Inventar zählt nur den
+gewählten Planeten. Ohne Space Age ist die Auswahl ausgeblendet.
+
 - **Depots:** alle Depots mit freien/gesamten Zügen; pro Zug Zusammensetzung (z. B. `<LCCL>`),
   Zustand („Lädt bei …“, „Fährt tanken“ …) und Ladung.
 - **Stationen:** Rolle, Angebot (grün) / Bedarf (rot), Unterwegs (blau = kommt, gelb = wird

@@ -4,6 +4,7 @@
 local List = require("scripts.gui.common.list")
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
+local Filter = require("scripts.gui.manager.surface-filter")
 
 local Tab = {}
 
@@ -68,13 +69,15 @@ function Tab.build(parent)
   }
 end
 
---- Alle Netze je Oberfläche. Schlüssel „<oberfläche>|<name>“.
-local function collect(search)
-  local nets, order, surfaces = {}, {}, {}
+--- Alle Netze je Oberfläche (nur die gewählte). Schlüssel „<oberfläche>|<name>“.
+local function collect(manager)
+  local search = manager.search
+  local nets, order = {}, {}
   local function ensure(surface_index, name)
     local key = surface_index .. "|" .. name
     if nets[key] == nil then
-      if search ~= "" and not string.find(string.lower(name), search, 1, true) then
+      if not Filter.match(manager, surface_index)
+        or search ~= "" and not string.find(string.lower(name), search, 1, true) then
         nets[key] = false
       else
         nets[key] = { key = key, surface = surface_index, name = name, stations = {}, idle = 0, deliveries = 0 }
@@ -87,7 +90,6 @@ local function collect(search)
   for _, station in pairs(storage.stations.by_unit) do
     local stop, cfg = station.stop, station.config
     if cfg and stop and stop.valid then
-      surfaces[stop.surface_index] = true
       local net = ensure(stop.surface_index, cfg.network)
       if net then net.stations[#net.stations + 1] = station end
     end
@@ -99,17 +101,23 @@ local function collect(search)
       for partner in pairs(partners) do ensure(surface_index, partner) end
     end
   end
-  -- freie Züge und Lieferungen (nach Netzname; mehrere Oberflächen mit gleichem Namen teilen sich
-  -- die Zahl – selten und nur eine Anzeige)
+  -- freie Züge und Lieferungen je Netz und Oberfläche
+  local by_id = storage.trains.by_id
   for _, net in pairs(nets) do
     if net then
-      for _ in pairs(storage.trains.idle[net.name] or {}) do net.idle = net.idle + 1 end
+      for id in pairs(storage.trains.idle[net.name] or {}) do
+        local record = by_id[id]
+        if record and record.surface_index == net.surface then net.idle = net.idle + 1 end
+      end
     end
   end
   for _, delivery in pairs(storage.deliveries.active) do
-    for _, net in pairs(nets) do
-      if net and net.name == delivery.network then net.deliveries = net.deliveries + 1 end
-    end
+    -- Netz des Abnehmers (im Stern fährt oft ein Zug aus einem anderen Netz)
+    local requester = storage.stations.by_unit[delivery.requester]
+    local network = requester and requester.config.network or delivery.network
+    local front = delivery.train and delivery.train.valid and delivery.train.front_stock
+    local net = front and network and nets[front.surface_index .. "|" .. network]
+    if net then net.deliveries = net.deliveries + 1 end
   end
 
   table.sort(order, function(a, b)
@@ -117,8 +125,7 @@ local function collect(search)
     if na.name ~= nb.name then return na.name < nb.name end
     return na.surface < nb.surface
   end)
-  local several = next(surfaces) ~= nil and next(surfaces, next(surfaces)) ~= nil
-  return nets, order, several
+  return nets, order
 end
 
 local function fill(row, entry)
@@ -172,13 +179,12 @@ local function refresh_links(refs, net, force)
 end
 
 function Tab.refresh(refs, manager)
-  local nets, order, several = collect(manager.search)
+  local nets, order = collect(manager)
   local items = {}
   for i, key in ipairs(order) do
     local net = nets[key]
-    local surface = game.surfaces[net.surface]
-    local name = several and surface and (net.name .. " · " .. surface.name) or net.name
-    items[i] = { "utl-manager.network-entry", name, #net.stations, net.idle, net.deliveries }
+    items[i] = { "utl-manager.network-entry", Filter.name(manager, net.name, net.surface), #net.stations,
+      net.idle, net.deliveries }
   end
   refs.list.items = items
   refs.keys = order

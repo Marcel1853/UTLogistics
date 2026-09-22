@@ -2,6 +2,7 @@
 local List = require("scripts.gui.common.list")
 local Widgets = require("scripts.gui.common.widgets")
 local Networks = require("scripts.stations.networks")
+local Filter = require("scripts.gui.manager.surface-filter")
 
 local Tab = {}
 
@@ -13,6 +14,16 @@ local COLUMNS = {
 }
 
 local ROLE_ORDER = { "provider", "requester", "depot", "fuel", "cleanup" }
+
+-- Manager des laufenden Auffrischens (fill bekommt nur Zeile und Station)
+local current = nil
+
+--- Oberfläche einer Station: die der Haltestelle, sonst die des Combinators.
+local function surface_of(station)
+  local stop, entity = station.stop, station.entity
+  if stop and stop.valid then return stop.surface_index end
+  return entity and entity.valid and entity.surface_index or nil
+end
 
 local function role_caption(station)
   local cfg = station.config
@@ -29,6 +40,7 @@ local function role_caption(station)
   if cfg.network ~= "default" or links ~= "" then
     caption = { "", caption, "  [", cfg.network, links ~= "" and (" " .. links) or "", "]" }
   end
+  if current and current.several then caption = { "", caption, "  · ", Filter.label(surface_of(station)) } end
   return caption
 end
 
@@ -68,10 +80,12 @@ end
 function Tab.refresh(refs, manager)
   local search = manager.search
   local items, names = {}, {}
+  current = manager
   for _, station in pairs(storage.stations.by_unit) do
     local stop = station.stop
     local name = stop and stop.valid and stop.backer_name or ""
-    if search == "" or string.find(string.lower(name), search, 1, true) then
+    if Filter.match(manager, surface_of(station))
+      and (search == "" or string.find(string.lower(name), search, 1, true)) then
       items[#items + 1] = station
       names[station] = name
     end
@@ -81,6 +95,7 @@ function Tab.refresh(refs, manager)
     return a.unit < b.unit
   end)
   List.sync(refs.rows, items, fill)
+  current = nil
 end
 
 return Tab

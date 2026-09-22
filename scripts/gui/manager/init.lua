@@ -5,6 +5,7 @@ local C = require("scripts.core.constants")
 local Manager = require("scripts.gui.manager.window")
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
+local Filter = require("scripts.gui.manager.surface-filter")
 
 local SHORTCUT = "utl-toggle-manager"
 
@@ -106,7 +107,9 @@ end)
 Events.on(defines.events.on_gui_selection_state_changed, function(event)
   local action, _, manager = context(event)
   if not manager then return end
-  if action == "depot_list" then
+  if action == "surface" then
+    Filter.choose(manager, event.element.selected_index)
+  elseif action == "depot_list" then
     Manager.tab("depots").select(manager.refs.depots, manager, event.element.selected_index)
   elseif action == "network_list" then
     Manager.tab("networks").select(manager.refs.networks, manager, event.element.selected_index)
@@ -137,6 +140,13 @@ Events.on(defines.events.on_gui_closed, function(event)
   local manager = storage.managers[event.player_index]
   if manager and manager.jumping then return end
   Manager.close(event.player_index)
+end)
+
+-- „Automatisch“ folgt dem Planeten: beim Wechsel (auch Fernsicht) sofort auffrischen.
+Events.on(defines.events.on_player_changed_surface, function(event)
+  if Manager.get(event.player_index) and Filter.follows_player(event.player_index) then
+    Manager.refresh(event.player_index)
+  end
 end)
 
 -- Nach einem Mod-Update schließen; beim nächsten Öffnen wird es neu gebaut.

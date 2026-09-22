@@ -65,7 +65,7 @@ local function assign(places)
   return specs
 end
 
-local CFG = { grid = 2, depots = {}, surface = Verbund.SURFACE, assign = assign }
+local CFG = { grid = 2, depots = {}, assign = assign }
 
 local function configure(spec)
   local unit = (spec.combinator_entity or spec.stop).unit_number
@@ -102,7 +102,9 @@ local function sign(spec, placed)
 end
 
 --- Netz bauen, Stationen einstellen, Sterne verbinden. Liefert das Bau-Ergebnis.
-function Verbund.setup()
+--- `surface_name` (optional): auf einer anderen Oberfläche bauen (Szenario UTL-Planeten-Test).
+function Verbund.setup(surface_name)
+  CFG.surface = surface_name or Verbund.SURFACE
   local built = Builder.build(CFG)
   local surface_index = built.surface.index
   local placed = {}

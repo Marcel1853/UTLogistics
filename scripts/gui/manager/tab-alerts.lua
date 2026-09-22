@@ -3,6 +3,7 @@
 --- Zeigt alle Warnungen, auch Gruppen, die der Spieler als Factorio-Warnung abgeschaltet hat.
 local List = require("scripts.gui.common.list")
 local Widgets = require("scripts.gui.common.widgets")
+local Filter = require("scripts.gui.manager.surface-filter")
 local Alerts = require("scripts.alerts.alerts")
 
 local Tab = {}
@@ -48,8 +49,11 @@ local function fill(row, entry)
   place.style.font = "default-bold"
 end
 
-function Tab.refresh(refs)
-  local list = storage.alert_log
+function Tab.refresh(refs, manager)
+  local list = {}
+  for _, entry in ipairs(storage.alert_log) do
+    if Filter.match(manager, entry.surface) then list[#list + 1] = entry end
+  end
   refs.count.caption = { "utl-manager.alerts-count", #list }
   List.sync(refs.rows, list, fill)
 end

@@ -1,8 +1,10 @@
 --- Reiter „Depots“ (wie LTN Manager): links die Depots (gleichnamige Haltestellen zusammengefasst)
---- mit freien/gesamten Zügen, rechts die Züge des gewählten Depots.
+--- mit freien/gesamten Zügen, rechts die Züge des gewählten Depots. Gleichnamige Depots auf
+--- verschiedenen Oberflächen bleiben getrennt (Schlüssel „<oberfläche>|<name>“).
 local List = require("scripts.gui.common.list")
 local Widgets = require("scripts.gui.common.widgets")
 local Info = require("scripts.gui.manager.train-info")
+local Filter = require("scripts.gui.manager.surface-filter")
 
 local Tab = {}
 
@@ -28,16 +30,18 @@ function Tab.build(parent)
   return { list = list, rows = List.build(right, COLUMNS), names = {} }
 end
 
---- Depots nach Namen gruppiert, mit ihren Zügen (Heimat-Depot = zuletzt geparkt).
-local function collect(search)
+--- Depots nach Oberfläche und Namen gruppiert, mit ihren Zügen (Heimat-Depot = zuletzt geparkt).
+local function collect(manager)
+  local search = manager.search
   local groups, order = {}, {}
   for _, station in pairs(storage.stations.by_unit) do
     local stop = station.stop
-    if station.config.roles.depot and stop and stop.valid then
+    if station.config.roles.depot and stop and stop.valid and Filter.match(manager, stop.surface_index) then
       local name = stop.backer_name
-      if not groups[name] and (search == "" or string.find(string.lower(name), search, 1, true)) then
-        groups[name] = { name = name, trains = {}, idle = 0 }
-        order[#order + 1] = name
+      local key = stop.surface_index .. "|" .. name
+      if not groups[key] and (search == "" or string.find(string.lower(name), search, 1, true)) then
+        groups[key] = { key = key, name = name, surface = stop.surface_index, trains = {}, idle = 0 }
+        order[#order + 1] = key
       end
     end
   end
@@ -46,14 +50,21 @@ local function collect(search)
     if not entry.train.valid then
       home[id] = nil
     else
-      local group = groups[entry.depot]
+      -- Oberfläche des Depots; ist die Haltestelle weg, die der Lok
+      local stop, front = entry.stop, entry.train.front_stock
+      local surface = stop and stop.valid and stop.surface_index or front and front.surface_index
+      local group = surface and groups[surface .. "|" .. entry.depot]
       if group then
         group.trains[#group.trains + 1] = entry.train
         if storage.trains.by_id[id] then group.idle = group.idle + 1 end
       end
     end
   end
-  table.sort(order)
+  table.sort(order, function(a, b)
+    local ga, gb = groups[a], groups[b]
+    if ga.name ~= gb.name then return ga.name < gb.name end
+    return ga.surface < gb.surface
+  end)
   return groups, order
 end
 
@@ -79,12 +90,12 @@ local function fill(row, train)
 end
 
 function Tab.refresh(refs, manager)
-  local groups, order = collect(manager.search)
+  local groups, order = collect(manager)
   local list = refs.list
   local items = {}
-  for i, name in ipairs(order) do
-    local group = groups[name]
-    items[i] = { "utl-manager.depot-entry", name, group.idle, #group.trains }
+  for i, key in ipairs(order) do
+    local group = groups[key]
+    items[i] = { "utl-manager.depot-entry", Filter.name(manager, group.name, group.surface), group.idle, #group.trains }
   end
   list.items = items
   refs.names = order
@@ -93,8 +104,8 @@ function Tab.refresh(refs, manager)
   elseif not groups[manager.depot or ""] then
     manager.depot = order[1]
   end
-  for i, name in ipairs(order) do
-    if name == manager.depot then list.selected_index = i end
+  for i, key in ipairs(order) do
+    if key == manager.depot then list.selected_index = i end
   end
 
   local trains = manager.depot and groups[manager.depot].trains or {}

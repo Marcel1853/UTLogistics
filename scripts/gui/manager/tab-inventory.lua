@@ -3,6 +3,7 @@
 local Widgets = require("scripts.gui.common.widgets")
 local List = require("scripts.gui.common.list")
 local flib_format = require("__flib__.format")
+local Filter = require("scripts.gui.manager.surface-filter")
 
 local Tab = {}
 
@@ -32,6 +33,13 @@ function Tab.build(parent)
   return refs
 end
 
+--- Oberfläche einer Station (Haltestelle, sonst Combinator).
+local function surface_of(station)
+  local stop, entity = station.stop, station.entity
+  if stop and stop.valid then return stop.surface_index end
+  return entity and entity.valid and entity.surface_index or nil
+end
+
 local function add(map, key, amount)
   map[key] = (map[key] or 0) + amount
 end
@@ -44,7 +52,7 @@ local function line(parent, caption, value)
 end
 
 --- Rechte Seite: Summen, Stationen mit dieser Ware und Züge unterwegs.
-local function detail(parent, key, totals)
+local function detail(parent, key, totals, manager)
   parent.clear()
   if not key then
     parent.add({ type = "label", caption = { "utl-manager.select-ware" } })
@@ -62,7 +70,8 @@ local function detail(parent, key, totals)
   parent.add({ type = "label", style = "utl_header_label", caption = { "utl-manager.col-station" } })
   for _, station in pairs(storage.stations.by_unit) do
     local provide, request = station.provide[key], station.request[key]
-    if (provide or request) and station.stop and station.stop.valid then
+    if (provide or request) and station.stop and station.stop.valid
+      and Filter.match(manager, station.stop.surface_index) then
       local row = parent.add({ type = "flow", direction = "horizontal" })
       row.style.vertical_align = "center"
       List.station_label(row, 200, station.stop.backer_name, station.stop)
@@ -75,7 +84,8 @@ local function detail(parent, key, totals)
   parent.add({ type = "label", style = "utl_header_label", caption = { "utl-manager.col-trains" } })
   for _, delivery in pairs(storage.deliveries.active) do
     local amount = delivery.manifest[key]
-    if amount then
+    local front = delivery.train and delivery.train.valid and delivery.train.front_stock
+    if amount and front and Filter.match(manager, front.surface_index) then
       local row = parent.add({ type = "flow", direction = "horizontal" })
       row.style.vertical_align = "center"
       local route = row.add({ type = "label", caption = { "utl-manager.route", delivery.from or "?", delivery.to or "?" } })
@@ -87,12 +97,18 @@ end
 
 function Tab.refresh(refs, manager)
   local totals = { provide = {}, request = {}, incoming = {} }
-  for _, station in pairs(storage.stations.by_unit) do
-    for key, amount in pairs(station.provide) do add(totals.provide, key, amount) end
-    for key, amount in pairs(station.request) do add(totals.request, key, amount) end
+  local stations = storage.stations.by_unit
+  for _, station in pairs(stations) do
+    if Filter.match(manager, surface_of(station)) then
+      for key, amount in pairs(station.provide) do add(totals.provide, key, amount) end
+      for key, amount in pairs(station.request) do add(totals.request, key, amount) end
+    end
   end
-  for _, by_key in pairs(storage.deliveries.incoming) do
-    for key, amount in pairs(by_key) do add(totals.incoming, key, amount) end
+  for unit, by_key in pairs(storage.deliveries.incoming) do
+    local station = stations[unit]
+    if station and Filter.match(manager, surface_of(station)) then
+      for key, amount in pairs(by_key) do add(totals.incoming, key, amount) end
+    end
   end
   for part, map in pairs(totals) do
     local grid = refs[part]
@@ -102,7 +118,7 @@ function Tab.refresh(refs, manager)
       if button and key == manager.ware then button.toggled = true end
     end
   end
-  detail(refs.detail, manager.ware, totals)
+  detail(refs.detail, manager.ware, totals, manager)
 end
 
 return Tab

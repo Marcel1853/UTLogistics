@@ -122,7 +122,9 @@ end
 --- Eintrag im Verlauf (neueste zuerst, höchstens HISTORY_SIZE).
 local function record_history(delivery, canceled)
   local history = storage.history
+  local front = delivery.train and delivery.train.valid and delivery.train.front_stock
   table.insert(history, 1, {
+    surface = front and front.surface_index or nil, -- für die Planeten-Auswahl im Manager
     depot = delivery.depot,
     from = delivery.from,
     to = delivery.to,

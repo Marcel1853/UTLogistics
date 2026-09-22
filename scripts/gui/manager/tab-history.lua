@@ -2,6 +2,7 @@
 --- Abgebrochene Lieferungen stehen rot mit Grund darin.
 local List = require("scripts.gui.common.list")
 local Widgets = require("scripts.gui.common.widgets")
+local Filter = require("scripts.gui.manager.surface-filter")
 
 local Tab = {}
 
@@ -28,8 +29,12 @@ function Tab.build(parent)
   return { count = count, rows = List.build(parent, COLUMNS) }
 end
 
+-- Manager des laufenden Auffrischens (fill bekommt nur Zeile und Eintrag)
+local current = nil
+
 local function fill(row, entry)
-  List.cell(row, COLUMNS[1].width, { type = "label", caption = entry.depot or "" }).style.font = "default-bold"
+  local depot = current and Filter.name(current, entry.depot or "", entry.surface) or entry.depot or ""
+  List.cell(row, COLUMNS[1].width, { type = "label", caption = depot }).style.font = "default-bold"
   local route = List.cell(row, COLUMNS[2].width, { type = "flow", direction = "vertical" })
   route.style.vertical_spacing = 0
   route.add({ type = "label", caption = entry.from or "?" }).style.font = "default-bold"
@@ -50,15 +55,18 @@ function Tab.refresh(refs, manager)
   local search = manager.search
   local items = {}
   for _, entry in ipairs(storage.history) do
-    if search == ""
+    -- ältere Einträge ohne Oberfläche erscheinen nur unter „Alle“
+    if Filter.match(manager, entry.surface) and (search == ""
       or string.find(string.lower(entry.from or ""), search, 1, true)
       or string.find(string.lower(entry.to or ""), search, 1, true)
-      or string.find(string.lower(entry.depot or ""), search, 1, true) then
+      or string.find(string.lower(entry.depot or ""), search, 1, true)) then
       items[#items + 1] = entry
     end
   end
   refs.count.caption = { "utl-manager.history-count", #items }
+  current = manager
   List.sync(refs.rows, items, fill)
+  current = nil
 end
 
 return Tab

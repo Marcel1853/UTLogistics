@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.5
+Date: 2026-09-22
+  Features:
+    - UTL Manager: planet selection next to the magnifier (Space Age only) – "Automatic" follows the planet you are on or looking at, "All planets" shows everything, or pick one planet (planets from other mods included).
+  Bugfixes:
+    - UTL Manager: depots with the same name on different planets were merged into one entry, and inventory, history and alerts mixed all planets. Free trains and deliveries per network are now counted per planet, deliveries at the requester's network.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.4
 Date: 2026-09-21
   Features:
