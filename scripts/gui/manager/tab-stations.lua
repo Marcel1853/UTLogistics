@@ -18,12 +18,6 @@ local ROLE_ORDER = { "provider", "requester", "depot", "fuel", "cleanup" }
 -- Manager des laufenden Auffrischens (fill bekommt nur Zeile und Station)
 local current = nil
 
---- Oberfläche einer Station: die der Haltestelle, sonst die des Combinators.
-local function surface_of(station)
-  local stop, entity = station.stop, station.entity
-  if stop and stop.valid then return stop.surface_index end
-  return entity and entity.valid and entity.surface_index or nil
-end
 
 local function role_caption(station)
   local cfg = station.config
@@ -36,11 +30,11 @@ local function role_caption(station)
   end
   if #caption == 1 then caption[2] = { "utl-manager.role-none" } end
   local stop = station.stop
-  local links = stop and stop.valid and Networks.link_text(stop.surface_index, cfg.network) or ""
+  local links = stop and stop.valid and Networks.link_text(Networks.place_of(stop), cfg.network) or ""
   if cfg.network ~= "default" or links ~= "" then
     caption = { "", caption, "  [", cfg.network, links ~= "" and (" " .. links) or "", "]" }
   end
-  if current and current.several then caption = { "", caption, "  · ", Filter.label(surface_of(station)) } end
+  if current and current.several then caption = { "", caption, "  · ", Filter.label((Filter.place_of(station))) } end
   return caption
 end
 
@@ -84,7 +78,7 @@ function Tab.refresh(refs, manager)
   for _, station in pairs(storage.stations.by_unit) do
     local stop = station.stop
     local name = stop and stop.valid and stop.backer_name or ""
-    if Filter.match(manager, surface_of(station))
+    if Filter.station(manager, station)
       and (search == "" or string.find(string.lower(name), search, 1, true)) then
       items[#items + 1] = station
       names[station] = name

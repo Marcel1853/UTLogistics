@@ -246,7 +246,36 @@ other mods – get their own crafting tab (startup setting).
 Heartbeat (10 ticks), stations per heartbeat (20), new deliveries per cycle (2), next job right
 away (on), **load only the current job** (on, wagon filters), **job output at the train stop**
 (on), **UTL features need research** (on), refuel below (40 %), “no train” alert after (5 minutes), default supply/demand threshold
-(1000), debug log (off).
+(1000), **loading inactivity (30 s)**, **unloading inactivity (30 s)**, **cargo and/or inactivity** (or), drop team leaders after … days offline (3), debug log (off).
+
+The three **loading values** (loading inactivity, unloading inactivity, cargo and/or inactivity) can
+also be changed in the **UTL Manager, tab “Settings”** – no need to leave the game. Below them,
+**admins** also see all other map settings (*Map / server*); other players do not see that part.
+- **Without teams** (all players in one team) the tab shows the three values for everyone; only an
+  admin may change them. A value changed there applies instead of the mod settings value (the tab
+  shows both); changing it in the mod settings menu again makes the menu win.
+- **With teams** (players on several forces, or in an own force) each team has its own values.
+  Whoever joins a team first is its **team leader**; leaders (and admins) may change the values,
+  appoint further leaders and take the rights away again – one leader always stays. When the last
+  leader leaves, the longest-serving member takes over. A leader who has not been online for
+  **3 days** (map setting *drop team leaders after … days offline*, game time while the server runs,
+  0 = never) loses the rights, and the longest-serving active member takes over. Without an own
+  value the map value applies.
+
+**Admins:** the command **`/utl-admin`** opens a window to pick any team and set its leaders and
+values – for when a team is stuck.
+
+**Loading and unloading inactivity** – seconds without any change to the cargo, like the vanilla
+wait condition – work in one of two ways (setting *cargo and/or inactivity*):
+- **Cargo or inactivity** (default): the train also leaves once nothing has changed for that long – at the
+  provider with what it has –
+  the delivery is shortened to what was really loaded, so the requester orders the rest again. If it
+  loaded nothing at all, the delivery is cancelled and the train goes back to its depot. At the
+  requester it leaves after that; anything left goes to a cleanup station.
+- **Cargo and inactivity:** the train leaves only when it is full or empty **and** nothing has
+  changed for that long.
+
+`0` = no inactivity condition (wait until full or empty, as before 0.0.6).
 
 ## Performance
 
@@ -322,8 +351,12 @@ Plus explanations of roles, requests, values and network, linking networks (star
 
 ## Not yet included
 
-Loading/unloading timeouts. Topping up a delivery that is already being loaded (the load list is
+Topping up a delivery that is already being loaded (the load list is
 fixed when the train is sent), and collecting from a second provider on the way.
+
+**Teams:** every team (force) is handled on its own – trains, depots, fuel and cleanup stations only
+work with stations of their own team, network links are per team, and the UTL Manager shows only
+your own team. Two teams may use the same network names without getting in each other's way.
 
 **Surfaces (Space Age):** every surface is handled on its own. UTL only matches stations, depots,
 fuel and cleanup stations **on the same surface**, so Nauvis and Vulcanus each need their own
@@ -334,4 +367,7 @@ planet.
 
 Remote interface `utl`: `station_count`, `get_station(unit)`, `configure_station(unit, changes)`,
 `set_request(unit, slot, signal, count)`, `copy_settings(from, to)`, `tag_blueprint(stack, mapping, surface)`, `idle_train_count`,
-`delivery_count`, `get_deliveries`, `get_alerts`.
+`delivery_count`, `get_deliveries`, `get_alerts`, `link_networks(surface, center, partner)`,
+`unlink_networks(surface, a, b)`, `get_network_star(surface, name)`,
+`set_team_config(force, key, value)`, `get_team_config(force, key)` (keys `load_timeout`, `unload_timeout`,
+`timeout_mode`; team values only count when there are teams), `set_map_config(setting, value)`.

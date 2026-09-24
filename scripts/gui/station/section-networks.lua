@@ -10,10 +10,10 @@ local Nets = {}
 local DEFAULT_NETWORK = "default"
 
 --- Netze, die sich mit dem Heimatnetz verbinden lassen (frei, nicht schon in einem Stern).
-local function candidates(surface, home, limit)
+local function candidates(place, home, limit)
   local list = {}
   for _, name in ipairs(Networks.known()) do
-    if name ~= home and Networks.can_link(surface, home, name, math.max(limit, 1)) == true then
+    if name ~= home and Networks.can_link(place, home, name, math.max(limit, 1)) == true then
       list[#list + 1] = name
     end
   end
@@ -43,7 +43,7 @@ end
 --- Eintrag (sonst stünde er in der aufgeklappten Liste noch einmal).
 function Nets.fill_add(add, items)
   add.items = items
-  add.selected_index = 0
+  if #add.items > 0 then add.selected_index = 0 end
   add.enabled = #items > 0
   add.tooltip = { #items > 0 and "utl-gui.networks-add-tooltip" or "utl-gui.networks-add-none" }
 end
@@ -109,9 +109,10 @@ function Nets.build(parent, station)
   box.style.top_margin = 4
   box.style.horizontally_stretchable = true
   local stop = station.stop
-  local surface = stop and stop.valid and stop.surface_index
+  -- Ort = Oberfläche + Team der Haltestelle (Verbindungen gelten je Ort)
+  local place = stop and stop.valid and Networks.place_of(stop)
   local limit = Unlocks.networks_limit(Unlocks.force_of(station))
-  local star = surface and Networks.star(surface, cfg.network) or { partners = {} }
+  local star = place and Networks.star(place, cfg.network) or { partners = {} }
   local caption = box.add({ type = "label",
     caption = star.role == "partner" and { "utl-gui.links" }
       or { "utl-gui.links-count", #star.partners, limit },
@@ -130,14 +131,14 @@ function Nets.build(parent, station)
   refs.add = add_row.add({ type = "drop-down", tags = { utl_action = "network_add_pick" } })
   refs.add.style.horizontally_stretchable = true
   refs.add.style.minimal_width = 120
-  Nets.fill_add(refs.add, surface and candidates(surface, cfg.network, limit) or {})
+  Nets.fill_add(refs.add, place and candidates(place, cfg.network, limit) or {})
   refs.new = add_row.add({ type = "button", style = "utl_net_new_button", caption = { "utl-gui.networks-new" },
     tooltip = { "utl-gui.networks-new-tooltip" }, tags = { utl_action = "network_new" } })
 
   -- Hinzufügen sperren und sagen, warum: Partner (kein eigener Stern), Grenze erreicht bzw. noch
   -- nicht erforscht, oder die Station hat keine Haltestelle (keine Oberfläche).
   local why
-  if not surface then
+  if not place then
     why = { "utl-gui.status-no-stop" }
   elseif star.role == "partner" then
     why = { "utl-gui.link-own-partner", star.center }

@@ -48,10 +48,15 @@ local function on_configuration_changed(data)
   Heartbeat.update_registration()
 end
 
+-- Takt neu anmelden, wenn sich ein Kartenwert ändert (Menü oder UTL-Manager)
+Config.listen(function() Heartbeat.update_registration() end)
+
 local function on_setting_changed(event)
   if event.setting:sub(1, 4) ~= "utl-" then return end
+  -- Im Einstellungsmenü geändert: das Menü gewinnt, ein Manager-Wert für diese Einstellung fällt weg
+  if event.player_index and storage.map_config then storage.map_config[event.setting] = nil end
   Config.refresh()
-  Heartbeat.update_registration()
+  Config.changed(event.setting)
 end
 
 function Events.register()

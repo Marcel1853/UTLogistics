@@ -50,7 +50,8 @@ end
 --- Such-Budget dieses Laufs aufgebraucht ist (dann im nächsten Lauf erneut).
 function Reach.check(train, depot_stop, stop, ignore_budget)
   local from = cache()
-  local key = depot_stop.surface_index .. "|" .. depot_stop.backer_name
+  -- Schlüssel mit Team: zwei Teams können gleichnamige Depots auf derselben Oberfläche haben
+  local key = depot_stop.surface_index .. ":" .. depot_stop.force_index .. "|" .. depot_stop.backer_name
   local by_stop = from[key]
   if not by_stop then
     by_stop = {}

@@ -7,6 +7,7 @@ local Schedule = require("scripts.trains.schedule")
 local CleanupRoute = require("scripts.trains.cleanup-route")
 local Alerts = require("scripts.alerts.alerts")
 local Networks = require("scripts.stations.networks")
+local Pending = require("scripts.trains.pending")
 
 local Depot = {}
 
@@ -48,18 +49,27 @@ function Depot.remove(train_id)
   trains.count = trains.count - 1
   -- aus allen Pools austragen, in denen er steht (ältere Einträge kannten mehrere Netze)
   for _, name in ipairs(record.networks or { record.network }) do
-    local pool = trains.idle[name]
+    local key = (record.place or 0) .. "|" .. name
+    local pool = trains.idle[key]
     if pool then
       pool[train_id] = nil
-      if next(pool) == nil then trains.idle[name] = nil end
+      if next(pool) == nil then trains.idle[key] = nil end
     end
   end
 end
 
 --- Zug steht an `stop`. Ist das ein Depot, kommt er in den Pool.
+--- Fremdes Team: Der Fahrplan kennt nur Namen, deshalb landet ein Zug auch an einer gleichnamigen
+--- Haltestelle eines anderen Teams. Dort wird er nicht frei, sondern zieht in ein eigenes Depot um.
 function Depot.arrive(train, stop, station)
   if not (station and station.config.roles.depot and station.stop_unit == stop.unit_number) then return end
   local id = train.id
+  Pending.release(id) -- angekommen: keine vorgemerkte Fahrt mehr offen
+  local front = train.front_stock
+  if front and stop.force_index ~= front.force_index then
+    if not Depot.relocate(train, stop, nil) then Depot.no_free_depot(train, stop) end
+    return
+  end
   if storage.trains.by_id[id] or storage.deliveries.by_train[id] then return end
   storage.trains.home[id] = { train = train, depot = stop.backer_name, stop = stop }
   local network = station.config.network
@@ -107,6 +117,8 @@ function Depot.arrive(train, stop, station)
     id = id,
     network = network,
     surface_index = stop.surface_index,
+    force_index = stop.force_index, -- Team: nur Aufträge desselben Teams
+    place = Networks.place_of(stop), -- Oberfläche + Team, Schlüssel der Zug-Pools
     stop = stop,
     stop_unit = stop.unit_number,
     position = stop.position, -- geparkt: Position ändert sich nicht (Dispatcher ohne API-Aufrufe)
@@ -116,11 +128,13 @@ function Depot.arrive(train, stop, station)
     fluid = fluid,
   }
   trains.count = trains.count + 1
-  -- Pool des Heimatnetzes; verbundene Netze (Stern) liest der Dispatcher mit
-  local pool = trains.idle[network]
+  -- Pool des Heimatnetzes an diesem Ort (Oberfläche + Team); verbundene Netze (Stern) liest der
+  -- Dispatcher mit. Ohne den Ort im Schlüssel fressen fremde Planeten/Teams das Such-Budget.
+  local key = Networks.place_of(stop) .. "|" .. network
+  local pool = trains.idle[key]
   if not pool then
     pool = {}
-    trains.idle[network] = pool
+    trains.idle[key] = pool
   end
   pool[id] = true
 end
@@ -132,6 +146,8 @@ function Depot.is_ready(record)
   local station = train.station
   return train.state == defines.train_state.wait_station
     and station ~= nil and station.unit_number == record.stop_unit
+    -- von Hand beladen, während er wartete: erst leeren, dann wieder Aufträge fahren
+    and not Depot.has_cargo(train)
 end
 
 --- Zug an einer Depot-Haltestelle (neu) erfassen, z. B. nachdem seine Restladung von Hand weg ist.
@@ -163,6 +179,10 @@ function Depot.send_service(train, network)
   -- Restladung ohne passendes Cleanup: nicht nur zum Tanken losschicken (sonst pendelt er)
   if missing then return false, missing end
   if not Schedule.send_service(train, fuel_stop, route) then return false, nil end
+  -- Fahrten vormerken: bis zur Ankunft zählt das Zuglimit der Haltestelle sie nicht mit
+  local stops = { fuel_stop }
+  for _, leg in ipairs(route or {}) do stops[#stops + 1] = leg.stop end
+  Pending.reserve(train.id, stops)
   storage.trains.service[train.id] = (fuel_stop and route and "both") or (fuel_stop and "fuel") or "cleanup"
   return true, nil
 end
@@ -173,13 +193,21 @@ end
 local MAX_DEPOT_CANDIDATES = 20
 function Depot.relocate(train, current, network, after_service)
   local name, length, surface = current.backer_name, #train.carriages, current.surface_index
+  -- Team des Zuges (nicht der Haltestelle: die kann einem anderen Team gehören)
+  local front = train.front_stock
+  local force = front and front.force_index or current.force_index
+  local place = Networks.place(surface, force)
   local goals, stops = {}, {}
+  -- Züge, die schon per Wegpunkt zu einem Depot unterwegs sind, zählen mit: sonst schickt UTL
+  -- mehrere zum selben freien Depot, und die übrigen stauen sich davor.
+  local heading = Pending.counts()
   for _, station in pairs(storage.stations.by_unit) do
     local stop, cfg = station.stop, station.config
     if cfg.roles.depot and stop and stop.valid and stop ~= current and stop.backer_name == name
-      and stop.surface_index == surface and (network == nil or Networks.related(surface, cfg.network, network))
+      and stop.surface_index == surface and stop.force_index == force
+      and (network == nil or Networks.related(place, cfg.network, network))
       and length_ok(cfg, length)
-      and stop.trains_count == 0 then
+      and stop.trains_count == 0 and (heading[stop.unit_number] or 0) == 0 then
       stops[#stops + 1] = stop
       goals[#goals + 1] = { train_stop = stop }
       if #goals >= MAX_DEPOT_CANDIDATES then break end
@@ -188,7 +216,9 @@ function Depot.relocate(train, current, network, after_service)
   if #goals == 0 then return false end
   local result = game.train_manager.request_train_path({ train = train, goals = goals, steps_limit = 20000 })
   if not result.found_path then return false end
-  if not Schedule.send_waypoint(train, stops[result.goal_index]) then return false end
+  local target = stops[result.goal_index]
+  if not Schedule.send_waypoint(train, target) then return false end
+  Pending.reserve(train.id, { target })
   storage.trains.service[train.id] = after_service and "relocate-serviced" or "relocate"
   return true
 end
@@ -205,6 +235,50 @@ function Depot.refuel_idle(limit)
       if limit and tries >= limit then return end
       tries = tries + 1
       if Depot.send_service(train, record.network) then Depot.remove(id) end
+    end
+  end
+end
+
+--- Freie Züge, in die jemand von Hand etwas geladen hat: zum Cleanup schicken. UTL merkt die
+--- Ladung sonst erst, wenn der Zug das nächste Mal etwas tut (es gibt kein Ereignis dafür).
+--- Die Ladung abzufragen kostet API-Aufrufe, deshalb reihum nur `scan` Züge je Durchlauf
+--- (bei vielen Zügen dauert es also etwas, bis es auffällt – dafür bleibt der Takt billig).
+local cleanup_cursor = nil
+function Depot.cleanup_idle(limit, scan)
+  local by_id = storage.trains.by_id
+  -- reihum höchstens `scan` Züge heraussuchen (die Ladung abzufragen kostet API-Aufrufe)
+  local ids = {}
+  local cursor = cleanup_cursor
+  if cursor ~= nil and by_id[cursor] == nil then cursor = nil end
+  for _ = 1, scan or 20 do
+    local id = next(by_id, cursor)
+    if id == nil then id = next(by_id) end -- am Ende wieder vorne anfangen
+    if id == nil then break end
+    ids[#ids + 1] = id
+    cursor = id
+  end
+  cleanup_cursor = cursor
+
+  local tries = 0
+  for _, id in ipairs(ids) do
+    local record = by_id[id]
+    local train = record and record.train
+    if train and train.valid and Depot.has_cargo(train) then
+      if limit and tries >= limit then return end
+      tries = tries + 1
+      local sent, missing = Depot.send_service(train, record.network)
+      if sent then
+        Depot.remove(id)
+      elseif record.stop and record.stop.valid then
+        -- Kein passendes/freies Cleanup: aus dem Pool nehmen, warnen und später erneut versuchen
+        -- (Depot.retry_cargo) – sonst rechnet UTL das alle 10 Sekunden neu durch.
+        Depot.remove(id)
+        if missing then
+          Alerts.raise("cargo", "cargo", record.stop,
+            { "utl-alert.no-cleanup", Alerts.train_name(train), CleanupRoute.rich(missing) }, "no-cleanup:" .. id)
+        end
+        storage.trains.cargo_waiting[id] = { train = train, stop = record.stop, network = record.network }
+      end
     end
   end
 end

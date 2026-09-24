@@ -4,6 +4,7 @@ local Registry = require("scripts.stations.registry")
 local Depot = require("scripts.trains.depot")
 local Deliveries = require("scripts.deliveries.deliveries")
 local Dispatch = require("scripts.dispatcher.dispatch")
+local Pending = require("scripts.trains.pending")
 local ServiceStops = require("scripts.trains.service-stops")
 local Filters = require("scripts.trains.wagon-filters")
 local Alerts = require("scripts.alerts.alerts")
@@ -27,6 +28,7 @@ local function on_state(event)
   if MANUAL[state] then
     Depot.remove(id)
     storage.trains.service[id] = nil
+    Pending.release(id)
     if delivery then Deliveries.cancel(delivery, "manual") end
     return
   end
@@ -53,6 +55,7 @@ local function on_state(event)
       else
         if station and (station.config.roles.fuel or station.config.roles.cleanup) then
           storage.trains.visiting[id] = stop -- für „direkt der nächste Auftrag“ bei der Abfahrt
+          Pending.release(id, stop.unit_number) -- angekommen: zählt jetzt das Vanilla-Zuglimit
         end
         Depot.stray(train, stop) -- gleichnamige Haltestelle ohne Depot-Rolle?
       end
@@ -96,6 +99,7 @@ Events.on(defines.events.on_train_created, function(event)
     storage.trains.visiting[old] = nil
     storage.trains.cargo_waiting[old] = nil
     storage.trains.home[old] = nil
+    Pending.release(old) -- vorgemerkte Fahrten der alten Zug-ID
     local delivery = Deliveries.of_train(old)
     if delivery then Deliveries.cancel(delivery, "rebuilt") end
   end
@@ -130,6 +134,13 @@ Heartbeat.add_task("alerts-cleanup", 60, Alerts.cleanup)
 -- Freie Züge, die knapp an Treibstoff sind, alle 60 Heartbeats (Standard 10 s) zum Tanken
 -- schicken – z. B. wenn beim Einparken gerade keine Tankstelle frei war.
 Heartbeat.add_task("refuel-idle", 60, function() Depot.refuel_idle(3) end)
+
+-- Vorgemerkte Fahrten aufräumen, die nie angekommen sind (Ziel abgerissen, Zug zerstört, kein
+-- Weg): alle 600 Heartbeats (Standard 100 s), Vormerkungen älter als 10 Minuten fallen weg.
+Heartbeat.add_task("pending-sweep", 600, function() Pending.sweep(10 * 60 * 60) end)
+
+-- Freie Züge, die jemand von Hand beladen hat: alle 60 Heartbeats einen Blick darauf.
+Heartbeat.add_task("cleanup-idle", 60, function() Depot.cleanup_idle(3, 20) end)
 
 -- Züge mit Restladung, für die kein Cleanup frei war: alle 60 Heartbeats erneut versuchen.
 Heartbeat.add_task("cleanup-retry", 60, function() Depot.retry_cargo(3) end)

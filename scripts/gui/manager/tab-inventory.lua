@@ -33,13 +33,6 @@ function Tab.build(parent)
   return refs
 end
 
---- Oberfläche einer Station (Haltestelle, sonst Combinator).
-local function surface_of(station)
-  local stop, entity = station.stop, station.entity
-  if stop and stop.valid then return stop.surface_index end
-  return entity and entity.valid and entity.surface_index or nil
-end
-
 local function add(map, key, amount)
   map[key] = (map[key] or 0) + amount
 end
@@ -71,7 +64,7 @@ local function detail(parent, key, totals, manager)
   for _, station in pairs(storage.stations.by_unit) do
     local provide, request = station.provide[key], station.request[key]
     if (provide or request) and station.stop and station.stop.valid
-      and Filter.match(manager, station.stop.surface_index) then
+      and Filter.station(manager, station) then
       local row = parent.add({ type = "flow", direction = "horizontal" })
       row.style.vertical_align = "center"
       List.station_label(row, 200, station.stop.backer_name, station.stop)
@@ -85,7 +78,7 @@ local function detail(parent, key, totals, manager)
   for _, delivery in pairs(storage.deliveries.active) do
     local amount = delivery.manifest[key]
     local front = delivery.train and delivery.train.valid and delivery.train.front_stock
-    if amount and front and Filter.match(manager, front.surface_index) then
+    if amount and front and Filter.match(manager, front.surface_index, front.force_index) then
       local row = parent.add({ type = "flow", direction = "horizontal" })
       row.style.vertical_align = "center"
       local route = row.add({ type = "label", caption = { "utl-manager.route", delivery.from or "?", delivery.to or "?" } })
@@ -99,14 +92,14 @@ function Tab.refresh(refs, manager)
   local totals = { provide = {}, request = {}, incoming = {} }
   local stations = storage.stations.by_unit
   for _, station in pairs(stations) do
-    if Filter.match(manager, surface_of(station)) then
+    if Filter.station(manager, station) then
       for key, amount in pairs(station.provide) do add(totals.provide, key, amount) end
       for key, amount in pairs(station.request) do add(totals.request, key, amount) end
     end
   end
   for unit, by_key in pairs(storage.deliveries.incoming) do
     local station = stations[unit]
-    if station and Filter.match(manager, surface_of(station)) then
+    if station and Filter.station(manager, station) then
       for key, amount in pairs(by_key) do add(totals.incoming, key, amount) end
     end
   end

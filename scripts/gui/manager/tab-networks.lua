@@ -89,25 +89,35 @@ local function collect(manager)
 
   for _, station in pairs(storage.stations.by_unit) do
     local stop, cfg = station.stop, station.config
-    if cfg and stop and stop.valid then
+    if cfg and stop and stop.valid and (not manager.force or stop.force_index == manager.force) then
       local net = ensure(stop.surface_index, cfg.network)
       if net then net.stations[#net.stations + 1] = station end
     end
   end
-  -- Netze, die nur über eine Verbindung existieren (noch ohne eigene Station)
-  for surface_index, links in pairs(storage.network_links or {}) do
-    for center, partners in pairs(links.partners) do
-      ensure(surface_index, center)
-      for partner in pairs(partners) do ensure(surface_index, partner) end
+  -- Netze, die nur über eine Verbindung existieren (noch ohne eigene Station). Verbindungen kennen
+  -- kein Team – deshalb nur, wenn eigene Stationen auf dieser Oberfläche stehen.
+  local own_surface = {}
+  for _, net in pairs(nets) do
+    if net then own_surface[net.surface] = true end
+  end
+  for place, links in pairs(storage.network_links or {}) do
+    local surface_index, force_index = Networks.split_place(place)
+    if own_surface[surface_index] and force_index == manager.force then
+      for center, partners in pairs(links.partners) do
+        ensure(surface_index, center)
+        for partner in pairs(partners) do ensure(surface_index, partner) end
+      end
     end
   end
   -- freie Züge und Lieferungen je Netz und Oberfläche
   local by_id = storage.trains.by_id
   for _, net in pairs(nets) do
     if net then
-      for id in pairs(storage.trains.idle[net.name] or {}) do
+      for id in pairs(storage.trains.idle[Networks.place(net.surface, manager.force or 1) .. "|" .. net.name] or {}) do
         local record = by_id[id]
-        if record and record.surface_index == net.surface then net.idle = net.idle + 1 end
+        if record and record.surface_index == net.surface and Filter.train(manager, record.train) then
+          net.idle = net.idle + 1
+        end
       end
     end
   end
@@ -115,7 +125,7 @@ local function collect(manager)
     -- Netz des Abnehmers (im Stern fährt oft ein Zug aus einem anderen Netz)
     local requester = storage.stations.by_unit[delivery.requester]
     local network = requester and requester.config.network or delivery.network
-    local front = delivery.train and delivery.train.valid and delivery.train.front_stock
+    local front = Filter.train(manager, delivery.train) and delivery.train.front_stock
     local net = front and network and nets[front.surface_index .. "|" .. network]
     if net then net.deliveries = net.deliveries + 1 end
   end
@@ -144,13 +154,14 @@ end
 --- Verbindungsleiste für das gewählte Netz auffrischen.
 local function refresh_links(refs, net, force)
   refs.chips.clear()
-  if not net then
+  if not (net and force) then
     refs.caption.caption = { "utl-gui.links" }
     refs.add.items, refs.add.enabled, refs.field.enabled, refs.confirm.enabled = {}, false, false, false
     return
   end
   local limit = Unlocks.networks_limit(force)
-  local star = Networks.star(net.surface, net.name)
+  local place = Networks.place(net.surface, force.index)
+  local star = Networks.star(place, net.name)
   refs.caption.caption = star.role == "partner" and { "utl-gui.links" }
     or { "utl-gui.links-count", #star.partners, limit }
   local names = star.role == "partner" and { star.center } or star.partners
@@ -167,12 +178,12 @@ local function refresh_links(refs, net, force)
   end
   local items = {}
   for _, name in ipairs(Networks.known()) do
-    if name ~= net.name and Networks.can_link(net.surface, net.name, name, math.max(limit, 1)) == true then
+    if name ~= net.name and Networks.can_link(place, net.name, name, math.max(limit, 1)) == true then
       items[#items + 1] = name
     end
   end
   refs.add.items = items
-  refs.add.selected_index = 0
+  if #refs.add.items > 0 then refs.add.selected_index = 0 end
   local open = star.role ~= "partner" and #star.partners < limit
   refs.add.enabled = open and #items > 0
   refs.field.enabled, refs.confirm.enabled = open, open
@@ -205,10 +216,13 @@ function Tab.refresh(refs, manager)
   local entries = {}
   if net then
     local related = {}
-    for _, name in ipairs(Networks.related_list(net.surface, net.name)) do related[name] = true end
+    for _, name in ipairs(Networks.related_list(Networks.place(net.surface, manager.force), net.name)) do
+      related[name] = true
+    end
     for _, station in pairs(storage.stations.by_unit) do
       local stop = station.stop
-      if stop and stop.valid and stop.surface_index == net.surface and related[station.config.network] then
+      if stop and stop.valid and stop.surface_index == net.surface and related[station.config.network]
+        and (not manager.force or stop.force_index == manager.force) then
         entries[#entries + 1] = { station = station, network = station.config.network,
           own = station.config.network == net.name }
       end

@@ -45,7 +45,7 @@ end
 --- Muss der Zug vor einem Auftrag tanken? Nur wenn er knapp ist UND es im Netzwerk Tankstellen
 --- gibt – wer ohne UTL-Tankstellen spielt (eigene Interrupts, Hand), dessen Züge fahren normal.
 function Fuel.needs_station(train, network)
-  return Fuel.is_low(train) and ServiceStops.exists(network, "fuel")
+  return Fuel.is_low(train) and ServiceStops.exists(network, "fuel", train.front_stock)
 end
 
 return Fuel

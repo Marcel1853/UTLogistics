@@ -7,13 +7,34 @@
 ---   * Ein Netz gehört zu höchstens einem Stern – als Zentrum oder als Partner. Ein Partner kann
 ---     keine eigenen Partner haben und nirgends sonst Partner sein. So entstehen keine Ketten.
 ---   * Die Zahl der Netze ist frei; begrenzt ist nur die Zahl der Partner je Zentrum.
----   * Sterne gelten je Oberfläche – auf Vulcanus kann man eigene bilden.
+---   * Sterne gelten je Ort = Oberfläche + Team: auf Vulcanus kann man eigene bilden, und jedes
+---     Team hat seine eigenen (gleich benannte Netze verschiedener Teams arbeiten nie zusammen).
 ---
---- Speicher: storage.network_links[surface_index] = {
+--- Die Funktionen nehmen einen **Ort** (`Networks.place`) statt einer Oberfläche.
+--- Speicher: storage.network_links[place] = {
 ---   partners = { [zentrum] = { [partner] = true } },
 ---   center_of = { [partner] = zentrum },
 --- }
 local Networks = {}
+
+-- Ort = Oberfläche * 2^20 + Team. Force-Indizes wachsen mit jeder erzeugten Force weiter und
+-- werden nie neu vergeben, deshalb reichlich Luft (Lua rechnet bis 2^53 genau).
+local FORCES = 1048576
+
+--- Ort aus Oberfläche und Team (Force-Index).
+function Networks.place(surface_index, force_index)
+  return surface_index * FORCES + force_index
+end
+
+--- Ort einer Haltestelle/Lok.
+function Networks.place_of(entity)
+  return entity.surface_index * FORCES + entity.force_index
+end
+
+--- Oberfläche und Team eines Orts.
+function Networks.split_place(place)
+  return math.floor(place / FORCES), place % FORCES
+end
 
 local function links_of(surface_index, create)
   local all = storage.network_links

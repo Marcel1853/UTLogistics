@@ -8,6 +8,7 @@ local Tabs = {
   inventory = require("scripts.gui.manager.tab-inventory"),
   history = require("scripts.gui.manager.tab-history"),
   alerts = require("scripts.gui.manager.tab-alerts"),
+  settings = require("scripts.gui.manager.tab-settings"),
 }
 local Filter = require("scripts.gui.manager.surface-filter")
 
@@ -16,9 +17,10 @@ local Manager = {}
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 5
-local ORDER = { "depots", "stations", "networks", "inventory", "history", "alerts" }
--- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste).
+local GUI_VERSION = 6
+local ORDER = { "depots", "stations", "networks", "inventory", "history", "alerts", "settings" }
+-- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste;
+-- Einstellungen nie, sonst überschriebe der Takt das Feld beim Tippen).
 local AUTO_REFRESH = { depots = true, stations = true, networks = true, history = true, alerts = true }
 
 local function frame_button(parent, sprite, tooltip, action)
@@ -95,7 +97,7 @@ function Manager.open(player)
   -- Planeten-Auswahl (nur mit Space Age sichtbar)
   local surface_pick = bar.add({ type = "drop-down", visible = false, tooltip = { "utl-manager.surface-tooltip" },
     tags = { utl_mgr = "surface" } })
-  surface_pick.style.width = 170
+  surface_pick.style.width = 230
   surface_pick.style.height = 24
   surface_pick.style.top_margin = -2
   frame_button(bar, "utility/search", { "utl-manager.search" }, "toggle_search")
@@ -153,6 +155,11 @@ end
 
 function Manager.set_search(manager, text)
   manager.search = string.lower(text)
+end
+
+--- Name des sichtbaren Reiters.
+function Manager.selected(manager)
+  return selected_name(manager)
 end
 
 --- Reiter per Name wählen (z. B. für die Tipps-Szenen).

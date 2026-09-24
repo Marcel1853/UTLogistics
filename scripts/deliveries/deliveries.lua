@@ -15,6 +15,8 @@ local Alerts = require("scripts.alerts.alerts")
 local Util = require("scripts.lib.util")
 local Filters = require("scripts.trains.wagon-filters")
 local Unlocks = require("scripts.core.unlocks")
+local TeamConfig = require("scripts.core.team-config")
+local Pending = require("scripts.trains.pending")
 local Output = require("scripts.stations.output")
 
 local Deliveries = {}
@@ -72,7 +74,13 @@ end
 --- die Lieferung bleibt bis zum Anbieter im Zustand to_provider). Der Dispatcher sucht sie aus.
 function Deliveries.create(record, provider, requester, manifest, fuel_stop)
   local train = record.train
-  if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop) then return nil end
+  -- Zeitlimits des Teams, dem der Zug gehört (sonst Kartenwert)
+  local force = train.front_stock and train.front_stock.force
+  local timeouts = { load = TeamConfig.get(force, "load_timeout"), unload = TeamConfig.get(force, "unload_timeout"),
+    mode = TeamConfig.get(force, "timeout_mode") }
+  if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop, timeouts) then return nil end
+  -- Tankhalt vormerken: bis zur Ankunft zählt ihn das Zuglimit der Tankstelle sonst nicht mit
+  if fuel_stop then Pending.reserve(train.id, { fuel_stop }) end
   Depot.remove(record.id)
 
   local deliveries = storage.deliveries
@@ -125,6 +133,7 @@ local function record_history(delivery, canceled)
   local front = delivery.train and delivery.train.valid and delivery.train.front_stock
   table.insert(history, 1, {
     surface = front and front.surface_index or nil, -- für die Planeten-Auswahl im Manager
+    force = front and front.force_index or nil, -- jedes Team sieht nur seinen Verlauf
     depot = delivery.depot,
     from = delivery.from,
     to = delivery.to,
@@ -140,6 +149,7 @@ end
 local function remove(delivery, canceled)
   record_history(delivery, canceled)
   Filters.clear(delivery)
+  Pending.release(delivery.train_id) -- ein vorgemerkter Tankhalt dieser Fahrt fällt weg
   -- Abbruch mitten im Laden: den Zug auch aus der Ausgabe nehmen.
   local at = storage.deliveries.at_station
   for _, unit in ipairs({ delivery.provider, delivery.requester }) do
@@ -207,19 +217,36 @@ function Deliveries.on_depart(delivery)
     train_at(delivery.provider, nil)
     release_provider(delivery)
     reread(delivery.provider)
-    -- Weniger geladen als bestellt (Wartebedingung von Hand/Interrupt beendet)?
+    -- Weniger geladen als bestellt (Zeitlimit, Wartebedingung von Hand/Interrupt beendet)?
+    -- Dann Ladeliste und „unterwegs“ beim Abnehmer auf das tatsächlich Geladene setzen – sonst
+    -- bestellt der Abnehmer bis zum Entladen zu wenig nach.
     local train = delivery.train
     if train.valid then
+      local total, short = 0, nil
       for key, amount in pairs(delivery.manifest) do
         local loaded = Deliveries.loaded(train, key)
-        if loaded < amount then
-          local provider = Registry.get(delivery.provider)
-          local stop = provider and provider.stop
-          Alerts.raise("cargo", "missing", stop and stop.valid and stop or train.front_stock,
-            { "utl-alert.provider-missing", Alerts.train_name(train), delivery.from or "?", loaded, amount },
-            "missing:" .. delivery.id)
-          break
+        -- Flüssigkeiten: winzige Reste (999,999 statt 1000) sind keine Fehlmenge
+        if loaded < amount and amount - loaded <= 1 and Util.split_key(key) == "fluid" then loaded = amount end
+        if loaded ~= amount then
+          -- „unterwegs“ beim Abnehmer auf das tatsächlich Geladene setzen (auch bei Überladung),
+          -- sonst bestellt er bis zum Entladen zu wenig oder zu viel nach.
+          if loaded < amount then short = short or { loaded = loaded, amount = amount } end
+          add(storage.deliveries.incoming, delivery.requester, key, loaded - amount)
+          delivery.manifest[key] = loaded > 0 and loaded or nil
         end
+        total = total + math.min(loaded, amount)
+      end
+      if total == 0 then
+        -- Nichts geladen (Anbieter leer, Zeitlimit abgelaufen): Fahrt zum Abnehmer lohnt nicht.
+        Deliveries.cancel(delivery, "provider-empty")
+        return false
+      end
+      if short then
+        local provider = Registry.get(delivery.provider)
+        local stop = provider and provider.stop
+        Alerts.raise("cargo", "missing", stop and stop.valid and stop or train.front_stock,
+          { "utl-alert.provider-missing", Alerts.train_name(train), delivery.from or "?", short.loaded, short.amount },
+          "missing:" .. delivery.id)
       end
     end
   elseif delivery.state == "unloading" then

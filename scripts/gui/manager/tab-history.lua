@@ -56,7 +56,7 @@ function Tab.refresh(refs, manager)
   local items = {}
   for _, entry in ipairs(storage.history) do
     -- ältere Einträge ohne Oberfläche erscheinen nur unter „Alle“
-    if Filter.match(manager, entry.surface) and (search == ""
+    if Filter.match(manager, entry.surface, entry.force) and (search == ""
       or string.find(string.lower(entry.from or ""), search, 1, true)
       or string.find(string.lower(entry.to or ""), search, 1, true)
       or string.find(string.lower(entry.depot or ""), search, 1, true)) then

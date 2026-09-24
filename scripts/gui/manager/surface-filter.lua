@@ -7,12 +7,26 @@ local Filter = {}
 
 local AUTO, ALL = "auto", "all"
 
---- Oberflächen mit UTL-Stationen, sortiert nach Index (Nauvis zuerst).
-function Filter.used()
+--- Haltestelle bzw. Combinator einer Station (für Oberfläche und Team).
+local function entity_of(station)
+  local stop, entity = station.stop, station.entity
+  if stop and stop.valid then return stop end
+  return entity and entity.valid and entity or nil
+end
+
+--- Oberfläche und Team (Force) einer Station; nil, wenn nichts Gültiges mehr da ist.
+function Filter.place_of(station)
+  local e = entity_of(station)
+  if e then return e.surface_index, e.force_index end
+  return nil, nil
+end
+
+--- Oberflächen mit UTL-Stationen des Teams `force_index`, sortiert nach Index (Nauvis zuerst).
+function Filter.used(force_index)
   local set, list = {}, {}
   for _, station in pairs(storage.stations.by_unit) do
     local stop = station.stop
-    if stop and stop.valid and not set[stop.surface_index] then
+    if stop and stop.valid and stop.force_index == force_index and not set[stop.surface_index] then
       set[stop.surface_index] = true
       list[#list + 1] = stop.surface_index
     end
@@ -44,7 +58,9 @@ end
 --- `manager.several` (Planet in der Liste mit anzeigen). Gleicht die Auswahlliste ab.
 function Filter.apply(manager, dropdown)
   local player = game.get_player(manager.player_index)
-  local used = Filter.used()
+  -- Jeder sieht nur sein eigenes Team (Stationen, Züge, Lieferungen, Warnungen)
+  manager.force = player and player.force_index or nil
+  local used = Filter.used(manager.force)
   local shown = Filter.visible()
   local choice = shown and prefs(manager.player_index).surface or ALL
 
@@ -104,9 +120,23 @@ function Filter.follows_player(player_index)
   return p == nil or p.surface == AUTO
 end
 
---- Gehört etwas auf dieser Oberfläche in die Anzeige?
-function Filter.match(manager, surface_index)
+--- Gehört etwas auf dieser Oberfläche und aus diesem Team in die Anzeige? `force_index` nil
+--- (ältere Einträge ohne Team) zählt als passend.
+function Filter.match(manager, surface_index, force_index)
+  if force_index and manager.force and force_index ~= manager.force then return false end
   return manager.surface == nil or manager.surface == surface_index
+end
+
+--- Station in der Anzeige?
+function Filter.station(manager, station)
+  local surface, force = Filter.place_of(station)
+  return surface ~= nil and Filter.match(manager, surface, force)
+end
+
+--- Zug (Lok) in der Anzeige?
+function Filter.train(manager, train)
+  local front = train and train.valid and train.front_stock
+  return front ~= nil and Filter.match(manager, front.surface_index, front.force_index)
 end
 
 --- „Name · Planet“, wenn mehrere Oberflächen gleichzeitig angezeigt werden.

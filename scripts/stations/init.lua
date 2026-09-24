@@ -63,11 +63,9 @@ end
 Events.on(defines.events.on_research_finished, on_research)
 Events.on(defines.events.on_research_reversed, on_research)
 
--- Map-Einstellung „UTL-Funktionen brauchen Forschung“ umgestellt.
-Events.on(defines.events.on_runtime_mod_setting_changed, function(event)
-  if event.setting ~= "utl-research-required" then return end
-  Config.refresh() -- die Reihenfolge der Handler ist nicht festgelegt
-  refresh_outputs(nil)
+-- Map-Einstellung „UTL-Funktionen brauchen Forschung“ umgestellt (Menü oder UTL-Manager).
+Config.listen(function(name)
+  if name == "utl-research-required" then refresh_outputs(nil) end
 end)
 
 -- Nach Mod-Updates fehlende Stationswerte ergänzen (neue Felder bekommen ihren Standard).

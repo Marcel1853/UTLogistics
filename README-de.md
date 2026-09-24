@@ -340,7 +340,40 @@ Start-Einstellungen.
 | Tanken unter (%) | 40 | Tankgrenze, 0 = aus. |
 | Warnung „kein Zug“ nach (Minuten) | 5 | So lange darf eine Anfrage unbedient sein, bevor gewarnt wird. 0 = sofort. |
 | Standard-Angebots-/Bedarfs-Schwelle | 1000 | Startwerte für neue Stationen. |
+| Inaktivität beim Laden (s) | 30 | Sekunden ohne Änderung an der Ladung beim Anbieter, 0 = keine Bedingung. Wie sie wirkt, legt „Fracht und/oder Inaktivität“ fest. |
+| Inaktivität beim Entladen (s) | 30 | Dasselbe beim Abnehmer. |
+| Fracht und/oder Inaktivität | oder | „und“: erst fahren, wenn voll bzw. leer und so lange nichts mehr passiert ist. „oder“: auch fahren, wenn so lange nichts passiert ist – mit dem, was drin ist. |
+| Team-Leiter abgeben nach … Tagen offline | 3 | Ein Leiter, der so lange nicht online war, verliert die Rechte. 0 = nie. |
 | Debug-Protokoll | aus | Zusätzliche Meldungen in `factorio-current.log`. |
+
+Die drei **Lade-Werte** (Inaktivität beim Laden, Inaktivität beim Entladen, Fracht und/oder
+Inaktivität) lassen sich auch im **UTL-Manager, Reiter „Einstellungen“** ändern – ohne das Spiel zu
+verlassen. Darunter sehen **Admins** auch alle übrigen Kartenwerte („Karte / Server“); andere
+Spieler sehen diesen Teil nicht.
+- **Ohne Teams** (alle Spieler in einem Team) zeigt der Reiter die drei Werte für alle; ändern darf
+  sie nur ein Admin. Ein dort geänderter Wert gilt statt des Werts aus den Mod-Einstellungen (der
+  Reiter zeigt beide); ändert man ihn danach im Einstellungsmenü, gewinnt wieder das Menü.
+- **Mit Teams** (Spieler auf mehreren Forces oder in einer eigenen Force) hat jedes Team eigene
+  Werte. Wer als Erster ins Team kommt, ist **Team-Leiter**; Leiter (und Admins) dürfen die Werte
+  ändern, weitere Leiter bestimmen und Rechte wieder wegnehmen – einer bleibt immer. Verlässt der
+  letzte Leiter das Team, übernimmt das dienstälteste Mitglied. Ein Leiter, der **3 Tage** nicht
+  online war (Karten-Einstellung „Team-Leiter abgeben nach … Tagen offline“, Spielzeit, solange der
+  Server läuft, 0 = nie), verliert die Rechte, und das dienstälteste aktive Mitglied übernimmt. Ohne
+  eigenen Wert gilt der Kartenwert.
+
+**Admins:** Der Befehl **`/utl-admin`** öffnet ein Fenster, in dem man jedes Team wählen und seine
+Leiter und Werte ändern kann – falls ein Team mal hängt.
+
+**Inaktivität beim Laden und Entladen** – Sekunden ohne Änderung an der Ladung, wie die
+Wartebedingung im Spiel – wirkt auf eine von zwei Arten (Einstellung „Fracht und/oder Inaktivität“):
+- **Fracht oder Inaktivität** (Standard): Der Zug fährt auch, sobald sich so lange nichts getan hat – mit dem, was er hat; die
+  Lieferung wird auf das tatsächlich Geladene gekürzt, der Abnehmer bestellt den Rest neu. Hat er
+  gar nichts geladen, wird die Lieferung abgebrochen, und der Zug fährt zurück ins Depot. Beim
+  Abnehmer fährt er nach Ablauf weiter; was übrig ist, bringt er zum Cleanup.
+- **Fracht und Inaktivität:** Der Zug fährt erst, wenn er voll bzw. leer ist **und** sich so lange
+  nichts mehr getan hat.
+
+`0` = keine Inaktivitäts-Bedingung (warten, bis voll bzw. leer, wie vor 0.0.6).
 
 ## Leistung
 
@@ -425,8 +458,12 @@ Netze verbinden (Stern, Forschung „Netzverbund“), Depots, Einstellungen kopi
 
 ## Noch nicht enthalten
 
-Zeitlimits beim Laden/Entladen. Nachladen, während der Zug schon am Anbieter steht (die Ladeliste
+Nachladen, während der Zug schon am Anbieter steht (die Ladeliste
 steht beim Losschicken fest), und Einsammeln bei einem zweiten Anbieter auf dem Weg.
+
+**Teams:** Jedes Team (Force) arbeitet für sich – Züge, Depots, Tankstellen und Cleanups arbeiten
+nur mit Stationen des eigenen Teams, Netzverbindungen gelten je Team, und der UTL-Manager zeigt nur
+das eigene Team. Zwei Teams dürfen dieselben Netznamen benutzen, ohne sich zu stören.
 
 **Oberflächen (Space Age):** Jede Oberfläche arbeitet für sich. UTL bringt nur Stationen, Depots,
 Tankstellen und Cleanups **derselben Oberfläche** zusammen. Auf Nauvis und auf Vulcanus brauchst
@@ -437,4 +474,8 @@ geplant – Züge können den Planeten nicht wechseln.
 
 Remote-Schnittstelle `utl`: `station_count`, `get_station(unit)`,
 `configure_station(unit, changes)`, `set_request(unit, slot, signal, count)`,
-`copy_settings(from, to)`, `tag_blueprint(stack, mapping, surface)`, `idle_train_count`, `delivery_count`, `get_deliveries`, `get_alerts`.
+`copy_settings(from, to)`, `tag_blueprint(stack, mapping, surface)`, `idle_train_count`, `delivery_count`, `get_deliveries`, `get_alerts`,
+`link_networks(surface, center, partner)`, `unlink_networks(surface, a, b)`,
+`get_network_star(surface, name)`, `set_team_config(force, key, value)`,
+`get_team_config(force, key)` (Schlüssel `load_timeout`, `unload_timeout`, `timeout_mode`;
+Team-Werte zählen nur, wenn es Teams gibt), `set_map_config(setting, value)`.

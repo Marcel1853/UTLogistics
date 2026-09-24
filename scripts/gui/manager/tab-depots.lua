@@ -36,7 +36,7 @@ local function collect(manager)
   local groups, order = {}, {}
   for _, station in pairs(storage.stations.by_unit) do
     local stop = station.stop
-    if station.config.roles.depot and stop and stop.valid and Filter.match(manager, stop.surface_index) then
+    if station.config.roles.depot and stop and stop.valid and Filter.match(manager, stop.surface_index, stop.force_index) then
       local name = stop.backer_name
       local key = stop.surface_index .. "|" .. name
       if not groups[key] and (search == "" or string.find(string.lower(name), search, 1, true)) then
@@ -49,7 +49,7 @@ local function collect(manager)
   for id, entry in pairs(home) do
     if not entry.train.valid then
       home[id] = nil
-    else
+    elseif Filter.train(manager, entry.train) then -- nur Züge des eigenen Teams (gleiche Depotnamen!)
       -- Oberfläche des Depots; ist die Haltestelle weg, die der Lok
       local stop, front = entry.stop, entry.train.front_stock
       local surface = stop and stop.valid and stop.surface_index or front and front.surface_index

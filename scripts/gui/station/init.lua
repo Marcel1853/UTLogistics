@@ -74,7 +74,7 @@ local function link_home(event, station, partner)
   local stop = station.stop
   if not (stop and stop.valid and partner and partner ~= "") then return false end
   local limit = Unlocks.networks_limit(Unlocks.force_of(station))
-  local ok = Networks.link(stop.surface_index, station.config.network, partner, limit)
+  local ok = Networks.link(Networks.place_of(stop), station.config.network, partner, limit)
   if ok ~= true then
     local player = game.get_player(event.player_index)
     if player then player.create_local_flying_text({ text = { "utl-gui." .. ok, partner }, create_at_cursor = true }) end
@@ -121,7 +121,7 @@ Events.on(defines.events.on_gui_click, function(event)
   elseif action == "network_chip" then
     -- Verbindung lösen (bei einem Partner: aus dem Stern seines Zentrums austreten)
     local stop = station.stop
-    if stop and stop.valid and Networks.unlink(stop.surface_index, cfg.network, tags.network) then
+    if stop and stop.valid and Networks.unlink(Networks.place_of(stop), cfg.network, tags.network) then
       changed(event, station, true)
     end
   elseif action == "network_rename" then

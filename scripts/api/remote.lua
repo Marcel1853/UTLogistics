@@ -3,6 +3,9 @@
 local Registry = require("scripts.stations.registry")
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
+local TeamConfig = require("scripts.core.team-config")
+local Config = require("scripts.core.config")
+local Pending = require("scripts.trains.pending")
 local Reader = require("scripts.stations.reader")
 local Roles = require("scripts.stations.roles")
 local Requests = require("scripts.stations.requests")
@@ -93,21 +96,67 @@ local interface = {
     return true
   end,
 
-  --- Netze zu einem Stern verbinden: `partner` hilft `center` und umgekehrt (je Oberfläche).
-  --- Grenze wie im Spiel aus der Forschung der Force. Liefert true oder den Grund als Text.
+  --- Netze zu einem Stern verbinden: `partner` hilft `center` und umgekehrt (je Oberfläche und
+  --- Team; `force` = Name, Standard „player“). Grenze wie im Spiel aus der Forschung der Force.
+  --- Liefert true oder den Grund als Text.
   link_networks = function(surface_index, center, partner, force)
-    local limit = Unlocks.networks_limit(force and game.forces[force] or game.forces["player"])
-    return Networks.link(surface_index, center, partner, limit)
+    local f = game.forces[force or "player"]
+    if not f then return "link-limit" end
+    return Networks.link(Networks.place(surface_index, f.index), center, partner, Unlocks.networks_limit(f))
   end,
 
-  --- Verbindung zweier Netze lösen.
-  unlink_networks = function(surface_index, a, b)
-    return Networks.unlink(surface_index, a, b)
+  --- Team-Wert setzen (z. B. "load_timeout", "unload_timeout" in Sekunden); nil = Kartenwert.
+  set_team_config = function(force_name, key, value)
+    local force = game.forces[force_name]
+    if not force then return false end
+    TeamConfig.set(force, key, value)
+    return true
   end,
 
-  --- Stern eines Netzes: { role, center, partners }.
-  get_network_star = function(surface_index, name)
-    return Networks.star(surface_index, name)
+  --- Wie viele Züge sind per Wegpunkt zu dieser Haltestelle unterwegs (Depot, Tanken, Cleanup)?
+  --- Zusammen mit `stop.trains_count` ergibt das die Belegung gegen das Zuglimit.
+  pending_trains = function(stop_unit)
+    return Pending.counts()[stop_unit] or 0
+  end,
+
+  --- Kartenwert setzen wie im UTL-Manager (Einstellungsname, z. B. "utl-load-timeout";
+  --- nil = wieder der Wert aus den Mod-Einstellungen). Prüft Typ und Grenzen.
+  set_map_config = function(name, value)
+    local proto = prototypes.mod_setting[name]
+    if not (proto and settings.global[name] and string.sub(name, 1, 4) == "utl-") then return false end
+    if value ~= nil then
+      if proto.type == "bool-setting" then
+        if type(value) ~= "boolean" then return false end
+      elseif proto.allowed_values then
+        local ok = false
+        for _, allowed in ipairs(proto.allowed_values) do ok = ok or allowed == value end
+        if not ok then return false end
+      else
+        if type(value) ~= "number" then return false end
+        if proto.type == "int-setting" then value = math.floor(value + 0.5) end
+        if proto.minimum_value and value < proto.minimum_value then return false end
+        if proto.maximum_value and value > proto.maximum_value then return false end
+      end
+    end
+    Config.set(name, value)
+    return true
+  end,
+
+  --- Gültiger Team-Wert (eigener Wert oder Kartenwert).
+  get_team_config = function(force_name, key)
+    return TeamConfig.get(game.forces[force_name], key)
+  end,
+
+  --- Verbindung zweier Netze lösen (`force` wie bei link_networks).
+  unlink_networks = function(surface_index, a, b, force)
+    local f = game.forces[force or "player"]
+    return f ~= nil and Networks.unlink(Networks.place(surface_index, f.index), a, b)
+  end,
+
+  --- Stern eines Netzes: { role, center, partners } (`force` wie bei link_networks).
+  get_network_star = function(surface_index, name, force)
+    local f = game.forces[force or "player"]
+    return Networks.star(Networks.place(surface_index, f and f.index or 1), name)
   end,
 
   --- Alle Einstellungen einer Station auf eine andere kopieren (wie Shift-Klick).

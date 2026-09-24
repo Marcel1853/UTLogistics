@@ -6,6 +6,7 @@ require("scripts.trains.init")
 require("scripts.dispatcher.init")
 require("scripts.gui.station.init")
 require("scripts.gui.manager.init")
+require("scripts.gui.admin.init")
 require("scripts.commands.init")
 require("scripts.api.remote")
 

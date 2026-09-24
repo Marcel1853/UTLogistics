@@ -21,6 +21,9 @@ script.on_nth_tick(10, function(e)
   local s = game.surfaces["nauvis"]
   local force = game.forces["player"]
   if e.tick == 10 then
+    -- Zeitlimits aus: die alten Runden füllen und leeren die Wagen selbst (erst R18 prüft sie)
+    remote.call("utl", "set_map_config", "utl-load-timeout", 0)
+    remote.call("utl", "set_map_config", "utl-unload-timeout", 0)
     s.request_to_generate_chunks({0,0}, 2); s.force_generate_chunk_requests()
     for _, ent in pairs(s.find_entities_filtered{area={{-20,-20},{20,20}}}) do if ent.type ~= "character" then ent.destroy() end end
     for x=-20,20 do for y=-20,20 do end end
@@ -240,6 +243,50 @@ function build_network_test()
   sch.add_record{ station = "UTL-RD", wait_conditions = {{ type = "inactivity", ticks = 300 }} }
   sch.go_to_station(1)
   remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+end
+
+-- Runde 20: eigenes Gleis bei x = 151 mit Depot „UTL-QD“ (Limit 2) und Cleanup „UTL-QC“
+-- (Limit 1), dazu zwei Züge. Beide bekommen von Hand Ladung: UTL muss das bemerken und sie
+-- nacheinander zum Cleanup schicken, nie beide gleichzeitig (Vormerkung der Wegpunkt-Fahrten).
+function build_cleanup_limit_test()
+  local s, force = game.surfaces["nauvis"], game.forces["player"]
+  local t = {} for x = 144, 160 do for y = -90, 90 do t[#t + 1] = { name = "concrete", position = { x, y } } end end
+  s.set_tiles(t)
+  for _, ent in pairs(s.find_entities_filtered{ area = {{144,-90},{160,90}} }) do
+    if ent.type ~= "character" then ent.destroy() end
+  end
+  for y = -80, 80, 2 do
+    s.create_entity{ name = "straight-rail", position = { 151, y }, direction = defines.direction.north, force = force }
+  end
+  local function stop(name, pos)
+    local e = s.create_entity{ name = "utl-train-stop", position = pos, direction = defines.direction.north,
+      force = force, raise_built = true }
+    e.backer_name = name
+    return e
+  end
+  st.qd = stop("UTL-QD", { 153, -20 })   -- Depot
+  st.qc = stop("UTL-QC", { 153, -60 })   -- Cleanup, in Fahrtrichtung dahinter
+  remote.call("utl", "configure_station", st.qd.unit_number, { mode = "depot", network = "Q" })
+  remote.call("utl", "configure_station", st.qc.unit_number, { mode = "cleanup", network = "Q" })
+  st.qd.trains_limit = 2
+  st.qc.trains_limit = 1
+  local wagons = {}
+  for i = 1, 2 do
+    -- Lok an beiden Enden, sonst kann der Zug nicht wenden (Depot liegt hinter ihm)
+    local y = 20 + (i - 1) * 35 -- beide südlich, fahren nacheinander nach Norden
+    local loco = s.create_entity{ name = "locomotive", position = { 151, y }, direction = defines.direction.north, force = force }
+    local wagon = s.create_entity{ name = "cargo-wagon", position = { 151, y + 7 }, direction = defines.direction.north, force = force }
+    local back = s.create_entity{ name = "locomotive", position = { 151, y + 14 }, direction = defines.direction.south, force = force }
+    loco.insert{ name = "coal", count = 120 }
+    back.insert{ name = "coal", count = 120 }
+    local sch = loco.train.get_schedule()
+    sch.add_record{ station = "UTL-QD", wait_conditions = {{ type = "inactivity", ticks = 120 }} }
+    sch.go_to_station(1)
+    loco.train.manual_mode = false
+    wagon.get_inventory(CARGO).insert{ name = "copper-plate", count = 100 }
+    wagons[i] = wagon
+  end
+  st.r20 = { wagons = wagons, max = 0, deadline = 149000 }
 end
 
 -- Runde 10: eigenes Gleis bei x = 91 mit Flüssigkeitszug (Netzwerk „fluid“).
@@ -660,6 +707,131 @@ function train_test_step()
     if tick >= st.wait_until then
       check("R17 ohne verbindung keine lieferung in netz B", remote.call("utl", "delivery_count") == 0,
         tostring(remote.call("utl", "delivery_count")))
+      -- Runde 18: Zeitlimits (5 s) mit dem Reserve-Zug in Netz A
+      remote.call("utl", "set_request", st.rb.unit_number, 1, nil)
+      remote.call("utl", "set_map_config", "utl-load-timeout", 5)
+      remote.call("utl", "set_map_config", "utl-unload-timeout", 5)
+      check("R18 standard: fracht oder inaktivität", remote.call("utl", "get_team_config", "player", "timeout_mode") == "or",
+        tostring(remote.call("utl", "get_team_config", "player", "timeout_mode")))
+      remote.call("utl", "set_map_config", "utl-timeout-mode", "and") -- erst „und“ prüfen
+      st.nwagon.get_inventory(CARGO).clear()
+      remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+      st.r18 = { phase = "and" }
+      st.round = 18
+    end
+  elseif st.round == 18 then
+    local r = st.r18
+    local d = remote.call("utl", "get_deliveries")[1]
+    local cargo = st.nwagon.get_inventory(CARGO)
+    if r.phase == "and" then
+      -- „Fracht und Zeit“: sofort voll beladen, trotzdem erst nach 5 s los; beim Abnehmer ebenso
+      if d and d.state == "loading" and not r.and_load then
+        r.and_load = tick
+        cargo.insert{ name = "iron-plate", count = 1000 }
+      elseif d and d.state == "to_requester" and r.and_load and not r.and_left then
+        r.and_left = true
+        check("R18 fracht und inaktivität: laden dauert mindestens 5 s", tick - r.and_load >= 280, tostring(tick - r.and_load))
+      elseif d and d.state == "unloading" and not r.and_unload then
+        r.and_unload = tick
+        r.and_id = d.id
+        cargo.clear()
+        -- Anforderung weg und ab jetzt „oder“: sonst hängte die Verkettung sofort einen neuen
+        -- Auftrag (noch mit „und“) an
+        remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
+        remote.call("utl", "set_map_config", "utl-timeout-mode", "or")
+      elseif r.and_unload and (not d or d.id ~= r.and_id) then
+        check("R18 fracht und inaktivität: entladen dauert mindestens 5 s", tick - r.and_unload >= 280, tostring(tick - r.and_unload))
+        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+        r.phase = "partial"
+      end
+    elseif r.phase == "partial" then
+      -- nur 400 von 1000 laden: der Zug muss nach 5 s mit 400 losfahren
+      if d and d.state == "loading" and not r.loading then
+        r.loading = tick
+        cargo.insert{ name = "iron-plate", count = 400 }
+      elseif d and d.state == "to_requester" and r.loading then
+        local waited = tick - r.loading
+        check("R18 inaktivität laden: abfahrt nach ~5 s", waited >= 280 and waited <= 700, tostring(waited))
+        check("R18 ladeliste auf das geladene gekürzt", d.manifest["item|iron-plate|normal"] == 400,
+          serpent.line(d.manifest))
+        r.phase = "unload"
+      end
+    elseif r.phase == "unload" then
+      -- beim Abnehmer nicht entladen: nach 5 s fährt er trotzdem weiter
+      if d and d.state == "unloading" and not r.unloading then
+        r.unloading = tick
+      elseif not d and r.unloading then
+        local waited = tick - r.unloading
+        check("R18 inaktivität entladen: weiterfahrt nach ~5 s mit rest", waited >= 280 and waited <= 700
+          and cargo.get_item_count("iron-plate") > 0, waited .. " " .. cargo.get_item_count("iron-plate"))
+        cargo.clear() -- Rest „ausräumen“, damit der Zug wieder frei wird
+        r.phase = "empty"
+      end
+    elseif r.phase == "empty" then
+      -- leerer Anbieter: nichts laden → nach 5 s Abbruch statt Fahrt zum Abnehmer
+      if d and d.state == "loading" and not r.empty then
+        r.empty = tick
+      elseif not d and r.empty then
+        local canceled = false
+        for _, a in pairs(remote.call("utl", "get_alerts")) do
+          if string.find(a.key, "canceled:", 1, true) then canceled = true end
+        end
+        check("R18 leerer anbieter: lieferung abgebrochen", canceled and tick - r.empty <= 700, tostring(tick - r.empty))
+        remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
+        -- Runde 19: Teams getrennt – Abnehmer des Teams „blau“ im selben Netz „A“
+        local blau = game.forces["blau"] or game.create_force("blau")
+        local s = game.surfaces["nauvis"]
+        st.blue = s.create_entity{ name = "utl-train-stop", position = { 119, 20 }, direction = defines.direction.south,
+          force = blau, raise_built = true }
+        st.blue.backer_name = "UTL-BLAU"
+        remote.call("utl", "configure_station", st.blue.unit_number,
+          { mode = "station", provide = false, request = true, network = "A", request_threshold = 100 })
+        remote.call("utl", "set_request", st.blue.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+        -- Verbindungen je Team: „blau“ kann A ↔ B verbinden, obwohl bei „player“ R ↔ A besteht
+        local surf = st.blue.surface_index
+        check("R19 netzverbindungen je team getrennt",
+          remote.call("utl", "link_networks", surf, "A", "B", "blau") == "link-limit" -- blau hat keine Forschung
+          and (remote.call("utl", "get_network_star", surf, "A", "blau") --[[@as table]]).role == nil
+          and (remote.call("utl", "get_network_star", surf, "A") --[[@as table]]).role == "partner",
+          serpent.line(remote.call("utl", "get_network_star", surf, "A")))
+        st.round = 19
+        st.wait_until = tick + 1500
+      end
+    end
+  elseif st.round == 19 then
+    local wrong = false
+    for _, d in pairs(remote.call("utl", "get_deliveries")) do
+      if d.to == "UTL-BLAU" then wrong = true end
+    end
+    if wrong then
+      check("R19 zug beliefert kein fremdes team", false, "lieferung an UTL-BLAU")
+      st.done = true
+    elseif tick >= st.wait_until then
+      check("R19 zug beliefert kein fremdes team", true)
+      build_cleanup_limit_test()
+      st.round = 20
+    end
+  elseif st.round == 20 then
+    -- Zuglimit am Cleanup: UTL fährt per Wegpunkt, deshalb muss es die unterwegs befindlichen
+    -- Züge selbst mitzählen. Nie mehr als „Limit“ dort stehend + unterwegs.
+    local r = st.r20
+    local here = st.qc.trains_count + remote.call("utl", "pending_trains", st.qc.unit_number)
+    if here > r.max then r.max = here end
+    -- Das Cleanup leert der Test selbst (im Spiel machen das Greifarme)
+    for _, wagon in ipairs(r.wagons) do
+      if wagon.valid and wagon.train.station == st.qc then wagon.get_inventory(CARGO).clear() end
+    end
+    local empty = 0
+    for _, wagon in ipairs(r.wagons) do
+      if wagon.valid and wagon.get_inventory(CARGO).is_empty() then empty = empty + 1 end
+    end
+    -- Genug geprüft, sobald ein Zug von selbst geleert wurde: dass UTL die Fahrt überhaupt
+    -- vergibt (sonst wäre das Limit trivial eingehalten) und dass nie zwei gleichzeitig dürfen.
+    if (empty >= 1 and r.max >= 1) or tick >= r.deadline then
+      check("R20 zuglimit am cleanup eingehalten (stehend + unterwegs)", r.max <= 1,
+        "höchstens " .. r.max .. " gleichzeitig")
+      check("R20 von Hand beladener Zug wird selbst zum Cleanup geschickt", empty >= 1 and r.max >= 1,
+        empty .. " von 2 geleert, max " .. r.max)
       st.done = true
     end
   end

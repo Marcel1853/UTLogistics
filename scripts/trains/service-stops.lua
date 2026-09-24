@@ -3,6 +3,7 @@
 --- unter den passenden wählt eine einzige Pfadsuche die nächste erreichbare.
 local Registry = require("scripts.stations.registry")
 local Networks = require("scripts.stations.networks")
+local Pending = require("scripts.trains.pending")
 
 local ServiceStops = {}
 
@@ -35,13 +36,19 @@ local function length_ok(cfg, length)
     and (cfg.max_train_length <= 0 or length <= cfg.max_train_length)
 end
 
---- Gibt es im Netzwerk überhaupt eine Station mit dieser Rolle (egal ob frei)?
-function ServiceStops.exists(network, role)
+--- Gibt es für diesen Zug überhaupt eine Station mit dieser Rolle (egal ob frei)? `front` = Lok:
+--- nur Stationen derselben Oberfläche und desselben Teams zählen – sonst gilt eine Tankstelle auf
+--- Nauvis auch für Vulcanus, und der Zug dort wartet ewig auf eine Fahrt, die nie kommt.
+function ServiceStops.exists(network, role, front)
+  local surface = front and front.surface_index
+  local force = front and front.force_index
   for unit in pairs(set_of(role)) do
     local station = Registry.get(unit)
     local stop = station and station.stop
     if station and station.config.roles[role] and stop and stop.valid
-      and Networks.related(stop.surface_index, station.config.network, network) then
+      and (surface == nil or stop.surface_index == surface)
+      and (force == nil or stop.force_index == force)
+      and Networks.related(Networks.place_of(stop), station.config.network, network) then
       return true
     end
   end
@@ -53,9 +60,11 @@ function ServiceStops.candidates(train, network, role)
   local list = {}
   local front = train.front_stock
   if not front then return list end
-  local surface = front.surface_index
+  local surface, force = front.surface_index, front.force_index
+  local place = Networks.place_of(front)
   local length = #train.carriages
   local set = set_of(role)
+  local heading = Pending.counts()
   for unit in pairs(set) do
     local station = Registry.get(unit)
     if not station then
@@ -64,9 +73,9 @@ function ServiceStops.candidates(train, network, role)
       local stop, cfg = station.stop, station.config
       -- Zuglimit der Haltestelle beachten: UTL fährt per Schienen-Wegpunkt direkt davor, da
       -- greift das Vanilla-Limit nicht – ein Stau würde sonst die Hauptstrecke blockieren.
-      if stop and stop.valid and cfg.roles[role] and stop.surface_index == surface
-        and Networks.related(surface, cfg.network, network) and length_ok(cfg, length)
-        and stop.trains_count < stop.trains_limit then
+      if stop and stop.valid and cfg.roles[role] and stop.surface_index == surface and stop.force_index == force
+        and Networks.related(place, cfg.network, network) and length_ok(cfg, length)
+        and stop.trains_count + (heading[stop.unit_number] or 0) < (stop.trains_limit or math.huge) then
         list[#list + 1] = { stop = stop, config = cfg }
       end
     end

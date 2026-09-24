@@ -21,11 +21,12 @@ function State.init()
   local trains = storage.trains or {}
   trains.by_id = trains.by_id or {} -- [train_id] = Zug-Eintrag (siehe trains/depot.lua)
   trains.count = trains.count or 0
-  trains.idle = trains.idle or {}   -- [netzwerk] = { [train_id] = true }
+  trains.idle = trains.idle or {}   -- ["<ort>|<netzwerk>"] = { [train_id] = true } (Ort = Oberfläche + Team)
   -- [train_id] = "fuel" | "cleanup" | "both" | "relocate" | "relocate-serviced": auf
   -- Dienstfahrt bzw. zu einem passenden Depot geschickt (verhindert Pendeln)
   trains.service = trains.service or trains.refueling or {}
   trains.refueling = nil
+  trains.pending = trains.pending or {} -- [train_id] = { [Haltestelle] = true }: per Wegpunkt unterwegs dorthin
   trains.visiting = trains.visiting or {} -- [train_id] = Tank-/Cleanup-Haltestelle, an der er steht
   trains.cargo_waiting = trains.cargo_waiting or {} -- [train_id] = { train, stop, network }: Restladung, kein Cleanup frei
   trains.home = trains.home or {} -- [train_id] = { train, depot = Name, stop = Haltestelle } (für den Manager)
@@ -77,7 +78,10 @@ function State.init()
   -- Offene Fenster pro Spieler: Stationsfenster (guis) und Manager (managers).
   storage.guis = storage.guis or {}
   storage.managers = storage.managers or {}
-  storage.manager_prefs = storage.manager_prefs or {} -- [player_index] = { surface = "auto" | "all" | Index }
+  storage.manager_prefs = storage.manager_prefs or {}
+  storage.admin_windows = storage.admin_windows or {} -- offene Admin-Fenster (scripts/gui/admin)
+  storage.map_config = storage.map_config or {} -- [Einstellung] = Wert, im UTL-Manager geändert (config.lua)
+  storage.team_config = storage.team_config or {} -- [force_index] = { load_timeout = …, … }, siehe team-config.lua
 end
 
 --- Für Aufrufe, die *vor* UTLs on_init kommen können: Factorio startet das Script eines

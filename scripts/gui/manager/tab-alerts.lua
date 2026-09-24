@@ -52,7 +52,7 @@ end
 function Tab.refresh(refs, manager)
   local list = {}
   for _, entry in ipairs(storage.alert_log) do
-    if Filter.match(manager, entry.surface) then list[#list + 1] = entry end
+    if Filter.match(manager, entry.surface, entry.force) then list[#list + 1] = entry end
   end
   refs.count.caption = { "utl-manager.alerts-count", #list }
   List.sync(refs.rows, list, fill)

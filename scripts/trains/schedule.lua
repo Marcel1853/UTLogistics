@@ -56,6 +56,16 @@ local function add_stop(schedule, index, stop, wait_conditions)
   return index + 1
 end
 
+--- Inaktivitäts-Bedingung anhängen (Sekunden ohne Änderung an der Ladung; 0/nil = keine).
+--- `mode` „or“ = Fracht ODER Inaktivität, sonst „and“ = Fracht UND Inaktivität. Inaktivität statt
+--- reiner Zeit (Wunsch Marcel): solange Greifarme/Pumpen noch arbeiten, läuft die Zeit nicht.
+local function with_timeout(conditions, seconds, mode)
+  if seconds and seconds > 0 then
+    conditions[#conditions + 1] = { type = "inactivity", ticks = seconds * 60, compare_type = mode == "or" and "or" or "and" }
+  end
+  return conditions
+end
+
 --- Wartebedingungen beim Anbieter: jede Ware der Ladeliste mindestens in bestellter Menge
 --- (Items: item_count, Flüssigkeiten: fluid_count), alle mit UND verknüpft.
 local function loading_conditions(manifest)
@@ -72,15 +82,17 @@ local function loading_conditions(manifest)
 end
 
 --- (Optional Tankstelle →) Anbieter → Abnehmer hinter dem aktuellen Halt einfügen und
---- losschicken. Liefert true bei Erfolg.
-function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop)
+--- losschicken. `timeouts` = { load = s, unload = s, mode = "and" | "or" } (0 = keine Zeit).
+--- Liefert true bei Erfolg.
+function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop, timeouts)
   local schedule = train.get_schedule()
   if not schedule then return false end
   local first = (schedule.current or 0) + 1
   local index = first
   if fuel_stop then index = add_stop(schedule, index, fuel_stop, FUEL_WAIT) end
-  index = add_stop(schedule, index, provider_stop, loading_conditions(manifest))
-  add_stop(schedule, index, requester_stop, { { type = "empty" } })
+  timeouts = timeouts or {}
+  index = add_stop(schedule, index, provider_stop, with_timeout(loading_conditions(manifest), timeouts.load, timeouts.mode))
+  add_stop(schedule, index, requester_stop, with_timeout({ { type = "empty" } }, timeouts.unload, timeouts.mode))
   schedule.go_to_station(first)
   return true
 end

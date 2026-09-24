@@ -66,6 +66,7 @@ function Alerts.log(group, icon, entity, message, key)
   entry.tick = game.tick
   entry.entity = entity
   entry.surface = entity.surface_index
+  entry.force = entity.force_index -- jedes Team sieht nur seine Warnungen
   entry.position = entity.position
   table.insert(list, 1, entry)
   list[LOG_SIZE + 1] = nil

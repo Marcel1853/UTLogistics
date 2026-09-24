@@ -91,6 +91,45 @@ data:extend({
     maximum_value = 1000000000,
     order = "b-b",
   },
+  -- Zeitlimits: Standard für alle Teams; jedes Team kann im UTL-Manager eigene Werte setzen.
+  {
+    type = "int-setting",
+    name = "utl-load-timeout",
+    setting_type = "runtime-global",
+    default_value = 30,
+    minimum_value = 0,
+    maximum_value = 3600,
+    order = "e-a",
+  },
+  {
+    type = "int-setting",
+    name = "utl-unload-timeout",
+    setting_type = "runtime-global",
+    default_value = 30,
+    minimum_value = 0,
+    maximum_value = 3600,
+    order = "e-b",
+  },
+  -- Verknüpfung von Fracht und Zeit: „und“ = mindestens so lange warten und bis voll/leer,
+  -- „oder“ = höchstens so lange warten.
+  {
+    type = "string-setting",
+    name = "utl-timeout-mode",
+    setting_type = "runtime-global",
+    default_value = "or",
+    allowed_values = { "and", "or" },
+    order = "e-c",
+  },
+  -- Team-Leiter, die so viele Tage (Spielzeit) nicht online waren, verlieren die Rechte (0 = nie)
+  {
+    type = "int-setting",
+    name = "utl-leader-inactive-days",
+    setting_type = "runtime-global",
+    default_value = 3,
+    minimum_value = 0,
+    maximum_value = 365,
+    order = "f-a",
+  },
   {
     type = "bool-setting",
     name = "utl-debug-log",
