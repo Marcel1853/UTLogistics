@@ -21,10 +21,25 @@ local function surfaces()
 end
 
 --- Platz machen: Laborboden, alles außer Spielern weg, keine Gegner in der Nähe.
+--- Platz schaffen. Auf einem fremden Planeten ist der Laborboden bei der Erzeugung wirkungslos
+--- (die Oberfläche hat die Karteneinstellungen des Planeten), und das Abräumen der Felsen über
+--- 848 × 848 Felder dauert ewig. Deshalb dort die Chunks löschen und mit Laborboden neu erzeugen;
+--- auf Nauvis wird nur geräumt, weil dort der Spieler steht.
 local function clear(surface)
+  log("[PLANETEN] " .. surface.name .. ": Gelände vorbereiten …")
   surface.generate_with_lab_tiles = true
   surface.always_day = true
   surface.peaceful_mode = true
+  if surface.name ~= "nauvis" then
+    for chunk in surface.get_chunks() do
+      surface.delete_chunk({ x = chunk.x, y = chunk.y })
+    end
+    surface.request_to_generate_chunks({ 384, 384 }, 14)
+    surface.force_generate_chunk_requests()
+    log("[PLANETEN] " .. surface.name .. ": Platz ist frei (leer erzeugt)")
+    return
+  end
+
   surface.request_to_generate_chunks({ 384, 384 }, 14)
   surface.force_generate_chunk_requests()
   local tiles = {}
@@ -34,13 +49,15 @@ local function clear(surface)
     end
   end
   surface.set_tiles(tiles, true, false, false, false)
-  for _, e in pairs(surface.find_entities_filtered({ area = AREA })) do
-    if e.valid and e.type ~= "character" then e.destroy() end
+  -- nur was im Weg steht (Bäume, Felsen, Klippen), nicht jede Kleinigkeit
+  for _, e in pairs(surface.find_entities_filtered({ area = AREA,
+    type = { "tree", "simple-entity", "cliff", "fish", "plant", "unit", "unit-spawner", "turret" } })) do
+    if e.valid then e.destroy() end
   end
-  -- Gegner (Beißer, Würmer, Demolisher, Pentapoden) im weiten Umkreis entfernen
   for _, e in pairs(surface.find_entities_filtered({ force = "enemy", position = { 384, 384 }, radius = 1500 })) do
     if e.valid then e.destroy() end
   end
+  log("[PLANETEN] " .. surface.name .. ": Platz ist frei")
 end
 
 local function place(player)
