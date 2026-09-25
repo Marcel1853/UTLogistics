@@ -5,7 +5,8 @@
 # (dieselbe Zip wie lokal).
 #
 # Voraussetzungen:
-#   - Secret FACTORIO_MOD_PORTAL_TOKEN (API-Schlüssel von factorio.com mit Recht „ModPortal: Upload Mods“).
+#   - Secret FACTORIO_MOD_PORTAL_TOKEN (API-Schlüssel von factorio.com mit den Rechten
+#     „ModPortal: Upload Mods“ und – für die Beschreibung – „ModPortal: Edit Mods“).
 #   - Die ERSTE Veröffentlichung von Hand im Mod-Portal hochladen: init_upload geht nur für Mods,
 #     die es dort schon gibt. Danach laufen alle neuen Versionen über diesen Workflow.
 name: Release auf dem Mod-Portal
@@ -101,6 +102,27 @@ jobs:
           git config user.email "actions@github.com"
           git checkout -B release
           git push origin release --force
+
+      - name: Beschreibung auf dem Mod-Portal aktualisieren
+        if: steps.check.outputs.found == 'false'
+        continue-on-error: true # eine misslungene Beschreibung soll den Release nicht kippen
+        run: |
+          ZEICHEN=$(wc -m < README.md)
+          echo "README.md hat $ZEICHEN Zeichen (Portal erlaubt 35000)."
+          if [ "$ZEICHEN" -gt 35000 ]; then
+            echo "Zu lang – Beschreibung bleibt unverändert."
+            exit 1
+          fi
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.FACTORIO_MOD_PORTAL_TOKEN }}" \
+            -F "mod=${{ steps.info.outputs.name }}" \
+            -F "description=<README.md" \
+            https://mods.factorio.com/api/v2/mods/edit_details)
+          echo "Antwort des Portals: $RESPONSE"
+          if echo "$RESPONSE" | jq -e '.error' >/dev/null 2>&1; then
+            echo "Beschreibung nicht übernommen (braucht das Recht „ModPortal: Edit Mods“)."
+            exit 1
+          fi
 
       - name: GitHub-Release anlegen
         if: steps.gh.outputs.missing == 'true'
