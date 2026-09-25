@@ -15,6 +15,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch: # von Hand starten, z. B. nur um die Beschreibung neu zu setzen
+    inputs:
+      beschreibung:
+        description: "Beschreibung aus README.md aufs Portal schreiben, auch ohne neue Version"
+        type: boolean
+        default: true
 
 permissions:
   contents: write # für Release-Branch, Tag und GitHub-Release
@@ -115,6 +121,7 @@ jobs:
         run: |
           # Bei einer neuen Version immer; sonst nur, wenn dieser Push die README geändert hat.
           if [ "${{ steps.check.outputs.found }}" != "false" ] \
+             && [ "${{ inputs.beschreibung }}" != "true" ] \
              && ! git diff --name-only HEAD^ HEAD | grep -qx "README.md"; then
             echo "Keine neue Version und README unverändert – Beschreibung bleibt, wie sie ist."
             exit 0
