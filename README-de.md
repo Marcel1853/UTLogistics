@@ -15,6 +15,8 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 > (85 Prüfungen) und einen headless-Lasttest, und die Ladefunktionen und der Netzverbund werden in
 > den Beispiel-Szenarien vorgeführt. Im echten Spiel ist er bisher nur in kleinen Netzen gelaufen.
 > **Der Netzverbund (0.0.4) ist ganz neu** – dort können noch Fehler auftauchen.
+> **Die Team-Trennung (0.0.6) ist im echten Mehrspieler noch nicht erprobt** – geprüft ist sie
+> bisher nur im Szenario „UTL-Teams“ und in den automatischen Tests.
 > Wenn etwas schiefgeht: bitte in der
 > [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion) melden, am besten mit
 > Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem gewachsenen Spielstand
@@ -411,8 +413,19 @@ helfen, aber **nie** Kupfer, denn Partner helfen sich nicht untereinander. `Stei
 verbunden und fährt nur mit seinen eigenen Zügen. Im UTL-Manager, Reiter **Netzwerke**, eine
 Verbindung lösen oder `Stein` dazunehmen und im **Verlauf** zusehen, wer wohin fährt.
 
+**Neues Spiel → Szenarien → UTL-Teams (vier Teams)**: vier Teams – Standard, Rot, Blau und Grün –
+mit je einem eigenen 2 × 2-Raster aus City Blocks. Die vier Raster stehen getrennt nebeneinander,
+kein Gleis führt hinüber. Alle vier benutzen mit Absicht **dieselben Stationsnamen** (Depot,
+Anbieter, Abnehmer, Tankstelle, Cleanup) und denselben Netznamen `Eisen` – Fahrpläne kennen nur
+Namen, kein Team, deshalb ist das die Lage, in der Züge zum falschen Team fahren könnten. Mit
+`/utl-team rot` wechselt man das Team, auch allein. Im UTL-Manager sieht jedes Team nur sich
+selbst.
+
 In allen Szenarien und in den Tipps-&-Tricks-Szenen stehen **Anzeigefelder** mit kurzen
 Erklärungen neben den Bahnhöfen (in deiner Spielsprache).
+
+Die Szenarien sind Übungs- und Prüfkarten, keine Spielinhalte. Werden es zu viele, fliegen ältere
+wieder heraus – gebraucht wird immer nur, was eine Funktion zeigt oder prüft.
 
 ## Lasttest-Szenario
 

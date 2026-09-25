@@ -8,12 +8,14 @@ Date: 2026-09-22
     - Team leaders: whoever joins a team first; leaders can appoint or remove further leaders. A leader offline for longer than the map setting (default 3 days) loses the rights.
     - Command /utl-admin (admins only): window to set leaders and values of any team.
     - Remote interface: set_team_config / get_team_config / set_map_config.
+    - New scenario "UTL teams": four teams (Standard, Rot, Blau, Grün), each with its own 2 x 2 grid of city blocks, standing apart with no track between them. All four use the same station names and the same network name, so team separation can be checked. /utl-team switches teams in single player too.
   Bugfixes:
     - Trains sent to a depot, fuel or cleanup station by rail waypoint are now counted against that stop's train limit while they are on their way, so several trains are no longer sent to the same free stop.
     - A train that someone loaded by hand while it was parked is noticed by itself now and goes to a cleanup station; it no longer gets a delivery while carrying cargo.
     - A train that ends up at a depot of another team is no longer treated as free there; it moves to a depot of its own team.
     - Fuel and cleanup stations on another surface are no longer counted as available, which could leave a train waiting forever.
     - Partial loads are booked correctly for the requester, including fluids (rounding) and overloading.
+    - Item groups: a subgroup of another mod is only moved into the UTL tab when it holds train items exclusively. Before, any subgroup whose name contained "train" or "rail" was moved, which tore mixed subgroups out of their own tab.
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.5
 Date: 2026-09-22

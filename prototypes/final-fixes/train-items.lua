@@ -60,13 +60,26 @@ for _, item_type in ipairs(ITEM_TYPES) do
   end
 end
 
--- Ganze Zeilen anderer Mods mit „train“/„rail“ im Namen umhängen (z. B. Zugfabriken,
--- Train Construction Site, was sonst noch in „train-transport“ steckt).
--- Signale, Reste und Effekte bleiben, wo sie sind.
+-- Ganze Zeilen anderer Mods umhängen – aber nur, wenn dort **ausschließlich** Zug-Items stehen
+-- (z. B. Zugfabriken, Train Construction Site). Früher entschied der Name („train“/„rail“), das
+-- riss auch gemischte Zeilen fremder Mods aus ihrem Reiter.
+local in_subgroup, train_in_subgroup = {}, {}
+for _, item_type in ipairs(ITEM_TYPES) do
+  for name, item in pairs(data.raw[item_type] or {}) do
+    local group = item.subgroup
+    if group and not item.hidden and not item.parameter then
+      in_subgroup[group] = (in_subgroup[group] or 0) + 1
+      local place_result = item.place_result
+      if (place_result and subgroup_by_entity[place_result]) or item_type == "rail-planner" or moved[name] then
+        train_in_subgroup[group] = (train_in_subgroup[group] or 0) + 1
+      end
+    end
+  end
+end
 local KEEP_GROUPS = { signals = true, environment = true, effects = true, other = true, ["utl-trains"] = true }
 for name, subgroup in pairs(data.raw["item-subgroup"]) do
-  local lower = name:lower()
-  if (lower:find("train", 1, true) or lower:find("rail", 1, true)) and not KEEP_GROUPS[subgroup.group] then
+  local total, trains = in_subgroup[name] or 0, train_in_subgroup[name] or 0
+  if total > 0 and trains == total and not KEEP_GROUPS[subgroup.group] then
     subgroup.group = "utl-trains"
     subgroup.order = "z-" .. (subgroup.order or name)
   end

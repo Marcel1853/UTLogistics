@@ -416,18 +416,19 @@ end
 --- Alle Bahnhofsplätze des Gitters (n × n Blöcke): je Korridorstück zwei (eine je Außenseite).
 --- Senkrecht: Gleis x+35 nach Süden (Bahnhof westlich), x+61 nach Norden (östlich).
 --- Waagerecht: Gleis y+35 nach Westen (nördlich), y+61 nach Osten (südlich).
-local function slots(n, skip)
+local function slots(n, skip, ox, oy)
   local list = {}
+  ox, oy = ox or 0, oy or 0
   local function add_slot(o, pa)
     local key = o .. ":" .. pa[1] .. ":" .. pa[2]
     if not skip[key] then list[#list + 1] = { o = o, pa = pa } end
   end
   for k = 0, n do
     for l = 0, n - 1 do
-      local x, y0 = BLOCK * k, BLOCK * l
+      local x, y0 = BLOCK * k + ox, BLOCK * l + oy
       add_slot("S", { x + 35, y0 + 81 })
       add_slot("N", { x + 61, y0 + 239 })
-      local y, x0 = BLOCK * k, BLOCK * l
+      local y, x0 = BLOCK * k + oy, BLOCK * l + ox
       add_slot("W", { x0 + 239, y + 35 })
       add_slot("E", { x0 + 81, y + 61 })
     end
@@ -464,14 +465,21 @@ function Builder.build(cfg)
   surface = game.surfaces[name] or game.create_surface(name)
   surface.generate_with_lab_tiles = true
   surface.always_day = true
-  force = game.forces["player"]
+  -- Team des Bauwerks: `cfg.force` gilt für alles, `depot.force`/`spec.force` je Station
+  -- (Szenario UTL-Teams baut damit vier Teams auf eine Karte).
+  local base = game.forces[cfg.force or "player"] or game.forces["player"]
+  force = base
   local n = cfg.grid
+  -- Versatz auf der Oberfläche: mehrere Raster nebeneinander (Szenario UTL-Teams baut so vier
+  -- getrennte City-Block-Raster, die sich nicht berühren).
+  local ox, oy = (cfg.origin or {})[1] or 0, (cfg.origin or {})[2] or 0
+  stats = { rails = 0, failed = 0, signals = 0, signals_failed = 0, equipment = 0, wires_failed = 0, blocks = 0 }
   local size = BLOCK * n + 320
-  surface.request_to_generate_chunks({ size / 2, size / 2 }, math.ceil(size / 64) + 1)
+  surface.request_to_generate_chunks({ ox + size / 2, oy + size / 2 }, math.ceil(size / 64) + 1)
   surface.force_generate_chunk_requests()
 
   for kx = 0, n - 1 do
-    for ky = 0, n - 1 do city_block(BLOCK * kx, BLOCK * ky, false) end
+    for ky = 0, n - 1 do city_block(BLOCK * kx + ox, BLOCK * ky + oy, false) end
   end
 
   -- Depot-Blöcke sind reine Depot-Blöcke (Wunsch Marcel): an keiner ihrer vier Seiten liegen
@@ -479,7 +487,7 @@ function Builder.build(cfg)
   local skip = {}
   for _, depot in ipairs(cfg.depots) do
     for _, b in ipairs(depot.blocks) do
-      local X, Y = BLOCK * b[1], BLOCK * b[2]
+      local X, Y = BLOCK * b[1] + ox, BLOCK * b[2] + oy
       skip["N:" .. (X + 61) .. ":" .. (Y + 239)] = true
       skip["S:" .. (X + BLOCK + 35) .. ":" .. (Y + 81)] = true
       skip["E:" .. (X + 81) .. ":" .. (Y + 61)] = true
@@ -496,8 +504,9 @@ function Builder.build(cfg)
 
   -- Depots in ihren Blöcken
   for d, depot in ipairs(cfg.depots) do
+    force = game.forces[depot.force or ""] or base
     for _, b in ipairs(depot.blocks) do
-      local stops = yard(BLOCK * b[1], BLOCK * b[2], function()
+      local stops = yard(BLOCK * b[1] + ox, BLOCK * b[2] + oy, function()
         return { kind = "depot", depot = d, name = depot.name, combinator = next_combinator() }
       end)
       for _, entry in ipairs(stops) do
@@ -509,11 +518,12 @@ function Builder.build(cfg)
   end
 
   -- Stationen auf die Bahnhofsplätze (Reihenfolge der Plätze: zeilenweise)
-  local places = slots(n, skip)
+  local places = slots(n, skip, ox, oy)
   local specs = cfg.assign and cfg.assign(places, BLOCK * n) or assign(cfg, places, BLOCK * n)
   for i, place in ipairs(places) do
     local spec = specs[i]
     if spec then
+      force = game.forces[spec.force or ""] or base
       spec.combinator = next_combinator()
       clear_signals(place.o, place.pa)
       local front = siding(place.o, place.pa, spec)
@@ -526,14 +536,15 @@ function Builder.build(cfg)
   end
 
   for kx = 0, n - 1 do
-    for ky = 0, n - 1 do city_block(BLOCK * kx, BLOCK * ky, true) end
+    for ky = 0, n - 1 do city_block(BLOCK * kx + ox, BLOCK * ky + oy, true) end
   end
 
+  force = base
   force.bulk_inserter_capacity_bonus = 11
   built.stats = stats
   built.size = size
   built.blocks = n
-  built.areas = { { { -40, -40 }, { size + 40, size + 40 } } }
+  built.areas = { { { ox - 40, oy - 40 }, { ox + size + 40, oy + size + 40 } } }
   local first = built.stations[1].stop.position
   built.start = { x = first.x, y = first.y - 6 }
   return built

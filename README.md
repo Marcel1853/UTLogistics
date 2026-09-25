@@ -14,7 +14,9 @@ cleanup and an overview window in one mod**, built for high UPS.
 > **Young mod, tested small.** UTL runs through an automated self test (85 checks) and a headless
 > load test, and the new loading features and network links are shown in the example scenarios. In
 > real games it has so far only been played on small networks. **Network links (0.0.4) are brand
-> new** – errors may still show up there. If something goes wrong, please report it in the
+> new** – errors may still show up there. **Team separation (0.0.6) has not been tried in a real
+> multiplayer game yet** – so far it is only covered by the “UTL teams” scenario and the automated
+> tests. If something goes wrong, please report it in the
 > [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save and
 > what you did. Keep a backup of your save before adding it to a long-running base.
 
@@ -311,8 +313,18 @@ also help iron but **never** copper, because partners do not help each other. `S
 linked to nobody and only runs its own trains. Open the UTL Manager, tab **Networks**, to remove
 a link or add `Stein`, and watch in **History** who goes where.
 
+**New game → Scenarios → UTL teams (four teams)**: four teams – Standard, Rot, Blau and Grün –
+each with its own 2 × 2 grid of city blocks. The four grids stand apart, no track connects them.
+All four deliberately use the **same station names** (Depot, Anbieter, Abnehmer, Tankstelle,
+Cleanup) and the same network name `Eisen` – schedules only know names, not teams, so this is
+exactly the situation where trains could serve the wrong team. Switch teams with `/utl-team rot`,
+single player too. In the UTL Manager each team only sees itself.
+
 All scenarios and the tips & tricks scenes carry **display panels** with short explanations next to
 the stations (in your game language).
+
+The scenarios are practice and test maps, not game content. If they pile up, older ones are removed
+again – only what demonstrates or checks a feature is kept.
 
 ## Load test scenario
 
