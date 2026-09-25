@@ -91,8 +91,15 @@ jobs:
           RESPONSE=$(curl -s -X POST -F "file=@$ZIP" "${{ steps.init.outputs.upload_url }}")
           echo "Antwort des Portals: $RESPONSE"
           if echo "$RESPONSE" | jq -e '.error' >/dev/null 2>&1; then
-            echo "Hochladen fehlgeschlagen."
-            exit 1
+            # Die Versionsliste des Portals hinkt kurz hinterher: ein Push gleich nach einem
+            # Release wollte sonst dieselbe Version noch einmal hochladen und brach ab – dann
+            # kamen Release-Branch und Beschreibung nicht mehr dran.
+            if echo "$RESPONSE" | grep -q "InvalidModRelease"; then
+              echo "Diese Version liegt schon auf dem Portal – Hochladen übersprungen."
+            else
+              echo "Hochladen fehlgeschlagen."
+              exit 1
+            fi
           fi
 
       - name: Release-Branch setzen
@@ -104,9 +111,14 @@ jobs:
           git push origin release --force
 
       - name: Beschreibung auf dem Mod-Portal aktualisieren
-        if: steps.check.outputs.found == 'false'
         continue-on-error: true # eine misslungene Beschreibung soll den Release nicht kippen
         run: |
+          # Bei einer neuen Version immer; sonst nur, wenn dieser Push die README geändert hat.
+          if [ "${{ steps.check.outputs.found }}" != "false" ] \
+             && ! git diff --name-only HEAD^ HEAD | grep -qx "README.md"; then
+            echo "Keine neue Version und README unverändert – Beschreibung bleibt, wie sie ist."
+            exit 0
+          fi
           ZEICHEN=$(wc -m < README.md)
           echo "README.md hat $ZEICHEN Zeichen (Portal erlaubt 35000)."
           if [ "$ZEICHEN" -gt 35000 ]; then
