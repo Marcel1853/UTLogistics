@@ -12,7 +12,7 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
 > **Junger Mod, bisher klein getestet.** UTL läuft durch einen automatischen Selbsttest
-> (85 Prüfungen) und einen headless-Lasttest, und die Ladefunktionen und der Netzverbund werden in
+> (106 Prüfungen) und einen headless-Lasttest, und die Ladefunktionen und der Netzverbund werden in
 > den Beispiel-Szenarien vorgeführt. Im echten Spiel ist er bisher nur in kleinen Netzen gelaufen.
 > **Der Netzverbund (0.0.4) ist ganz neu** – dort können noch Fehler auftauchen.
 > **Die Team-Trennung (0.0.6) ist im echten Mehrspieler noch nicht erprobt** – geprüft ist sie

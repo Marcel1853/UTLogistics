@@ -857,7 +857,6 @@ function train_test_step()
           sch.go_to_station(1)
           st.ntrain.manual_mode = false
         end
-        log("[SELFTEST] [R21] neuer Zug: " .. tostring(st.ntrain ~= nil) .. ", Wagen=" .. tostring(st.nwagon ~= nil))
       end
       remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 500)
       st.r21 = { phase = "wait", deadline = tick + 5400 }
@@ -866,8 +865,22 @@ function train_test_step()
   elseif st.round == 21 then
     local r = st.r21
     local list = remote.call("utl", "get_deliveries") --[[@as table]]
-    local d = list[1]
     local KEY = "item|iron-plate|normal"
+    -- Nur Lieferungen an den Abnehmer dieser Runde zählen: nach dem Entladen hängt UTL dem Zug
+    -- sofort den nächsten Auftrag an (Verkettung), der sonst mit dem alten verwechselt wird.
+    local d, mine = nil, {}
+    for _, entry in pairs(list) do
+      if entry.requester == st.ra.unit_number then
+        mine[#mine + 1] = entry
+        if d == nil or (r.id and entry.id == r.id) then d = entry end
+      end
+    end
+    local function by_id(id)
+      for _, entry in pairs(list) do
+        if entry.id == id then return entry end
+      end
+      return nil
+    end
     if r.phase == "wait" then
       if d and (d.state == "to_provider" or d.state == "loading") then
         r.id, r.first = d.id, d.manifest[KEY] or 0
@@ -875,13 +888,6 @@ function train_test_step()
         remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1500)
         r.phase = "grow"
         r.deadline = tick + 3600
-      elseif (tick % 600) == 0 then
-        local zustand = "?"
-        for name, value in pairs(defines.train_state) do
-          if st.ntrain.valid and value == st.ntrain.state then zustand = name end
-        end
-        log("[SELFTEST] [R21] warte: zug=" .. zustand .. "/" .. (st.ntrain.valid and tostring(st.ntrain.station and st.ntrain.station.backer_name) or "weg")
-          .. " frei=" .. remote.call("utl", "idle_train_count") .. " lieferungen=" .. #list)
       end
       if r.phase == "wait" and tick >= r.deadline then
         local ra, pa = station_info(st.ra.unit_number), station_info(st.pa.unit_number)
@@ -896,7 +902,7 @@ function train_test_step()
       local menge = d and d.manifest[KEY] or 0
       if d and d.id == r.id and menge > r.first then
         check("R21 nachladen: ladeliste der laufenden lieferung wächst", true, r.first .. " -> " .. menge)
-        check("R21 nachladen: kein zweiter zug losgeschickt", #list == 1, tostring(#list))
+        check("R21 nachladen: kein zweiter zug losgeschickt", #mine == 1, tostring(#mine))
         -- Wartebedingung am Anbieter-Halt muss die neue Menge verlangen
         local wanted = nil
         local schedule = st.ntrain.valid and st.ntrain.get_schedule()
@@ -912,10 +918,136 @@ function train_test_step()
         end
         check("R21 nachladen: wartebedingung am anbieter angepasst", wanted == menge,
           tostring(wanted) .. " statt " .. tostring(menge))
-        st.done = true
+        -- Nächster Fall: eine zweite Ware kommt dazu. Der Anbieter bietet ab jetzt auch Kupfer.
+        local s21 = game.surfaces["nauvis"]
+        local umkreis = { { st.pa.position.x, st.pa.position.y - 3 }, { st.pa.position.x + 5, st.pa.position.y + 3 } }
+        local cc = s21.find_entities_filtered({ name = "constant-combinator", area = umkreis })[1]
+        if cc then
+          cc.get_control_behavior().get_section(1)
+            .set_slot(2, { value = { type = "item", name = "copper-plate", quality = "normal" }, min = 5000 })
+        end
+        remote.call("utl", "set_request", st.ra.unit_number, 2, { type = "item", name = "copper-plate" }, 800)
+        r.grown = menge
+        r.phase = "second"
+        r.deadline = tick + 3600
       elseif tick >= r.deadline then
         check("R21 nachladen: ladeliste der laufenden lieferung wächst", false,
           "blieb bei " .. tostring(menge) .. ", " .. serpent.line(list))
+        st.done = true
+      end
+    elseif r.phase == "second" then
+      local COPPER = "item|copper-plate|normal"
+      local eigene = by_id(r.id)
+      local kupfer = eigene and eigene.manifest[COPPER] or 0
+      if eigene and kupfer > 0 then
+        local eisen = eigene.manifest[KEY] or 0
+        check("R21 nachladen: zweite ware kommt auf dieselbe ladeliste", kupfer == 800, tostring(kupfer))
+        check("R21 nachladen: erste ware bleibt erhalten", eisen == r.grown,
+          tostring(eisen) .. " statt " .. tostring(r.grown))
+        -- Nächster Fall: mehr Bedarf als in den Zug passt (1 Wagen = 40 Slots × 100 = 4000)
+        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 20000)
+        r.phase = "cap"
+        r.deadline = tick + 3600
+      elseif tick >= r.deadline then
+        local pa, ra = station_info(st.pa.unit_number), station_info(st.ra.unit_number)
+        check("R21 nachladen: zweite ware kommt auf dieselbe ladeliste", false,
+          "Ladeliste " .. serpent.line(eigene and eigene.manifest)
+          .. " Angebot " .. serpent.line(pa and pa.provide)
+          .. " Bedarf " .. serpent.line(ra and ra.request)
+          .. " Zustand " .. tostring(eigene and eigene.state))
+        st.done = true
+      end
+    elseif r.phase == "cap" then
+      -- Der Wagen hat 40 Slots à 100 Stück. Eisen und Kupfer zusammen dürfen sie nicht sprengen.
+      local eigene = by_id(r.id)
+      local eisen = eigene and eigene.manifest[KEY] or 0
+      local kupfer = eigene and eigene.manifest["item|copper-plate|normal"] or 0
+      local slots = math.ceil(eisen / 100) + math.ceil(kupfer / 100)
+      if eigene and slots >= 40 then
+        check("R21 nachladen: nicht mehr als in den Zug passt", slots == 40,
+          slots .. " Slots (" .. eisen .. " Eisen, " .. kupfer .. " Kupfer)")
+        check("R21 nachladen: immer noch nur ein Zug", #mine == 1, tostring(#mine))
+        -- Jetzt wirklich beladen: der Zug muss abfahren und die Lieferung sauber abschließen
+        local inv = st.nwagon.get_inventory(CARGO)
+        inv.insert{ name = "iron-plate", count = eisen }
+        if kupfer > 0 then inv.insert{ name = "copper-plate", count = kupfer } end
+        r.phase = "deliver"
+        r.deadline = tick + 5400
+      elseif tick >= r.deadline then
+        check("R21 nachladen: nicht mehr als in den Zug passt", false,
+          "nur " .. slots .. " Slots belegt (erwartet 40)")
+        st.done = true
+      end
+    elseif r.phase == "deliver" then
+      local eigene = by_id(r.id)
+      if eigene and eigene.state == "unloading" then
+        st.nwagon.get_inventory(CARGO).clear() -- der Abnehmer hat keine Greifarme
+      elseif not eigene then
+        local ra = station_info(st.ra.unit_number)
+        check("R21 nachgeladene lieferung sauber abgeschlossen", true)
+        -- Reservierungen müssen weg sein: der Abnehmer fragt wieder die volle Menge an
+        check("R21 nach dem entladen keine reste in den reservierungen",
+          ra ~= nil and (ra.request[KEY] or 0) > 0, serpent.line(ra and ra.request))
+        -- Gegenprobe: mit ausgeschaltetem Nachladen darf die Ladeliste nicht wachsen.
+        -- Erst alles zur Ruhe bringen, sonst startet die nächste Lieferung gleich mit voller
+        -- Ladung (dann könnte auch mit Nachladen nichts mehr dazukommen).
+        remote.call("utl", "set_map_config", "utl-top-up", false)
+        remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
+        remote.call("utl", "set_request", st.ra.unit_number, 2, nil)
+        -- Zeitlimit kurz wieder an: der verkettete Auftrag wartet sonst ewig auf Ladung,
+        -- die im Test niemand einfüllt.
+        remote.call("utl", "set_map_config", "utl-load-timeout", 5)
+        st.nwagon.get_inventory(CARGO).clear()
+        r.phase = "off-idle"
+        r.deadline = tick + 5400
+      elseif tick >= r.deadline then
+        check("R21 nachgeladene lieferung sauber abgeschlossen", false,
+          "Zustand " .. tostring(eigene and eigene.state) .. ", " .. serpent.line(list))
+        st.done = true
+      end
+    elseif r.phase == "off-idle" then
+      -- warten, bis keine Lieferung mehr an diesem Abnehmer läuft
+      -- Laufende Fahrten zu Ende bringen: beim Anbieter beladen, beim Abnehmer leeren.
+      -- Ein nachträglich gesetztes Zeitlimit hilft hier nicht, die Wartebedingungen stehen
+      -- schon im Fahrplan.
+      for _, entry in pairs(mine) do
+        if entry.state == "loading" then
+          for key, menge in pairs(entry.manifest) do
+            if key == KEY then st.nwagon.get_inventory(CARGO).insert{ name = "iron-plate", count = menge } end
+          end
+        elseif entry.state == "unloading" then
+          st.nwagon.get_inventory(CARGO).clear()
+        end
+      end
+      if #mine == 0 then
+        st.nwagon.get_inventory(CARGO).clear()
+        remote.call("utl", "set_map_config", "utl-load-timeout", 0) -- für die Gegenprobe wieder aus
+        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 500)
+        r.id = nil
+        r.phase = "off-wait"
+        r.deadline = tick + 5400
+      elseif tick >= r.deadline then
+        check("R21 gegenprobe: lieferungen kamen zur ruhe", false, serpent.line(mine))
+        st.done = true
+      end
+    elseif r.phase == "off-wait" then
+      local neue = mine[1]
+      if neue and (neue.state == "to_provider" or neue.state == "loading") then
+        r.id, r.first = neue.id, neue.manifest[KEY] or 0
+        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1500)
+        r.phase = "off-check"
+        r.deadline = tick + 1800
+      elseif tick >= r.deadline then
+        check("R21 gegenprobe: zweite lieferung kam zustande", false, serpent.line(list))
+        st.done = true
+      end
+    elseif r.phase == "off-check" then
+      local eigene = by_id(r.id)
+      local menge = eigene and eigene.manifest[KEY] or r.first
+      if tick >= r.deadline then
+        check("R21 mit abgeschaltetem nachladen bleibt die ladeliste gleich",
+          menge == r.first and r.first < 4000,
+          tostring(r.first) .. " -> " .. tostring(menge) .. " (Zug fasst 4000)")
         st.done = true
       end
     end

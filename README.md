@@ -11,7 +11,7 @@ cleanup and an overview window in one mod**, built for high UPS.
   **“UTL: Network links I–III”** (link a network with 1, 2 or 3 partner networks). The map
   setting “UTL features need research” turns this off – then everything is available right away.
 
-> **Young mod, tested small.** UTL runs through an automated self test (85 checks) and a headless
+> **Young mod, tested small.** UTL runs through an automated self test (106 checks) and a headless
 > load test, and the new loading features and network links are shown in the example scenarios. In
 > real games it has so far only been played on small networks. **Network links (0.0.4) are brand
 > new** – errors may still show up there. **Team separation (0.0.6) has not been tried in a real
