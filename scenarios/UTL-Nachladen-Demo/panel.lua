@@ -5,6 +5,7 @@ local Panel = {}
 
 local NAME = "utl_demo_panel"
 Panel.MODE_BUTTON = "utl_demo_mode"
+Panel.COLLAPSE_BUTTON = "utl_demo_collapse"
 
 -- Schritte je Modus (Locale utl-demo.step-…); 4 und 5 unterscheiden sich
 local STEPS = {
@@ -24,9 +25,15 @@ end
 --- Fenster für einen Spieler anlegen (vorhandenes wird ersetzt).
 function Panel.create(player)
   if player.gui.screen[NAME] then player.gui.screen[NAME].destroy() end
-  local frame = player.gui.screen.add({ type = "frame", name = NAME, direction = "vertical",
-    caption = { "utl-demo.title" } })
+  local frame = player.gui.screen.add({ type = "frame", name = NAME, direction = "vertical" })
   frame.location = { 20, 120 }
+  -- Titelleiste: daran verschieben, rechts ein-/ausklappen
+  local bar = frame.add({ type = "flow", style = "flib_titlebar_flow" })
+  bar.drag_target = frame
+  bar.add({ type = "label", style = "frame_title", caption = { "utl-demo.title" }, ignored_by_interaction = true })
+  bar.add({ type = "empty-widget", style = "flib_titlebar_drag_handle", ignored_by_interaction = true })
+  bar.add({ type = "sprite-button", name = Panel.COLLAPSE_BUTTON, style = "frame_action_button",
+    sprite = "utility/collapse", tooltip = { "utl-demo.collapse" }, mouse_button_filter = { "left" } })
   -- Abstände zwischen den Zeilen gibt es nur bei Flows, nicht bei Frames → Flow im Frame
   local box = frame.add({ type = "frame", name = "inner", style = "inside_shallow_frame_with_padding", direction = "vertical" })
   local inner = box.add({ type = "flow", name = "content", direction = "vertical" })
@@ -54,13 +61,27 @@ function Panel.create(player)
   local stats = inner.add({ type = "label", name = "stats" })
   stats.style.single_line = false
   stats.style.maximal_width = 340
+  if storage.demo and storage.demo.collapsed[player.index] then Panel.toggle(player, true) end
   Panel.refresh(player)
+end
+
+--- Fenster ein- bzw. ausklappen (eingeklappt bleibt nur die Titelleiste).
+--- `collapsed` erzwingt einen Zustand, sonst wird umgeschaltet.
+function Panel.toggle(player, collapsed)
+  local frame = player.gui.screen[NAME]
+  if not (frame and frame.valid) then return end
+  if collapsed == nil then collapsed = frame.inner.visible end
+  frame.inner.visible = not collapsed
+  local button = frame.children[1][Panel.COLLAPSE_BUTTON]
+  button.sprite = collapsed and "utility/expand" or "utility/collapse"
+  button.tooltip = { collapsed and "utl-demo.expand" or "utl-demo.collapse" }
+  if storage.demo then storage.demo.collapsed[player.index] = collapsed or nil end
 end
 
 --- Inhalt auffrischen (einmal pro Sekunde, nur Texte).
 function Panel.refresh(player)
   local frame = player.gui.screen[NAME]
-  if not (frame and frame.valid) then return end
+  if not (frame and frame.valid and frame.inner.visible) then return end
   local inner = frame.inner.content
   local demo = storage.demo or {}
   local mode = demo.round_on and "on" or "off"

@@ -5,8 +5,9 @@
 ---   4./5. mit Nachladen: dieselbe Fahrt bringt 3000 – ohne: 1000, der Rest braucht eine 2. Fahrt
 ---   6. Pause, nächste Runde
 --- Die Runden wechseln sich ab (mit/ohne), per Knopf auch „immer an“ oder „immer aus“.
---- Die Kiste des Abnehmers vernichtet alles – damit es sich wie im echten Spiel verhält, senkt das
---- Szenario den Bedarf beim Entladen um das Gelieferte.
+--- Am Abnehmer stehen echte Kisten: UTL rechnet den Bedarf selbst als Anforderung − Bestand, der
+--- Rest nach einer zu kleinen Fahrt ergibt sich also von allein. 20 s nach der Runde leert eine
+--- Schaltung die Kisten (siehe world.lua), danach beginnt die nächste Runde.
 local World = require("__UTLogistics__/scenarios/UTL-Nachladen-Demo/world")
 local Panel = require("__UTLogistics__/scenarios/UTL-Nachladen-Demo/panel")
 
@@ -14,10 +15,17 @@ local KEY = World.KEY
 local FIRST, GROWN = 1000, 3000
 local NEXT_MODE = { alternate = "on", on = "off", off = "alternate" }
 
+local ROUND_LIMIT = 5 * 3600 -- Sicherheitsnetz: eine Runde endet spätestens nach 5 Minuten
+
 local function set_request(amount)
   remote.call("utl", "set_request", storage.demo.requester_unit, 1,
     amount and { type = "item", name = "iron-plate" } or nil, amount)
-  storage.demo.need = amount or 0
+end
+
+--- Bedarf, wie UTL ihn sieht (Anforderung − Bestand).
+local function need()
+  local info = remote.call("utl", "get_station", storage.demo.requester_unit) --[[@as table?]]
+  return info and info.request and info.request[KEY] or 0
 end
 
 local function setup()
@@ -26,7 +34,8 @@ local function setup()
   local w = World.build()
   storage.demo = {
     requester_unit = w.requester_unit, locomotive = w.locomotive, train_label = w.train_label,
-    need_label = w.need_label, mode = "alternate", round = 0, step = 0, need = 0,
+    need_label = w.need_label, chests = w.chests, round_switch = w.round_switch, collapsed = {},
+    mode = "alternate", round = 0, step = 0,
     stats = { on_rounds = 0, on_trips = 0, off_rounds = 0, off_trips = 0 }, counted = {},
     phase = "pause", wait_until = game.tick + 300,
   }
@@ -46,6 +55,8 @@ local function start_round()
   if demo.mode == "alternate" then demo.round_on = demo.round % 2 == 1 else demo.round_on = demo.mode == "on" end
   remote.call("utl", "set_map_config", "utl-top-up", demo.round_on)
   demo.id, demo.first, demo.topped, demo.rest = nil, nil, nil, nil
+  demo.round_until = game.tick + ROUND_LIMIT
+  World.set_round(demo.round_switch, true) -- Kisten bleiben voll, solange die Runde läuft
   set_request(FIRST)
   demo.step = 1
   demo.phase = "wait-train"
@@ -70,7 +81,8 @@ local function tick()
   end
   if mine and mine.state == "unloading" then count_trip(mine) end
 
-  if demo.phase == "pause" and game.tick >= demo.wait_until then
+  local stock = World.stock(demo.chests)
+  if demo.phase == "pause" and game.tick >= demo.wait_until and stock == 0 then
     start_round()
   elseif demo.phase == "wait-train" and mine and (mine.state == "to_provider" or mine.state == "loading") then
     demo.id, demo.first = mine.id, mine.manifest[KEY] or 0
@@ -89,18 +101,14 @@ local function tick()
       demo.topped, demo.step, demo.phase = false, 4, "to-unload"
     end
   elseif demo.phase == "to-unload" and mine and mine.id == demo.id and mine.state == "unloading" then
-    if demo.topped then
-      set_request(nil)
-    else
-      demo.rest = GROWN - demo.first
-      set_request(demo.rest)
-    end
+    -- ohne Nachladen bleibt ein Rest; den bestellt UTL aus dem Kisteninhalt von selbst neu
+    if not demo.topped then demo.rest = GROWN - demo.first end
     demo.step = 5
     demo.phase = "rest"
-  elseif demo.phase == "rest" then
-    if mine and mine.id ~= demo.id and mine.state == "unloading" then
-      set_request(nil) -- die zweite Fahrt ist da, der Bedarf ist gedeckt
-    elseif not mine then
+  elseif demo.phase == "rest" or (demo.phase ~= "pause" and game.tick >= (demo.round_until or math.huge)) then
+    if (not mine and stock >= GROWN) or game.tick >= (demo.round_until or math.huge) then
+      set_request(nil)
+      World.set_round(demo.round_switch, false) -- ab jetzt zählt die Schaltung bis zum Leeren
       local st = demo.stats
       if demo.round_on then st.on_rounds = st.on_rounds + 1 else st.off_rounds = st.off_rounds + 1 end
       demo.step = 6
@@ -127,7 +135,7 @@ local function tick()
       demo.train_label.color = { 1, 1, 1 }
     end
   end
-  if demo.need_label and demo.need_label.valid then demo.need_label.text = { "utl-demo.need", demo.need } end
+  if demo.need_label and demo.need_label.valid then demo.need_label.text = { "utl-demo.need", need(), stock } end
   Panel.refresh_all()
 end
 
@@ -143,8 +151,13 @@ script.on_event(defines.events.on_player_created, function(event)
 end)
 
 script.on_event(defines.events.on_gui_click, function(event)
-  if event.element.valid and event.element.name == Panel.MODE_BUTTON and storage.demo then
+  local element = event.element
+  if not (element.valid and storage.demo) then return end
+  if element.name == Panel.MODE_BUTTON then
     storage.demo.mode = NEXT_MODE[storage.demo.mode] or "alternate"
     Panel.refresh_all()
+  elseif element.name == Panel.COLLAPSE_BUTTON then
+    local player = game.get_player(event.player_index)
+    if player then Panel.toggle(player) end
   end
 end)
