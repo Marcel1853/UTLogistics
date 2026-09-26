@@ -124,8 +124,9 @@ local function find_providers(request)
         found[#found + 1] = {
           station = provider,
           amount = math.min(available, request.need),
-          -- Rang: Cleanup „Reserve“/„zuerst leeren“, Lager je Ware (über Höchst normal, sonst Reserve)
+          -- Rang: Cleanup „Reserve“/„zuerst leeren“; Lager normal, nur Restladung ohne Grenzen Reserve
           rank = provider.provide_rank and provider.provide_rank[request.key] or Fields.provider_rank(provider.config),
+          storage = provider.config.roles.storage == true,
           priority = provider.config.provide_priority,
           distance = dist2(provider.stop.position, position),
         }
@@ -136,7 +137,8 @@ local function find_providers(request)
     if a.rank ~= b.rank then return a.rank > b.rank end
     if a.priority ~= b.priority then return a.priority > b.priority end
     if a.amount ~= b.amount then return a.amount > b.amount end
-    return a.distance < b.distance
+    if a.distance ~= b.distance then return a.distance < b.distance end
+    return b.storage and not a.storage -- gleich weit: normaler Anbieter vor Lager
   end)
   return found
 end

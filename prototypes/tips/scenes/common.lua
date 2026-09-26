@@ -283,42 +283,6 @@ script.on_nth_tick(37, function(e)
 end)
 ]]
 
--- Lager zwischen Anbieter und Abnehmer: Mindest 400, Höchst 800 Eisen. Es füllt sich aus dem
--- Anbieter und hört bei 800 auf; die Stahlkiste zeigt, wie viel darin liegt.
-local STORAGE = [[
--- Ohne Greifarm-Forschung bräuchten zwei Bulk-Greifarme für 800 Eisen Minuten – der Zug stünde
--- ewig am Anbieter. Kapazität wie mit erforschten Stufen:
-force.bulk_inserter_capacity_bonus = 11
-force.technologies["utl-loading-control"].researched = true
-force.technologies["utl-storage"].researched = true
-remote.call("utl", "set_map_config", "utl-load-timeout", 0)
-remote.call("utl", "set_map_config", "utl-unload-timeout", 0)
--- Der Abnehmer der Grundszene hat hier nichts zu tun (echte Abnehmer gingen dem Lager vor); seine
--- Greifarme weg, sonst zögen sie dem Zug am Lager die Kohle aus der Lok.
-remote.call("utl", "set_request", r_unit, 1, nil)
-for _, x in ipairs({ -18.5, -20.5 }) do
-  for _, e in pairs(s.find_entities_filtered({ name = "bulk-inserter", position = { x, -0.5 }, radius = 0.4 })) do e.destroy() end
-end
--- Lager westwärts vor dem Depot: vom Anbieter aus in Fahrtrichtung, zurück ins Depot ebenso
--- (die Strecke hat keine Wendeschleife)
-local lager = stop("Lager", -15, false, false)
-l_unit = lager.unit_number
-remote.call("utl", "configure_station", l_unit, { mode = "storage",
-  storage = { limits = { { signal = { type = "item", name = "iron-plate" }, min = 400, max = 800 } } } })
-equip({ -3.5, -4.5, -5.5, -6.5 }, -0.5, false, nil, lager.get_wire_connector(W.circuit_green, true), true)
-if not game.simulation then
-  -- nur für tools/tipstest: Bestand im Lager nach 60 s (soll bei 800 ankommen, nicht darüber)
-  script.on_nth_tick(3600, function()
-    local n = 0
-    for _, chest in pairs(s.find_entities_filtered({ name = "steel-chest", area = { { -8, -3 }, { -3, 0 } } })) do
-      n = n + chest.get_item_count("iron-plate")
-    end
-    log("[TIPS] storage erstes bestand " .. n)
-    script.on_nth_tick(3600, nil)
-  end)
-end
-]]
-
 -- Alle Rollen nebeneinander (Namen per Alt-Ansicht sichtbar); Cleanup steht nur zum Zeigen da.
 local ROLES = [[
 local cleanup = stop("Cleanup", 5, false, false)
@@ -373,6 +337,6 @@ end
 
 
 return {
-  SIMPLE = SIMPLE, FUEL = FUEL, CLEANUP = CLEANUP, CLEANUP_RETURN = CLEANUP_RETURN, REVERSIBLE = REVERSIBLE, STORAGE = STORAGE, ROLES = ROLES, REQUESTS = REQUESTS,
+  SIMPLE = SIMPLE, FUEL = FUEL, CLEANUP = CLEANUP, CLEANUP_RETURN = CLEANUP_RETURN, REVERSIBLE = REVERSIBLE, ROLES = ROLES, REQUESTS = REQUESTS,
   DEPOTS = DEPOTS, COPY = COPY, ROLE_SIGNS = ROLE_SIGNS, scene = scene, window = window,
 }

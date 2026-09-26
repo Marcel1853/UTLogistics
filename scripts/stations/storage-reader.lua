@@ -1,13 +1,13 @@
 --- Lager: Angebot und Bedarf aus dem Bestand und den Grenzen je Ware.
 ---
----   Bestand:  0 ──── Mindest ════════ Höchst ──── ∞
----             fordert an   bietet an,       bietet an,
----             bis Höchst   Rang Reserve     Rang normal
+---   Bestand:  0 ──── Mindest ════════════════════ ∞
+---             fordert an   bietet an (wie ein normaler Anbieter –
+---             bis Höchst   liegt das Lager näher am Abnehmer, gewinnt es)
 ---
 --- * Unter Mindest: Anforderung = Höchst − Bestand (auffüllen bis Höchst, nicht nur bis Mindest –
 ---   sonst füllt es sich in vielen kleinen Fahrten knapp über die Grenze).
---- * Angebot = Bestand − Mindest; solange der Bestand unter Höchst liegt mit Rang „Reserve“
----   (normale Anbieter gehen vor), darüber mit Rang „normal“ (das Lager will es loswerden).
+--- * Angebot = Bestand − Mindest, gleichrangig mit normalen Anbietern (Entscheidung Marcel): ein
+---   Lager ist Puffer für kurze Wege – bei gleicher Menge gewinnt der nähere.
 --- * Waren ohne Grenzen (z. B. angenommene Restladung): ganz anbieten, Rang „Reserve“.
 --- Kein Hin- und Herschieben zwischen zwei Lagern: angeboten wird nur, was über dem Mindest liegt,
 --- angefordert nur unter dem Mindest – Ware wandert höchstens einmal von „zu viel“ nach „zu wenig“.
@@ -38,7 +38,7 @@ function StorageReader.compute(net, cfg, enabled)
       local spare = stock - min
       if spare > 0 then
         provide[key] = spare
-        rank[key] = stock > max and Fields.RANK_NORMAL or Fields.RANK_RESERVE
+        rank[key] = Fields.RANK_NORMAL
       end
     end
   end

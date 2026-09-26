@@ -1386,8 +1386,10 @@ function train_test_step()
     elseif r.phase == "between" and tick >= r.deadline then
       local s1 = station_info(st.s1.unit)
       check("R24 lager in der ruhezone fordert nichts an", s1 ~= nil and s1.request[KEY] == nil, serpent.line(s1 and s1.request))
-      check("R24 lager bietet über mindest an, als reserve",
-        s1 ~= nil and s1.provide[KEY] == 1000 and s1.provide_rank[KEY] == 0, serpent.line(s1 and { s1.provide, s1.provide_rank }))
+      check("R24 lager bietet über mindest gleichrangig an",
+        s1 ~= nil and s1.provide[KEY] == 1000 and s1.provide_rank[KEY] == 1, serpent.line(s1 and { s1.provide, s1.provide_rank }))
+      check("R24 restladung ohne grenzen nur als reserve",
+        s1 ~= nil and s1.provide_rank["item|copper-plate|normal"] == 0, serpent.line(s1 and s1.provide_rank))
       check("R24 lager bietet ware ohne grenzen ganz an (restladung)",
         s1 ~= nil and s1.provide["item|copper-plate|normal"] == 1500, serpent.line(s1 and s1.provide))
       limits(st.s1, 4000)
