@@ -11,16 +11,14 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
   Auftrags-Ausgabe) und **„UTL: Netzverbund I–III“** (ein Netz mit 1, 2 oder 3 Partnernetzen verbinden). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
-> **Junger Mod, bisher klein getestet.** UTL läuft durch einen automatischen Selbsttest
-> (106 Prüfungen) und einen headless-Lasttest, und die Ladefunktionen und der Netzverbund werden in
-> den Beispiel-Szenarien vorgeführt. Im echten Spiel ist er bisher nur in kleinen Netzen gelaufen.
-> **Der Netzverbund (0.0.4) ist ganz neu** – dort können noch Fehler auftauchen.
-> **Die Team-Trennung (0.0.6) ist im echten Mehrspieler noch nicht erprobt** – geprüft ist sie
-> bisher nur im Szenario „UTL-Teams“ und in den automatischen Tests.
-> Wenn etwas schiefgeht: bitte in der
-> [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion) melden, am besten mit
-> Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem gewachsenen Spielstand
-> vorher sichern.
+> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (106 Prüfungen) und einen
+> headless-Lasttest mit 384 Zügen auf 12 × 12 City Blocks; Updates werden geprüft, indem ein
+> Spielstand der Vorversion geladen wird. Die wichtigsten Funktionen zeigen die Szenarien. Im
+> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Nachladen** (0.0.7,
+> Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
+> etwas schiefgeht: bitte in der [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion)
+> melden, am besten mit Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem
+> gewachsenen Spielstand vorher sichern.
 
 ---
 

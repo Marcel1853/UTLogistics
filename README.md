@@ -11,14 +11,13 @@ cleanup and an overview window in one mod**, built for high UPS.
   **“UTL: Network links I–III”** (link a network with 1, 2 or 3 partner networks). The map
   setting “UTL features need research” turns this off – then everything is available right away.
 
-> **Young mod, tested small.** UTL runs through an automated self test (106 checks) and a headless
-> load test, and the new loading features and network links are shown in the example scenarios. In
-> real games it has so far only been played on small networks. **Network links (0.0.4) are brand
-> new** – errors may still show up there. **Team separation (0.0.6) has not been tried in a real
-> multiplayer game yet** – so far it is only covered by the “UTL teams” scenario and the automated
-> tests. If something goes wrong, please report it in the
-> [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save and
-> what you did. Keep a backup of your save before adding it to a long-running base.
+> **Testing status.** UTL runs through an automated self test (106 checks) and a headless load
+> test with 384 trains on 12 × 12 city blocks; updates are checked by loading a save from the
+> previous version. The main features are shown in the scenarios. In real games it has so far been
+> played on small networks. Newest: **topping up** (0.0.7, off by default) and **team separation**
+> (0.0.6, not yet tried in a real multiplayer game). If something goes wrong, please report it in
+> the [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save
+> and what you did. Keep a backup before adding UTL to a long-running base.
 
 ## Quick start
 
