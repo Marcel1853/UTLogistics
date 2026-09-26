@@ -34,7 +34,7 @@ local function setup()
   local w = World.build()
   storage.demo = {
     requester_unit = w.requester_unit, locomotive = w.locomotive, train_label = w.train_label,
-    need_label = w.need_label, chests = w.chests, round_switch = w.round_switch, collapsed = {},
+    need_label = w.need_label, chests = w.chests, round_switch = w.round_switch,
     mode = "alternate", round = 0, step = 0,
     stats = { on_rounds = 0, on_trips = 0, off_rounds = 0, off_trips = 0 }, counted = {},
     phase = "pause", wait_until = game.tick + 300,
@@ -151,13 +151,8 @@ script.on_event(defines.events.on_player_created, function(event)
 end)
 
 script.on_event(defines.events.on_gui_click, function(event)
-  local element = event.element
-  if not (element.valid and storage.demo) then return end
-  if element.name == Panel.MODE_BUTTON then
+  if storage.demo and Panel.on_click(event) then
     storage.demo.mode = NEXT_MODE[storage.demo.mode] or "alternate"
     Panel.refresh_all()
-  elseif element.name == Panel.COLLAPSE_BUTTON then
-    local player = game.get_player(event.player_index)
-    if player then Panel.toggle(player) end
   end
 end)
