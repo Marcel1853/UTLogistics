@@ -224,7 +224,10 @@ function World.build()
 
   remote.call("utl", "configure_station", u["11/41"], { mode = "depot" })
   remote.call("utl", "configure_station", u["137/61"], { mode = "depot" })
+  -- Tankstelle: je ein Greifarm an der vorderen (3 Felder hinter der Haltestelle) und der hinteren
+  -- Lok (17 Felder) – beide Loks schauen nach vorn und verbrauchen Kohle
   bay(made.stops["69/19"], station("69/19"), { behind = 3, supply = { "coal" } })
+  bay(made.stops["69/19"], station("69/19"), { behind = 17, supply = { "coal" } })
   remote.call("utl", "configure_station", u["69/19"], { mode = "fuel" })
 
   -- Anbieter: zwei Plätze Eisen, einer Kupfer; die Greifarme gibt die Auftrags-Ausgabe frei
