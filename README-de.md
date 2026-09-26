@@ -421,6 +421,13 @@ Namen, kein Team, deshalb ist das die Lage, in der Züge zum falschen Team fahre
 `/utl-team rot` wechselt man das Team, auch allein. Im UTL-Manager sieht jedes Team nur sich
 selbst.
 
+**Neues Spiel → Szenarien → UTL-Nachladen (zum Anschauen)**: zeigt, was das Nachladen bringt.
+Ein Zug fährt los, um 1000 Eisen zu holen – unterwegs steigt der Bedarf auf 3000. Mit Nachladen
+kommt die zusätzliche Menge auf die Ladeliste desselben Zugs, ohne braucht der Rest eine zweite
+Fahrt. Die Runden wechseln sich ab. Ein Fenster erklärt jeden Schritt, eine Kamera folgt dem Zug,
+über dem Zug steht seine Ladeliste und über dem Abnehmer sein Bedarf; ein Zähler zeigt, wie viele
+Fahrten mit und ohne Nachladen nötig waren.
+
 In allen Szenarien und in den Tipps-&-Tricks-Szenen stehen **Anzeigefelder** mit kurzen
 Erklärungen neben den Bahnhöfen (in deiner Spielsprache).
 
@@ -491,7 +498,8 @@ nur dieselbe Sorte.
 
 Das spart Züge, hält den Zug aber länger am Anbieter – deshalb ist es abschaltbar und **von Haus
 aus aus**. Einschalten in den Karteneinstellungen oder im Manager unter „Einstellungen“:
-*Nachladen, während der Zug lädt*. Wer es anlässt, merkt keinen Unterschied zu vorher.
+*Nachladen, während der Zug lädt*. Wer es auslässt, merkt keinen Unterschied zu vorher.
+Zum Anschauen: Szenario „UTL-Nachladen“.
 
 ## Noch nicht enthalten
 

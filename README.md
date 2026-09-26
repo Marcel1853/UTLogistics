@@ -320,6 +320,12 @@ Cleanup) and the same network name `Eisen` – schedules only know names, not te
 exactly the situation where trains could serve the wrong team. Switch teams with `/utl-team rot`,
 single player too. In the UTL Manager each team only sees itself.
 
+**New game → Scenarios → UTL top up (to watch)**: shows what topping up does. A train sets off to
+fetch 1000 iron – on its way the demand rises to 3000. With topping up, the extra amount goes onto
+the load list of the same train; without it, the rest needs a second trip. The rounds alternate. A
+window explains every step, a camera follows the train, the load list floats above the train and
+the demand above the requester; a counter shows how many trips were needed with and without.
+
 All scenarios and the tips & tricks scenes carry **display panels** with short explanations next to
 the stations (in your game language).
 
@@ -383,6 +389,7 @@ only of the same kind.
 This saves trains but keeps the train at the provider for longer – so it can be switched off and
 **is off by default**. Turn it on in the map settings or in the manager under “Settings”: *Top up
 while loading*. Leaving it off changes nothing compared to before.
+To watch it: scenario “UTL top up”.
 
 ## Not yet included
 
