@@ -361,19 +361,22 @@ Plus explanations of roles, requests, values and network, linking networks (star
 - **A train does not refuel:** is there a reachable fuel station in the same network whose
   train length fits?
 
+## Teams and surfaces
+
+Both are included, and UTL keeps both apart properly:
+
+- **Teams (forces):** every team is handled on its own. Trains, depots, fuel and cleanup stations
+  only take stations of their own team, network links are per team, and the manager shows only your
+  own team. Two teams may use the same network and station names without getting in each other's
+  way. Try it: scenario “UTL teams”.
+- **Surfaces (Space Age):** every surface is handled on its own. Only what stands on the **same**
+  surface is matched, so Nauvis and Vulcanus each need their own depots and their own trains.
+  Deliveries *between* surfaces will not come: trains cannot change planet.
+
 ## Not yet included
 
-Topping up a delivery that is already being loaded (the load list is
-fixed when the train is sent), and collecting from a second provider on the way.
-
-**Teams:** every team (force) is handled on its own – trains, depots, fuel and cleanup stations only
-work with stations of their own team, network links are per team, and the UTL Manager shows only
-your own team. Two teams may use the same network names without getting in each other's way.
-
-**Surfaces (Space Age):** every surface is handled on its own. UTL only matches stations, depots,
-fuel and cleanup stations **on the same surface**, so Nauvis and Vulcanus each need their own
-depot and their own trains. Deliveries *between* surfaces are not planned – trains cannot change
-planet.
+Topping up a delivery that is already being loaded (the load list is fixed when the train is sent),
+and collecting from a second provider on the way.
 
 ## For mod authors
 

@@ -469,19 +469,23 @@ Netze verbinden (Stern, Forschung „Netzverbund“), Depots, Einstellungen kopi
   passt und die erreichbar ist?
 - **Der Befehl `/utl-status`** zeigt Stationen, freie Züge und laufende Lieferungen.
 
+## Teams und Oberflächen
+
+Beides ist enthalten, beides trennt UTL sauber:
+
+- **Teams (Forces):** Jedes Team arbeitet für sich. Züge, Depots, Tankstellen und Cleanups nehmen
+  nur Stationen des eigenen Teams, Netzverbindungen gelten je Team, und der Manager zeigt nur das
+  eigene Team. Zwei Teams dürfen dieselben Netz- und Stationsnamen benutzen, ohne sich zu stören.
+  Ausprobieren: Szenario „UTL-Teams“.
+- **Oberflächen (Space Age):** Jede Oberfläche arbeitet für sich. Zusammengebracht wird nur, was
+  auf **derselben** Oberfläche steht – Nauvis und Vulcanus brauchen also jeweils eigene Depots und
+  eigene Züge. Lieferungen **zwischen** Oberflächen wird es nicht geben: Züge können den Planeten
+  nicht wechseln.
+
 ## Noch nicht enthalten
 
-Nachladen, während der Zug schon am Anbieter steht (die Ladeliste
-steht beim Losschicken fest), und Einsammeln bei einem zweiten Anbieter auf dem Weg.
-
-**Teams:** Jedes Team (Force) arbeitet für sich – Züge, Depots, Tankstellen und Cleanups arbeiten
-nur mit Stationen des eigenen Teams, Netzverbindungen gelten je Team, und der UTL-Manager zeigt nur
-das eigene Team. Zwei Teams dürfen dieselben Netznamen benutzen, ohne sich zu stören.
-
-**Oberflächen (Space Age):** Jede Oberfläche arbeitet für sich. UTL bringt nur Stationen, Depots,
-Tankstellen und Cleanups **derselben Oberfläche** zusammen. Auf Nauvis und auf Vulcanus brauchst
-du also jeweils eigene Depots und eigene Züge. Lieferungen **zwischen** Oberflächen sind nicht
-geplant – Züge können den Planeten nicht wechseln.
+Nachladen, während der Zug schon am Anbieter steht (die Ladeliste steht beim Losschicken fest), und
+Einsammeln bei einem zweiten Anbieter auf dem Weg.
 
 ## Für Mod-Autoren
 
