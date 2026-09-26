@@ -1,5 +1,6 @@
 --- Szenario „UTL-Nachladen“: Aufbau und alles, was in der Welt zu sehen ist.
---- Ein City Block mit Depot (1 Zug, 2 Wagen), Anbieter (Eisen) und Abnehmer. Dazu Anzeigefelder
+--- Ein City Block mit Depot (1 Zug, 2 Wagen), Anbieter (Eisen), Abnehmer, Tankstelle und Cleanup
+--- (damit man länger zuschauen kann, ohne dass der Zug liegen bleibt). Dazu Anzeigefelder
 --- mit Erklärung und schwebende Texte: über dem Zug seine Ladeliste, über dem Abnehmer sein Bedarf.
 ---
 --- Am Abnehmer stehen **Eisenkisten** (man sieht, was ankommt). Dahinter leert eine Schaltung die
@@ -21,6 +22,8 @@ local STATIONS = {
   { kind = "depot", name = "Depot", network = "Demo", cars = 2 },
   { kind = "provider", name = "Anbieter", network = "Demo", item = "iron-plate" },
   { kind = "requester", name = "Abnehmer", network = "Demo", item = "iron-plate" },
+  { kind = "fuel", name = "Tankstelle", network = "Demo" },
+  { kind = "cleanup", name = "Cleanup", network = "Demo" },
 }
 
 --- Die drei Stationen gleichmäßig über die Plätze des Blocks verteilen.
@@ -63,12 +66,22 @@ end
 
 --- Abnehmer: Vernichtungs-Kisten des Baukastens durch Eisenkisten ersetzen, dahinter je ein
 --- Greifarm in eine Vernichtungs-Kiste, dazu die Zeitschaltung. Liefert Kisten und Schalter „R“.
-local function rebuild_requester(surface, stop)
+local function rebuild_requester(surface, stop, combinator)
   local p = stop.position
+  -- Die Kisten des Abnehmers hängen per grünem Draht an seiner Haltestelle bzw. am Eingang seines
+  -- Combinators. Daran erkennen – der Cleanup hat auch Vernichtungs-Kisten, aber ohne Draht.
+  local ids = {}
+  local net = stop.get_circuit_network(W.circuit_green)
+  if net then ids[net.network_id] = true end
+  if combinator and combinator.valid then
+    local input = combinator.get_circuit_network(W.combinator_input_green)
+    if input then ids[input.network_id] = true end
+  end
   local old = {}
   for _, chest in pairs(surface.find_entities_filtered({ name = "infinity-chest",
     area = { { p.x - 40, p.y - 40 }, { p.x + 40, p.y + 40 } } })) do
-    if chest.remove_unfiltered_items then old[#old + 1] = chest end -- nur die des Abnehmers
+    local chest_net = chest.get_circuit_network(W.circuit_green)
+    if chest.remove_unfiltered_items and chest_net and ids[chest_net.network_id] then old[#old + 1] = chest end
   end
   local chests, voids = {}, {}
   for _, chest in ipairs(old) do
@@ -174,7 +187,13 @@ function World.build()
         { mode = "station", provide = false, request = true, network = "Demo", request_threshold = 100, max_trains = 1 })
       sign(spec.stop, "demo-requester")
       result.requester, result.requester_unit = spec.stop, unit
-      result.chests, result.round_switch = rebuild_requester(result.surface, spec.stop)
+      result.chests, result.round_switch = rebuild_requester(result.surface, spec.stop, spec.combinator_entity)
+    elseif spec.kind == "fuel" then
+      remote.call("utl", "configure_station", unit, { mode = "fuel", network = "Demo" })
+      sign(spec.stop, "demo-fuel")
+    elseif spec.kind == "cleanup" then
+      remote.call("utl", "configure_station", unit, { mode = "cleanup", network = "Demo" })
+      sign(spec.stop, "demo-cleanup")
     end
   end
   local train = built.trains[1]
