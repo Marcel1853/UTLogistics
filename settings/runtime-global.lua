@@ -120,6 +120,15 @@ data:extend({
     allowed_values = { "and", "or" },
     order = "e-c",
   },
+  -- Nachladen: wächst der Bedarf, während der Zug noch lädt oder zum Anbieter fährt, kommt die
+  -- Menge auf die laufende Ladeliste statt in eine zweite Fahrt (Standard aus)
+  {
+    type = "bool-setting",
+    name = "utl-top-up",
+    setting_type = "runtime-global",
+    default_value = false,
+    order = "e-d",
+  },
   -- Team-Leiter, die so viele Tage (Spielzeit) nicht online waren, verlieren die Rechte (0 = nie)
   {
     type = "int-setting",

@@ -46,6 +46,7 @@ function State.init()
   deliveries.count = deliveries.count or 0
   deliveries.next_id = deliveries.next_id or 1
   deliveries.by_train = deliveries.by_train or {} -- [train_id] = id
+  deliveries.by_requester = deliveries.by_requester or {} -- [station] = { [id] = true } (Nachladen)
   deliveries.outgoing = deliveries.outgoing or {} -- [station] = { [key] = reservierte Menge }
   deliveries.incoming = deliveries.incoming or {} -- [station] = { [key] = Menge unterwegs }
   deliveries.trains_at = deliveries.trains_at or {} -- [station] = Züge auf dem Weg dorthin

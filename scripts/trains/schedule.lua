@@ -97,6 +97,41 @@ function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop
   return true
 end
 
+--- Ladeliste eines laufenden Auftrags ändern (Nachladen): die Wartebedingungen des
+--- Anbieter-Halts durch die der neuen Ladeliste ersetzen. Gesucht wird der temporäre Halt mit
+--- dem Namen der Anbieter-Haltestelle ab dem aktuellen Eintrag. Erst die neuen Bedingungen
+--- anhängen, dann die alten entfernen – dazwischen gilt beides, der Zug fährt also nicht
+--- vorzeitig los (alles im selben Tick).
+--- Liefert true, wenn der Halt gefunden und geändert wurde.
+function Schedule.update_loading(train, provider_stop, manifest, timeouts)
+  if not (train.valid and provider_stop and provider_stop.valid) then return false end
+  local schedule = train.get_schedule()
+  if not schedule then return false end
+  local name = provider_stop.backer_name
+  local count = schedule.get_record_count() or 0
+  local position = nil
+  for i = math.max(schedule.current or 1, 1), count do
+    local record = schedule.get_record({ schedule_index = i })
+    if record and record.temporary and record.station == name then
+      position = { schedule_index = i }
+      break
+    end
+  end
+  if not position then return false end
+
+  timeouts = timeouts or {}
+  local wanted = with_timeout(loading_conditions(manifest), timeouts.load, timeouts.mode)
+  local old = schedule.get_wait_condition_count(position) or 0
+  -- Reihenfolge der Parameter: (record_position, condition_index, …)
+  for i, condition in ipairs(wanted) do
+    local index = old + i
+    schedule.add_wait_condition(position, index, condition.type)
+    schedule.change_wait_condition(position, index, condition)
+  end
+  for i = old, 1, -1 do schedule.remove_wait_condition(position, i) end
+  return true
+end
+
 --- Dienstfahrt: (Tankstelle →) (Cleanup-Route →) danach weiter mit dem eigenen Fahrplan
 --- (in der Regel zurück ins Depot). `cleanup_route` = Liste { stop, wares } aus cleanup-route.lua.
 --- Liefert true bei Erfolg.

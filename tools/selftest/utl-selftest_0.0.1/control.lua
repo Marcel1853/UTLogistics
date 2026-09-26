@@ -832,7 +832,92 @@ function train_test_step()
         "höchstens " .. r.max .. " gleichzeitig")
       check("R20 von Hand beladener Zug wird selbst zum Cleanup geschickt", empty >= 1 and r.max >= 1,
         empty .. " von 2 geleert, max " .. r.max)
-      st.done = true
+      -- Runde 21: Nachladen. Ohne Zeitlimit wartet der Zug am Anbieter, solange die Ladeliste
+      -- nicht voll ist – so lässt sich in Ruhe prüfen, ob der neue Bedarf dort landet.
+      remote.call("utl", "set_map_config", "utl-load-timeout", 0)
+      remote.call("utl", "set_map_config", "utl-unload-timeout", 0)
+      remote.call("utl", "set_map_config", "utl-top-up", true)
+      st.nwagon.get_inventory(CARGO).clear()
+      -- Frischer Zug am Reserve-Gleis: der alte findet nach R18/R20 keinen Weg mehr zurück
+      -- (no_path), und ein Zug ohne Depot gilt nicht als frei.
+      if st.ntrain.valid then
+        for _, wagen in pairs(st.ntrain.carriages) do wagen.destroy() end
+      end
+      do
+        local s21 = game.surfaces["nauvis"]
+        local f21 = game.forces["player"]
+        local l1 = s21.create_entity{ name = "locomotive", position = { 121, 0 }, direction = defines.direction.north, force = f21 }
+        st.nwagon = s21.create_entity{ name = "cargo-wagon", position = { 121, 7 }, direction = defines.direction.north, force = f21 }
+        local l2 = s21.create_entity{ name = "locomotive", position = { 121, 14 }, direction = defines.direction.south, force = f21 }
+        for _, l in ipairs({ l1, l2 }) do if l then l.insert{ name = "coal", count = 150 } end end
+        st.ntrain = l1 and l1.train
+        if st.ntrain then
+          local sch = st.ntrain.get_schedule()
+          sch.add_record{ station = "UTL-RD", wait_conditions = { { type = "inactivity", ticks = 120 } } }
+          sch.go_to_station(1)
+          st.ntrain.manual_mode = false
+        end
+        log("[SELFTEST] [R21] neuer Zug: " .. tostring(st.ntrain ~= nil) .. ", Wagen=" .. tostring(st.nwagon ~= nil))
+      end
+      remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 500)
+      st.r21 = { phase = "wait", deadline = tick + 5400 }
+      st.round = 21
+    end
+  elseif st.round == 21 then
+    local r = st.r21
+    local list = remote.call("utl", "get_deliveries") --[[@as table]]
+    local d = list[1]
+    local KEY = "item|iron-plate|normal"
+    if r.phase == "wait" then
+      if d and (d.state == "to_provider" or d.state == "loading") then
+        r.id, r.first = d.id, d.manifest[KEY] or 0
+        -- Bedarf wächst, während der Zug schon unterwegs/am Anbieter ist
+        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1500)
+        r.phase = "grow"
+        r.deadline = tick + 3600
+      elseif (tick % 600) == 0 then
+        local zustand = "?"
+        for name, value in pairs(defines.train_state) do
+          if st.ntrain.valid and value == st.ntrain.state then zustand = name end
+        end
+        log("[SELFTEST] [R21] warte: zug=" .. zustand .. "/" .. (st.ntrain.valid and tostring(st.ntrain.station and st.ntrain.station.backer_name) or "weg")
+          .. " frei=" .. remote.call("utl", "idle_train_count") .. " lieferungen=" .. #list)
+      end
+      if r.phase == "wait" and tick >= r.deadline then
+        local ra, pa = station_info(st.ra.unit_number), station_info(st.pa.unit_number)
+        check("R21 nachladen: lieferung kam zustande", false,
+          "frei=" .. remote.call("utl", "idle_train_count")
+          .. " zug=" .. (st.ntrain.valid and (st.ntrain.state .. "/" .. tostring(st.ntrain.station and st.ntrain.station.backer_name)) or "weg")
+          .. " ladung=" .. serpent.line(st.ntrain.valid and st.ntrain.get_contents() or {})
+          .. " bedarf=" .. serpent.line(ra and ra.request) .. " angebot=" .. serpent.line(pa and pa.provide))
+        st.done = true
+      end
+    elseif r.phase == "grow" then
+      local menge = d and d.manifest[KEY] or 0
+      if d and d.id == r.id and menge > r.first then
+        check("R21 nachladen: ladeliste der laufenden lieferung wächst", true, r.first .. " -> " .. menge)
+        check("R21 nachladen: kein zweiter zug losgeschickt", #list == 1, tostring(#list))
+        -- Wartebedingung am Anbieter-Halt muss die neue Menge verlangen
+        local wanted = nil
+        local schedule = st.ntrain.valid and st.ntrain.get_schedule()
+        if schedule then
+          for i = 1, schedule.get_record_count() or 0 do
+            local record = schedule.get_record({ schedule_index = i })
+            if record and record.station == "UTL-PA" then
+              for _, condition in pairs(schedule.get_wait_conditions({ schedule_index = i }) or {}) do
+                if condition.condition and condition.condition.constant then wanted = condition.condition.constant end
+              end
+            end
+          end
+        end
+        check("R21 nachladen: wartebedingung am anbieter angepasst", wanted == menge,
+          tostring(wanted) .. " statt " .. tostring(menge))
+        st.done = true
+      elseif tick >= r.deadline then
+        check("R21 nachladen: ladeliste der laufenden lieferung wächst", false,
+          "blieb bei " .. tostring(menge) .. ", " .. serpent.line(list))
+        st.done = true
+      end
     end
   end
   if not st.done and tick >= 149900 then

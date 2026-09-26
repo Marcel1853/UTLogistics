@@ -56,7 +56,9 @@ local function collect_requests()
     local station = Registry.get(unit)
     if not station then
       Index.remove(unit)
-    elseif usable(station) and station.config.roles.requester and has_room(station) then
+    -- `has_room` wird hier **nicht** geprüft: beim Nachladen geht der Bedarf auf einen Zug, der
+    -- ohnehin schon unterwegs ist. Für neue Lieferungen prüft es `Dispatch.run`.
+    elseif usable(station) and station.config.roles.requester then
       local cfg = station.config
       for key, amount in pairs(station.request) do -- Items und Flüssigkeiten
         local need = amount - Deliveries.incoming(unit, key)

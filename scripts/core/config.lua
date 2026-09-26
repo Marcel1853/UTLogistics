@@ -24,6 +24,7 @@ Config.KEYS = {
   ["utl-load-timeout"] = "load_timeout",
   ["utl-unload-timeout"] = "unload_timeout",
   ["utl-timeout-mode"] = "timeout_mode",
+  ["utl-top-up"] = "top_up",
   ["utl-leader-inactive-days"] = "leader_inactive_days",
   ["utl-debug-log"] = "debug_log",
 }

@@ -17,6 +17,7 @@ local Reach = require("scripts.dispatcher.reach")
 local Fuel = require("scripts.trains.fuel")
 local Select = require("scripts.dispatcher.select")
 local Warn = require("scripts.dispatcher.no-train-alerts")
+local TopUp = require("scripts.dispatcher.top-up")
 
 local Dispatch = {}
 
@@ -77,7 +78,8 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   local best
   for _, request in ipairs(Select.requests()) do
     local r_stop = request.station.stop
-    if r_stop.surface_index == record.surface_index and r_stop.force_index == record.force_index
+    if Select.has_room(request.station) -- Anfragen kommen jetzt auch ohne freien Platz herein
+      and r_stop.surface_index == record.surface_index and r_stop.force_index == record.force_index
       and Networks.related(Networks.place(record.surface_index, record.force_index), request.station.config.network, network) then
       local providers = Select.providers(request) or {}
       for i = 1, math.min(#providers, Select.PROVIDER_TRIES) do
@@ -124,7 +126,12 @@ function Dispatch.run()
     if created >= budget then break end
     local request = requests[i]
     local unit = request.station.unit
-    if not busy[unit] and Select.has_room(request.station) then
+    -- Nachladen zuerst: der Bedarf kann auf eine laufende Lieferung gehen, auch wenn der
+    -- Abnehmer sein Zuglimit schon ausgeschöpft hat (der Zug fährt ja ohnehin dorthin).
+    if not busy[unit] and TopUp.try(request) then
+      busy[unit] = true
+      created = created + 1
+    elseif not busy[unit] and Select.has_room(request.station) then
       local ok, later = try_request(request)
       if ok then
         busy[unit] = true

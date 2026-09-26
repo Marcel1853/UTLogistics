@@ -103,6 +103,12 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop)
   }
   deliveries.active[id] = delivery
   deliveries.by_train[train.id] = id
+  local of_requester = deliveries.by_requester[requester.unit]
+  if not of_requester then
+    of_requester = {}
+    deliveries.by_requester[requester.unit] = of_requester
+  end
+  of_requester[id] = true
   deliveries.count = deliveries.count + 1
   for key, amount in pairs(manifest) do
     add(deliveries.outgoing, provider.unit, key, amount)
@@ -164,6 +170,11 @@ local function remove(delivery, canceled)
   count_train(delivery.requester, -1)
   deliveries.active[delivery.id] = nil
   if deliveries.by_train[delivery.train_id] == delivery.id then deliveries.by_train[delivery.train_id] = nil end
+  local of_requester = deliveries.by_requester[delivery.requester]
+  if of_requester then
+    of_requester[delivery.id] = nil
+    if next(of_requester) == nil then deliveries.by_requester[delivery.requester] = nil end
+  end
   deliveries.count = deliveries.count - 1
   Heartbeat.update_registration()
 end
@@ -270,6 +281,33 @@ function Deliveries.on_depart(delivery)
     return train.valid and not storage.trains.service[train.id]
   end
   return false
+end
+
+--- Nachladen: eine Menge auf die Ladeliste einer laufenden Lieferung setzen und die
+--- Reservierungen mitziehen (beim Anbieter reserviert, beim Abnehmer unterwegs). Der Fahrplan
+--- wird dabei **nicht** angefasst – das macht der Aufrufer (`dispatcher/top-up.lua`), damit er
+--- bei einem Fehlschlag nichts gebucht hat.
+function Deliveries.book_top_up(delivery, key, amount)
+  if amount <= 0 then return end
+  delivery.manifest[key] = (delivery.manifest[key] or 0) + amount
+  add(storage.deliveries.outgoing, delivery.provider, key, amount)
+  add(storage.deliveries.incoming, delivery.requester, key, amount)
+  delivery.topped_up = (delivery.topped_up or 0) + 1
+end
+
+--- Nachladen zurücknehmen (Fahrplan ließ sich nicht ändern).
+function Deliveries.undo_top_up(delivery, key, amount)
+  if amount <= 0 then return end
+  local left = (delivery.manifest[key] or 0) - amount
+  delivery.manifest[key] = left > 0 and left or nil
+  add(storage.deliveries.outgoing, delivery.provider, key, -amount)
+  add(storage.deliveries.incoming, delivery.requester, key, -amount)
+  delivery.topped_up = (delivery.topped_up or 1) - 1
+end
+
+--- Lieferungen zu diesem Abnehmer (Index für das Nachladen).
+function Deliveries.to_requester(unit)
+  return storage.deliveries.by_requester[unit]
 end
 
 --- Menge einer Ware (Key) im Zug.

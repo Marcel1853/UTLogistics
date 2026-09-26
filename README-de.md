@@ -482,10 +482,21 @@ Beides ist enthalten, beides trennt UTL sauber:
   eigene Züge. Lieferungen **zwischen** Oberflächen wird es nicht geben: Züge können den Planeten
   nicht wechseln.
 
+## Nachladen (abschaltbar, Standard aus)
+
+Wächst der Bedarf eines Abnehmers, während ein Zug für ihn noch zum Anbieter fährt oder dort lädt,
+kommt die Menge auf die **laufende Ladeliste** statt in eine zweite Fahrt. Bedingung: derselbe
+Anbieter hat die Ware noch frei, und im Zug ist Platz. Items dürfen dazukommen, bei Flüssigkeiten
+nur dieselbe Sorte.
+
+Das spart Züge, hält den Zug aber länger am Anbieter – deshalb ist es abschaltbar und **von Haus
+aus aus**. Einschalten in den Karteneinstellungen oder im Manager unter „Einstellungen“:
+*Nachladen, während der Zug lädt*. Wer es anlässt, merkt keinen Unterschied zu vorher.
+
 ## Noch nicht enthalten
 
-Nachladen, während der Zug schon am Anbieter steht (die Ladeliste steht beim Losschicken fest), und
-Einsammeln bei einem zweiten Anbieter auf dem Weg.
+Einsammeln bei einem zweiten Anbieter auf dem Weg (eine Fahrt holt bisher bei genau einem
+Anbieter ab).
 
 ## Für Mod-Autoren
 

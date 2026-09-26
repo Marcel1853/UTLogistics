@@ -8,6 +8,7 @@ Date: 2026-09-22
     - Team leaders: whoever joins a team first; leaders can appoint or remove further leaders. A leader offline for longer than the map setting (default 3 days) loses the rights.
     - Command /utl-admin (admins only): window to set leaders and values of any team.
     - Remote interface: set_team_config / get_team_config / set_map_config.
+    - Topping up while loading (map setting "Top up while loading", off by default): if a requester's demand grows while a train is still heading for the provider or loading there, the amount is added to the running load list instead of starting a second trip. Needs the same provider to still have the goods and room in the train; items may be added, fluids only of the same kind.
     - New scenario "UTL teams": four teams (Standard, Rot, Blau, Grün), each with its own 2 x 2 grid of city blocks, standing apart with no track between them. All four use the same station names and the same network name, so team separation can be checked. /utl-team switches teams in single player too.
   Bugfixes:
     - Trains sent to a depot, fuel or cleanup station by rail waypoint are now counted against that stop's train limit while they are on their way, so several trains are no longer sent to the same free stop.

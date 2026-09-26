@@ -373,10 +373,20 @@ Both are included, and UTL keeps both apart properly:
   surface is matched, so Nauvis and Vulcanus each need their own depots and their own trains.
   Deliveries *between* surfaces will not come: trains cannot change planet.
 
+## Topping up while loading (optional, off by default)
+
+If a requester's demand grows while a train is still on its way to the provider or loading there,
+the amount is added to the **running load list** instead of starting a second trip. It requires
+that the same provider still has the goods and that the train has room. Items may be added, fluids
+only of the same kind.
+
+This saves trains but keeps the train at the provider for longer – so it can be switched off and
+**is off by default**. Turn it on in the map settings or in the manager under “Settings”: *Top up
+while loading*. Leaving it off changes nothing compared to before.
+
 ## Not yet included
 
-Topping up a delivery that is already being loaded (the load list is fixed when the train is sent),
-and collecting from a second provider on the way.
+Collecting from a second provider on the way (one trip still picks up at exactly one provider).
 
 ## For mod authors
 
