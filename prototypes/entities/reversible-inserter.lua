@@ -1,4 +1,4 @@
--- Wende-Greifarm: Kopie des Bulk-Greifarms, blau eingefärbt. Er arbeitet so, wie er gebaut wurde;
+-- Wende-Greifarm: Kopie des Bulk-Greifarms, türkis eingefärbt. Er arbeitet so, wie er gebaut wurde;
 -- ist seine Schaltbedingung erfüllt, dreht UTL ihn um (scripts/inserters/). So kann ein Bahnhof,
 -- der annimmt und abgibt, mit einem Satz Greifarme auskommen.
 local C = require("prototypes.constants")
@@ -7,7 +7,7 @@ local function tint_layers(sprite_def)
   if type(sprite_def) ~= "table" then return end
   if sprite_def.filename or sprite_def.filenames then
     if not sprite_def.draw_as_shadow and not sprite_def.draw_as_glow and not sprite_def.draw_as_light then
-      sprite_def.tint = C.tint
+      sprite_def.tint = C.reversible_tint
     end
     return
   end
@@ -15,7 +15,7 @@ local function tint_layers(sprite_def)
 end
 
 local ICONS = {
-  { icon = "__base__/graphics/icons/bulk-inserter.png", tint = C.tint },
+  { icon = "__base__/graphics/icons/bulk-inserter.png", tint = C.reversible_tint },
   { icon = "__base__/graphics/icons/arrows/signal-left-right-arrow.png", scale = 0.28, shift = { 8, -8 } },
 }
 

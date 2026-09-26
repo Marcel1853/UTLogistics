@@ -184,11 +184,43 @@ equip({ 3.5 }, 2.5, false, nil, nil)
 -- Cleanup mit „Inhalt wieder anbieten“: seine Kiste hat Kupfer, der Abnehmer will Kupfer – das hat
 -- sonst niemand, also holt der Zug es am Cleanup ab.
 local CLEANUP_RETURN = [[
+-- Die Auftrags-Ausgabe braucht „UTL: Ladesteuerung“; in der Tipps-Welt ist nichts erforscht.
+force.technologies["utl-loading-control"].researched = true
 local cleanup = stop("Cleanup", 13, true, false)
 c_unit = cleanup.unit_number
 remote.call("utl", "configure_station", c_unit, { mode = "cleanup", cleanup = { offer = "first" } })
 equip({ 3.5 }, 2.5, true, "copper-plate", cleanup.get_wire_connector(W.circuit_green, true))
+-- Gemischte Restladung: Eisen und Kupfer in derselben Kiste. Der Abnehmer will nur Kupfer.
+local chest = s.find_entities_filtered({ name = "infinity-chest", position = { 3.5, 3.5 }, radius = 0.5 })[1]
+chest.infinity_container_filters = {
+  { index = 1, name = "iron-plate", count = 1000, mode = "at-least" },  -- über der Anbieter-Schwelle
+  { index = 2, name = "copper-plate", count = 1000, mode = "at-least" },
+}
 remote.call("utl", "set_request", r_unit, 1, { type = "item", name = "copper-plate" }, 200)
+-- Der Greifarm filtert per Schaltung: „Filter setzen“ aus der Auftrags-Ausgabe des Cleanups – so
+-- greift er nur die bestellte Ware. Die Ausgabe legt UTL einen Moment nach dem Einstellen an.
+local inserter = s.find_entities_filtered({ name = "bulk-inserter", position = { 3.5, 2.5 }, radius = 0.5 })[1]
+local cb = inserter.get_or_create_control_behavior()
+cb.circuit_set_filters = true
+local wired = false
+script.on_nth_tick(41, function()
+  if not wired then
+    local output = s.find_entities_filtered({ name = "utl-station-output", position = cleanup.position, radius = 5 })[1]
+    if not output then return end
+    output.get_wire_connector(defines.wire_connector_id.circuit_red, true)
+      .connect_to(inserter.get_wire_connector(defines.wire_connector_id.circuit_red, true))
+    wired = true
+    if game.simulation then script.on_nth_tick(41, nil) end
+  elseif not game.simulation then
+    -- nur für tools/tipstest: fährt der Zug vom Cleanup, darf nur Kupfer im Wagen sein
+    for _, t in pairs(game.train_manager.get_trains({ surface = s })) do
+      if t.state == defines.train_state.on_the_path and t.get_item_count() > 0 and not logged_cleanup then
+        logged_cleanup = true
+        log("[TIPS] cleanup_return erstes abfahrt ladung " .. serpent.line(t.get_contents()))
+      end
+    end
+  end
+end)
 ]]
 
 -- Wende-Greifarme am Abnehmer: statt der Entlade-Greifarme stehen dort Wende-Greifarme in
@@ -200,6 +232,9 @@ local REVERSIBLE = [[
 force.technologies["utl-loading-control"].researched = true
 force.technologies["utl-storage"].researched = true
 remote.call("utl", "configure_station", r_unit, { mode = "station" })
+-- Keine Inaktivitäts-Wartezeit in dieser Szene: der Zug fährt, sobald er voll bzw. leer ist
+remote.call("utl", "set_map_config", "utl-load-timeout", 0)
+remote.call("utl", "set_map_config", "utl-unload-timeout", 0)
 local revs = {}
 for _, x in ipairs({ -18.5, -20.5 }) do
   for _, e in pairs(s.find_entities_filtered({ name = "bulk-inserter", position = { x, -0.5 }, radius = 0.4 })) do e.destroy() end

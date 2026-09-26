@@ -9,10 +9,12 @@ local Util = require("scripts.lib.util")
 
 local Schedule = {}
 
--- Tankstelle: bis alle Loks voll sind, höchstens 30 s (leere Kiste soll den Zug nicht festhalten).
+-- Tankstelle: bis alle Loks voll sind oder sich 30 s nichts mehr tut (leere Kiste soll den Zug nicht
+-- festhalten). Inaktivität statt vergangener Zeit – wie überall sonst (Wunsch Marcel): solange noch
+-- getankt wird, läuft die Zeit nicht.
 local FUEL_WAIT = {
   { type = "fuel_full" },
-  { type = "time", ticks = 30 * 60, compare_type = "or" },
+  { type = "inactivity", ticks = 30 * 60, compare_type = "or" },
 }
 
 -- Cleanup: bis die Waren, die diese Station annimmt, weg sind (je Ware „= 0“, alle mit UND),
