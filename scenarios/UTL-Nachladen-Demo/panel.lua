@@ -27,7 +27,9 @@ function Panel.create(player)
   local frame = player.gui.screen.add({ type = "frame", name = NAME, direction = "vertical",
     caption = { "utl-demo.title" } })
   frame.location = { 20, 120 }
-  local inner = frame.add({ type = "frame", name = "inner", style = "inside_shallow_frame_with_padding", direction = "vertical" })
+  -- Abstände zwischen den Zeilen gibt es nur bei Flows, nicht bei Frames → Flow im Frame
+  local box = frame.add({ type = "frame", name = "inner", style = "inside_shallow_frame_with_padding", direction = "vertical" })
+  local inner = box.add({ type = "flow", name = "content", direction = "vertical" })
   inner.style.vertical_spacing = 6
   note(inner, { "utl-demo.intro" })
 
@@ -59,7 +61,7 @@ end
 function Panel.refresh(player)
   local frame = player.gui.screen[NAME]
   if not (frame and frame.valid) then return end
-  local inner = frame.inner
+  local inner = frame.inner.content
   local demo = storage.demo or {}
   local mode = demo.round_on and "on" or "off"
 
