@@ -8,14 +8,15 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 - Benötigt: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age ist optional.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
   Schienenverkehr“ und „Schaltungsnetze“). Ausbaustufen: **„UTL: Ladesteuerung“** (Wagenfilter und
-  Auftrags-Ausgabe) und **„UTL: Netzverbund I–III“** (ein Netz mit 1, 2 oder 3 Partnernetzen verbinden). Mit der
+  Auftrags-Ausgabe) und **„UTL: Netzverbund I–III“** (ein Netz mit 1, 2 oder 3 Partnernetzen verbinden) und **„UTL: Lager“**
+  (Lager-Stationen und Wende-Greifarme). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
-> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (106 Prüfungen) und einen
+> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (126 Prüfungen) und einen
 > headless-Lasttest mit 384 Zügen auf 12 × 12 City Blocks; Updates werden geprüft, indem ein
 > Spielstand der Vorversion geladen wird. Die wichtigsten Funktionen zeigen die Szenarien. Im
-> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Nachladen** (0.0.7,
-> Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
+> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Lager**, **Wende-Greifarm**
+> und **Cleanup gibt zurück** (0.0.8), **Nachladen** (0.0.7, Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
 > etwas schiefgeht: bitte in der [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion)
 > melden, am besten mit Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem
 > gewachsenen Spielstand vorher sichern.
@@ -63,6 +64,7 @@ Gut für bestehende Bahnhöfe: Combinator danebenstellen, Ausgang mit der Haltes
 | **Depot** | Hier warten freie Züge. |
 | **Tankstelle** | Hier tanken Züge (Greifarme füllen die Loks). |
 | **Cleanup** | Hier werden Züge mit Restladung geleert. |
+| **Lager** | Nimmt an und gibt ab, zwischen Mindest- und Höchstbestand je Ware (siehe unten). |
 
 Depot, Tankstelle und Cleanup schließen sich gegenseitig und Anbieter/Abnehmer aus.
 
@@ -236,7 +238,7 @@ zurück.
 
 Liegt **eine** Lok eines Zugs unter **40 %** (Map-Einstellung „Tanken unter (%)“), fährt der
 Zug zur nächsten passenden **Tankstelle** – vor dem nächsten Auftrag, direkt nach dem Entladen
-oder aus dem Depot. Er wartet, bis alle Loks voll sind (höchstens 30 s), und fährt dann weiter.
+oder aus dem Depot. Er wartet, bis alle Loks voll sind oder sich 30 s nichts mehr tut, und fährt dann weiter.
 Ist gerade keine Tankstelle frei, bekommt ein knapper Zug keinen Auftrag, sondern wartet im
 Depot; UTL versucht es alle 10 Sekunden erneut. Gibt es im Netzwerk **gar keine** UTL-Tankstelle
 (z. B. weil du selbst per Interrupt oder von Hand tankst), fahren knappe Züge ganz normal.
@@ -267,6 +269,51 @@ nur mit Abfluss, sonst mischen sie sich im Rohr.
 
 Gibt es für eine Ware kein passendes, freies Cleanup, bleibt der Zug im Depot, es kommt die
 Warnung „kein passendes Cleanup für [Ware]“, und UTL versucht es alle 10 s erneut.
+
+**Cleanup gibt zurück.** Was im Cleanup landet, muss dort nicht bleiben: Mit dem Häkchen **„Inhalt
+wieder anbieten“** bietet eine Cleanup-Station ihren Kisteninhalt dem Netz an, wie ein Anbieter
+(die Kisten müssen an der Haltestelle hängen). Die Stufe wählst du: **nur als Reserve** (normale
+Anbieter gehen vor), **wie ein normaler Anbieter** oder **zuerst leeren** (vor jedem normalen
+Anbieter). Was bei einem Abnehmer übrig blieb, bringt UTL diesem Abnehmer 5 Minuten lang nicht
+zurück – so fährt nichts im Kreis. Die Map-Einstellung **„Cleanup darf Inhalt wieder anbieten“**
+schaltet es auf der ganzen Karte ab.
+
+## Lager (für Fortgeschrittene)
+
+*Braucht die Forschung „UTL: Lager“.*
+
+Ein **Lager** ist ein Bahnhof, der annimmt **und** abgibt – ein Puffer nahe bei den Verbrauchern.
+Rolle **Lager** wählen und je Ware einen **Mindest-** und einen **Höchstbestand** einstellen (bis zu
+acht Waren):
+
+- **unter Mindest** fordert es an – und zwar bis Höchst, damit es sich nicht in vielen kleinen
+  Fahrten auffüllt;
+- **über Mindest** bietet es an, was über dem Mindest liegt – **wie ein normaler Anbieter**: bei
+  gleicher Menge liefert der nähere, bei gleichem Abstand geht ein normaler Anbieter vor.
+
+Zwei Lager schieben sich Ware nie hin und her: angeboten wird nur, was über dem Mindest liegt,
+angefordert nur unter dem Mindest. Die allgemeinen Angebots- und Bedarfs-Schwellen gelten hier
+nicht – Mindest und Höchst sind die Schwellen. Mit **„Restladung annehmen“** (Standard: an) dürfen
+Züge hier auch Reste abladen, wie an einem Cleanup; Waren ohne Grenzen bietet das Lager ganz an,
+aber nur als Reserve. Die Map-Einstellung **„Lager-Stationen erlauben“** schaltet Lager auf der
+ganzen Karte ab.
+
+## Wende-Greifarm
+
+*Braucht die Forschung „UTL: Lager“.*
+
+Ein Bulk-Greifarm, der sich **per Schaltung umdreht**: Er arbeitet so, wie er gebaut wurde, und
+solange seine Bedingung erfüllt ist, tauscht er Greif- und Ablageseite. In seinem Fenster (neben
+dem normalen Greifarm-Fenster) stellst du **Signal**, **Vergleich**, **Zahl** ein und ob das **rote**
+und/oder **grüne** Kabel gelesen wird. Standard: **[utl-unloading] > 0** – an der Auftrags-Ausgabe
+einer UTL-Station lädt er Züge, die abholen, und dreht sich zum Entladen um, wenn ein Zug liefert.
+Ein Satz Greifarme reicht so für einen Bahnhof, der annimmt und abgibt, etwa ein Lager. Die
+Auftrags-Ausgabe meldet dafür zusätzlich **„Zug lädt hier“** und **„Zug entlädt hier“**, solange ein
+Lieferzug an der Haltestelle steht.
+
+Hält der Greifarm noch etwas in der Hand, das nicht mehr bestellt ist (z. B. nach einem
+Filterwechsel), legt er es dorthin zurück, woher er es hat. Er dreht sich höchstens einmal pro
+Sekunde. Blaupausen und Kopieren behalten seine Einstellung.
 
 ## Depots und Zuglänge
 
@@ -344,6 +391,9 @@ Start-Einstellungen.
 | Inaktivität beim Entladen (s) | 30 | Dasselbe beim Abnehmer. |
 | Fracht und/oder Inaktivität | oder | „und“: erst fahren, wenn voll bzw. leer und so lange nichts mehr passiert ist. „oder“: auch fahren, wenn so lange nichts passiert ist – mit dem, was drin ist. |
 | Team-Leiter abgeben nach … Tagen offline | 3 | Ein Leiter, der so lange nicht online war, verliert die Rechte. 0 = nie. |
+| Nachladen, während der Zug lädt | aus | Siehe „Nachladen“ unten. |
+| Cleanup darf Inhalt wieder anbieten | an | Aus: kein Cleanup bietet etwas an, auch mit Häkchen. |
+| Lager-Stationen erlauben | an | Aus: Lager bieten nichts an und fordern nichts an. |
 | Debug-Protokoll | aus | Zusätzliche Meldungen in `factorio-current.log`. |
 
 Die drei **Lade-Werte** (Inaktivität beim Laden, Inaktivität beim Entladen, Fracht und/oder
@@ -426,6 +476,15 @@ Fahrt. Die Runden wechseln sich ab. Ein Fenster erklärt jeden Schritt, eine Kam
 über dem Zug steht seine Ladeliste und über dem Abnehmer sein Bedarf; ein Zähler zeigt, wie viele
 Fahrten mit und ohne Nachladen nötig waren.
 
+**Neues Spiel → Szenarien → UTL-Lager (zum Anschauen)**: die Neuerungen aus 0.0.8 auf dem Rundkurs
+mit zwei Zügen. Ein **Lager** (Mindest 400, Höchst 1200 Eisen) mit **Wende-Greifarmen** beliefert die
+nahe Fabrik und füllt sich beim Anbieter wieder auf, wenn eine kleine Fabrik dahinter es unter
+Mindest verbraucht hat; die Werkstatt neben dem Anbieter bekommt ihr Eisen weiter vom Anbieter,
+weil der näher ist (außer der Anbieter ist gerade belegt – dann hilft das Lager aus). Ein **Cleanup** mit „zuerst leeren“ nimmt einen Kupfer-Rest an und gibt ihn an
+eine andere Kupfer-Werkstatt zurück. Ein Fenster erklärt jeden der drei Teile (Knopf: nächster
+Teil), eine Kamera folgt dem beteiligten Zug. Damit wirklich Reste entstehen, füllt das Szenario
+die Kiste der Kupfer-Werkstatt A auf, während ein Zug dorthin unterwegs ist – das Fenster sagt das.
+
 In allen Szenarien und in den Tipps-&-Tricks-Szenen stehen **Anzeigefelder** mit kurzen
 Erklärungen neben den Bahnhöfen (in deiner Spielsprache).
 
@@ -452,7 +511,7 @@ ganzen Zug, Depots gebündelt in einem Abstellbahnhof.
 
 ## Tipps & Tricks im Spiel
 
-Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: fünfzehn Einträge,
+Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: achtzehn Einträge,
 die die Bedienung erklären, jeder mit einer laufenden Beispielszene (teils mit geöffnetem
 UTL-Fenster, Manager und Umschalt-Klick zum Kopieren). Darunter: eine UTL-Haltestelle mit Anbieter, Abnehmer und Depot;
 dieselbe Strecke mit normalen Haltestellen und UTL-Stations-Combinatoren (Kabel sichtbar); und
@@ -460,7 +519,9 @@ ein Zug, der zuerst zur Tankstelle fährt und dann liefert; ein Zug mit Restladu
 der Cleanup-Station geleert wird; **zwei getrennte Netzwerke übereinander** mit Kamerafahrt; zwei Netze im Stationsfenster
 verbinden (aus der Liste wählen, mit „Neu“ anlegen); der Manager Reiter für Reiter, sein Reiter
 Netzwerke mit einer neuen Verbindung und der Reiter Inventar, in dem ein Klick auf eine Ware
-Stationen und Züge zeigt. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
+Stationen und Züge zeigt; Wende-Greifarme an der Auftrags-Ausgabe, die sich für einen
+entladenden Zug umdrehen; ein Cleanup, der seinen Inhalt zurückgibt; ein Lager auf einem Rundkurs
+mit zwei Zügen, das den nahen Abnehmer beliefert und sich unter Mindest wieder auffüllt. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
 Netze verbinden (Stern, Forschung „Netzverbund“), Depots, Einstellungen kopieren/Blaupausen und Manager.
 
 ## Häufige Fragen
