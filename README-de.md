@@ -9,14 +9,14 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
   Schienenverkehr“ und „Schaltungsnetze“). Ausbaustufen: **„UTL: Ladesteuerung“** (Wagenfilter und
   Auftrags-Ausgabe) und **„UTL: Netzverbund I–III“** (ein Netz mit 1, 2 oder 3 Partnernetzen verbinden) und **„UTL: Lager“**
-  (Lager-Stationen und Wende-Greifarme). Mit der
+  (Lager-Stationen). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
-> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (126 Prüfungen) und einen
+> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (122 Prüfungen) und einen
 > headless-Lasttest mit 384 Zügen auf 12 × 12 City Blocks; Updates werden geprüft, indem ein
 > Spielstand der Vorversion geladen wird. Die wichtigsten Funktionen zeigen die Szenarien. Im
-> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Lager**, **Wende-Greifarm**
-> und **Cleanup gibt zurück** (0.0.8), **Nachladen** (0.0.7, Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
+> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Lager** und **Cleanup gibt
+> zurück** (0.0.8), **Nachladen** (0.0.7, Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
 > etwas schiefgeht: bitte in der [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion)
 > melden, am besten mit Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem
 > gewachsenen Spielstand vorher sichern.
@@ -298,22 +298,15 @@ Züge hier auch Reste abladen, wie an einem Cleanup; Waren ohne Grenzen bietet d
 aber nur als Reserve. Die Map-Einstellung **„Lager-Stationen erlauben“** schaltet Lager auf der
 ganzen Karte ab.
 
-## Wende-Greifarm
+### Annehmen und abgeben am selben Bahnhof
 
-*Braucht die Forschung „UTL: Lager“.*
-
-Ein Bulk-Greifarm, der sich **per Schaltung umdreht**: Er arbeitet so, wie er gebaut wurde, und
-solange seine Bedingung erfüllt ist, tauscht er Greif- und Ablageseite. In seinem Fenster (neben
-dem normalen Greifarm-Fenster) stellst du **Signal**, **Vergleich**, **Zahl** ein und ob das **rote**
-und/oder **grüne** Kabel gelesen wird. Standard: **[utl-unloading] > 0** – an der Auftrags-Ausgabe
-einer UTL-Station lädt er Züge, die abholen, und dreht sich zum Entladen um, wenn ein Zug liefert.
-Ein Satz Greifarme reicht so für einen Bahnhof, der annimmt und abgibt, etwa ein Lager. Die
-Auftrags-Ausgabe meldet dafür zusätzlich **„Zug lädt hier“** und **„Zug entlädt hier“**, solange ein
-Lieferzug an der Haltestelle steht.
-
-Hält der Greifarm noch etwas in der Hand, das nicht mehr bestellt ist (z. B. nach einem
-Filterwechsel), legt er es dorthin zurück, woher er es hat. Er dreht sich höchstens einmal pro
-Sekunde. Blaupausen und Kopieren behalten seine Einstellung.
+Ein Lager (oder ein Cleanup, der zurückgibt) braucht Greifarme in beide Richtungen. Die übliche
+Vanilla-Bauweise, alles auf einer Gleisseite: **Entlade-Greifarm** (Wagen → Kiste) → **Umlade-Greifarm**
+(Kiste → Kiste) → **Lade-Greifarm** (Kiste → Wagen). Die Auftrags-Ausgabe an Entlade- und
+Lade-Greifarme verdrahten und als Bedingung setzen: Lade-Greifarme **[utl-loading] > 0**,
+Entlade-Greifarme **[utl-loading] = 0**. Die Auftrags-Ausgabe meldet **„Zug lädt hier“** und **„Zug
+entlädt hier“**, solange ein Lieferzug an der Haltestelle steht; Restladung hat keinen Auftrag und
+wird mit „= 0“ ebenfalls entladen. Das Szenario „UTL-Lager“ zeigt es.
 
 ## Depots und Zuglänge
 
@@ -477,7 +470,7 @@ Fahrt. Die Runden wechseln sich ab. Ein Fenster erklärt jeden Schritt, eine Kam
 Fahrten mit und ohne Nachladen nötig waren.
 
 **Neues Spiel → Szenarien → UTL-Lager (zum Anschauen)**: die Neuerungen aus 0.0.8 auf dem Rundkurs
-mit zwei Zügen. Ein **Lager** (Mindest 400, Höchst 1200 Eisen) mit **Wende-Greifarmen** beliefert die
+mit zwei Zügen. Ein **Lager** (Mindest 400, Höchst 1200 Eisen) mit **Lade- und Entlade-Greifarmen** beliefert die
 nahe Fabrik und füllt sich beim Anbieter wieder auf, wenn eine kleine Fabrik dahinter es unter
 Mindest verbraucht hat; die Werkstatt neben dem Anbieter bekommt ihr Eisen weiter vom Anbieter,
 weil der näher ist (außer der Anbieter ist gerade belegt – dann hilft das Lager aus). Ein **Cleanup** mit „zuerst leeren“ nimmt einen Kupfer-Rest an und gibt ihn an
@@ -511,7 +504,7 @@ ganzen Zug, Depots gebündelt in einem Abstellbahnhof.
 
 ## Tipps & Tricks im Spiel
 
-Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: achtzehn Einträge,
+Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: siebzehn Einträge,
 die die Bedienung erklären, jeder mit einer laufenden Beispielszene (teils mit geöffnetem
 UTL-Fenster, Manager und Umschalt-Klick zum Kopieren). Darunter: eine UTL-Haltestelle mit Anbieter, Abnehmer und Depot;
 dieselbe Strecke mit normalen Haltestellen und UTL-Stations-Combinatoren (Kabel sichtbar); und
@@ -519,8 +512,7 @@ ein Zug, der zuerst zur Tankstelle fährt und dann liefert; ein Zug mit Restladu
 der Cleanup-Station geleert wird; **zwei getrennte Netzwerke übereinander** mit Kamerafahrt; zwei Netze im Stationsfenster
 verbinden (aus der Liste wählen, mit „Neu“ anlegen); der Manager Reiter für Reiter, sein Reiter
 Netzwerke mit einer neuen Verbindung und der Reiter Inventar, in dem ein Klick auf eine Ware
-Stationen und Züge zeigt; Wende-Greifarme an der Auftrags-Ausgabe, die sich für einen
-entladenden Zug umdrehen; ein Cleanup, der seinen Inhalt zurückgibt; ein Lager auf einem Rundkurs
+Stationen und Züge zeigt; ein Cleanup, der seinen Inhalt zurückgibt; ein Lager auf einem Rundkurs
 mit zwei Zügen, das den nahen Abnehmer beliefert und sich unter Mindest wieder auffüllt. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
 Netze verbinden (Stern, Forschung „Netzverbund“), Depots, Einstellungen kopieren/Blaupausen und Manager.
 

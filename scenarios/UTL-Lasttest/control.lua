@@ -4,6 +4,7 @@
 --- deren Speicher bei ihrem Start – eine Einrichtung in on_init ginge verloren.
 local Lasttest = require("lasttest")
 local Signs = require("__UTLogistics__/scripts/lib/signs")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 -- Erklärfelder: je Art das Beispiel, das dem Start am nächsten liegt (Text: utl-sign.<key>).
 local SIGNS = {
@@ -58,6 +59,8 @@ local function setup()
   for _, player in pairs(game.players) do place(player) end
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function()
   script.on_nth_tick(1, setup)
 end)

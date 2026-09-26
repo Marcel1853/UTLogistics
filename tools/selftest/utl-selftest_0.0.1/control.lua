@@ -1202,74 +1202,15 @@ function train_test_step()
         check("R22 rückweg-sperre: cleanup bringt den rest nicht gleich zurück",
           remote.call("utl", "idle_train_count") >= 1, "frei=" .. remote.call("utl", "idle_train_count"))
         request(nil)
-        -- Runde 23: Wende-Greifarm auf freiem Feld bei x = 200: Kiste A – Greifarm – Kiste B.
-        -- Ein Konstant-Kombinator (rotes Kabel) schaltet das Standard-Signal utl-unloading.
-        local s23, f23 = game.surfaces["nauvis"], game.forces["player"]
-        s23.request_to_generate_chunks({ 200, 0 }, 1)
-        s23.force_generate_chunk_requests()
-        for _, e in pairs(s23.find_entities_filtered{ area = { { 195, -5 }, { 206, 6 } } }) do
-          if e.type ~= "character" then e.destroy() end
-        end
-        st.ra_chest = s23.create_entity{ name = "iron-chest", position = { 200.5, -0.5 }, force = f23 }
-        st.rev = s23.create_entity{ name = "utl-reversible-inserter", position = { 200.5, 0.5 },
-          direction = defines.direction.north, force = f23, raise_built = true }
-        st.rb_chest = s23.create_entity{ name = "iron-chest", position = { 200.5, 1.5 }, force = f23 }
-        local eei = s23.create_entity{ name = "electric-energy-interface", position = { 203, 0 }, force = f23 }
-        eei.power_production, eei.electric_buffer_size = 1000000, 10000000
-        s23.create_entity{ name = "medium-electric-pole", position = { 201.5, 0.5 }, force = f23 }
-        st.rev_cc = s23.create_entity{ name = "constant-combinator", position = { 199.5, 0.5 }, force = f23 }
-        st.rev_cc.get_wire_connector(W.circuit_red, true).connect_to(st.rev.get_wire_connector(W.circuit_red, true))
-        st.ra_chest.insert{ name = "iron-plate", count = 50 }
-        st.rb_chest.insert{ name = "copper-plate", count = 50 }
-        st.r23 = { phase = "normal", deadline = tick + 180, base = st.rev.direction }
+        -- Runde 23: Auftrags-Ausgabe meldet Laden und Entladen (Signale utl-loading/utl-unloading)
+        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 500)
+        st.r23 = { phase = "output", deadline = tick + 7200 }
         st.round = 23
       end
     end
   elseif st.round == 23 then
     local r = st.r23
-    local function set_signal(value)
-      local section = st.rev_cc.get_control_behavior().get_section(1)
-      if value and value ~= 0 then
-        section.set_slot(1, { value = { type = "virtual", name = "utl-unloading", quality = "normal" }, min = value })
-      else
-        section.clear_slot(1)
-      end
-    end
-    local function counts()
-      return st.ra_chest.get_item_count("iron-plate"), st.rb_chest.get_item_count("iron-plate"),
-        st.ra_chest.get_item_count("copper-plate"), st.rb_chest.get_item_count("copper-plate")
-    end
-    if r.phase == "normal" and tick >= r.deadline then
-      -- ohne Signal: arbeitet wie gebaut – eine Ware ist hinübergewandert
-      local a_iron, b_iron, a_copper, b_copper = counts()
-      r.flow = b_iron > 0 and "A-B" or (a_copper > 0 and "B-A" or nil)
-      check("R23 wende-greifarm ohne signal arbeitet wie gebaut", r.flow ~= nil and st.rev.direction == r.base,
-        "fluss " .. tostring(r.flow) .. ", eisen A/B " .. a_iron .. "/" .. b_iron .. ", kupfer A/B " .. a_copper .. "/" .. b_copper)
-      set_signal(1)
-      r.phase, r.deadline = "flipped", tick + 240
-    elseif r.phase == "flipped" and tick >= r.deadline then
-      local a_iron, b_iron, a_copper, b_copper = counts()
-      local reversed = (r.flow == "A-B" and a_copper > 0) or (r.flow == "B-A" and b_iron > 0)
-      check("R23 wende-greifarm mit signal dreht sich um", reversed and st.rev.direction == (r.base + 8) % 16,
-        "richtung " .. st.rev.direction .. " (gebaut " .. r.base .. "), eisen A/B " .. a_iron .. "/" .. b_iron
-        .. ", kupfer A/B " .. a_copper .. "/" .. b_copper)
-      r.phase, r.deadline, r.changes, r.last_dir = "flicker", tick + 180, 0, st.rev.direction
-    elseif r.phase == "flicker" then
-      -- flackerndes Signal (alle 10 Ticks um): höchstens eine Drehung je Sekunde
-      set_signal((tick / 10) % 2 == 0 and 1 or 0)
-      if st.rev.direction ~= r.last_dir then
-        r.changes = r.changes + 1
-        r.last_dir = st.rev.direction
-      end
-      if tick >= r.deadline then
-        check("R23 flackerndes signal: höchstens eine drehung je sekunde", r.changes <= 4,
-          r.changes .. " drehungen in 3 s")
-        set_signal(0)
-        -- Auftrags-Ausgabe: Lade- und Entlade-Signal während eines echten Zugs
-        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 500)
-        r.phase, r.deadline = "output", tick + 7200
-      end
-    elseif r.phase == "output" then
+    if r.phase == "output" then
       local function output_of(stop)
         local found = stop.surface.find_entities_filtered{ name = "utl-station-output",
           area = { { stop.position.x - 3, stop.position.y - 3 }, { stop.position.x + 3, stop.position.y + 3 } } }[1]
@@ -1300,29 +1241,8 @@ function train_test_step()
         if inv then inv.clear() end
       end
       if r.seen_load and r.seen_unload then
-        -- Runde 24: erst die Hand-Rückgabe des Wende-Greifarms, dann das Lager
-        local s24, f24 = game.surfaces["nauvis"], game.forces["player"]
-        local R24 = defines.wire_connector_id.circuit_red
-        st.h_a = s24.create_entity{ name = "iron-chest", position = { 210.5, 0.5 }, force = f24 }
-        st.h_i = s24.create_entity{ name = "utl-reversible-inserter", position = { 210.5, 1.5 }, direction = 0,
-          force = f24, raise_built = true }
-        st.h_b = s24.create_entity{ name = "iron-chest", position = { 210.5, 2.5 }, force = f24 }
-        local eei = s24.create_entity{ name = "electric-energy-interface", position = { 213, 1 }, force = f24 }
-        eei.power_production, eei.electric_buffer_size = 1000000, 10000000
-        s24.create_entity{ name = "medium-electric-pole", position = { 211.5, 1.5 }, force = f24 }
-        st.h_cc = s24.create_entity{ name = "constant-combinator", position = { 209.5, 1.5 }, force = f24 }
-        st.h_cc.get_wire_connector(R24, true).connect_to(st.h_i.get_wire_connector(R24, true))
-        st.h_i.get_or_create_control_behavior().circuit_set_filters = true
-        f24.bulk_inserter_capacity_bonus = 11 -- große Hand: er greift mehr, als die Zielkiste nimmt
-        st.h_cc.get_control_behavior().get_section(1).set_slot(1,
-          { value = { type = "item", name = "copper-plate", quality = "normal" }, min = 1 })
-        st.h_a.insert{ name = "iron-plate", count = 200 }
-        st.h_a.insert{ name = "copper-plate", count = 200 }
-        -- Zielkiste mit Platz für nur 5 Kupfer: der Greifarm bleibt mit dem Rest in der Hand stehen
-        local hb = st.h_b.get_inventory(defines.inventory.chest)
-        hb.set_bar(2)
-        hb.insert{ name = "copper-plate", count = 95 }
-        st.r24 = { phase = "hand", deadline = tick + 240 }
+        -- Runde 24: Lager
+        st.r24 = { phase = "setup" }
         st.round = 24
       elseif tick >= r.deadline then
         check("R23 auftrags-ausgabe: lade- und entladesignal gesehen", false,
@@ -1345,20 +1265,7 @@ function train_test_step()
     end
     local list = remote.call("utl", "get_deliveries") --[[@as table]]
     local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
-    if r.phase == "hand" and tick >= r.deadline then
-      local held = st.h_i.held_stack
-      r.held = held.valid_for_read and held.count or 0
-      r.copper_before = st.h_a.get_item_count("copper-plate")
-      -- Auftrag wechselt auf Eisen: das Kupfer in der Hand passt nicht mehr
-      st.h_cc.get_control_behavior().get_section(1).set_slot(1,
-        { value = { type = "item", name = "iron-plate", quality = "normal" }, min = 1 })
-      r.phase, r.deadline = "hand-check", tick + 180
-    elseif r.phase == "hand-check" and tick >= r.deadline then
-      local held = st.h_i.held_stack
-      local now = st.h_a.get_item_count("copper-plate")
-      check("R24 wende-greifarm legt unbestelltes aus der hand zurück",
-        r.held > 0 and not (held.valid_for_read and held.name == "copper-plate") and now == r.copper_before + r.held,
-        "vorher " .. r.held .. " in der hand, kiste " .. r.copper_before .. " -> " .. now)
+    if r.phase == "setup" then
       -- Lager S1 (südwärts, y 70) und S2 (y 76). Die Regeln erst im Netz „Z“ prüfen, in dem kein Zug
       -- fährt – sonst startet UTL schon hier (richtig) Lieferungen. Bestand per Konstant-Kombinator.
       local s24, f24 = game.surfaces["nauvis"], game.forces["player"]

@@ -197,15 +197,9 @@ chest.infinity_container_filters = {
   { index = 2, name = "copper-plate", count = 1000, mode = "at-least" },
 }
 remote.call("utl", "set_request", r_unit, 1, { type = "item", name = "copper-plate" }, 200)
--- Ein Wende-Greifarm statt des Bulk-Greifarms: er filtert per Schaltung („Filter setzen“ aus der
--- Auftrags-Ausgabe des Cleanups) und legt nach der Abfahrt zurück, was er noch in der Hand hat –
--- ein normaler Greifarm behielte es und blockierte beim nächsten Auftrag mit anderer Ware.
--- Die Ausgabe legt UTL einen Moment nach dem Einstellen an.
-force.technologies["utl-storage"].researched = true
-local old = s.find_entities_filtered({ name = "bulk-inserter", position = { 3.5, 2.5 }, radius = 0.5 })[1]
-local inserter = s.create_entity({ name = "utl-reversible-inserter", position = { 3.5, 2.5 }, direction = old.direction,
-  force = force, raise_built = true })
-old.destroy()
+-- Der Greifarm filtert per Schaltung („Filter setzen“ aus der Auftrags-Ausgabe des Cleanups) und
+-- greift so nur das bestellte Kupfer. Die Ausgabe legt UTL einen Moment nach dem Einstellen an.
+local inserter = s.find_entities_filtered({ name = "bulk-inserter", position = { 3.5, 2.5 }, radius = 0.5 })[1]
 local cb = inserter.get_or_create_control_behavior()
 cb.circuit_set_filters = true
 local wired = false
@@ -225,60 +219,6 @@ script.on_nth_tick(41, function()
         log("[TIPS] cleanup_return erstes abfahrt ladung " .. serpent.line(t.get_contents()))
       end
     end
-    -- 5 s nach der Abfahrt: hat der Greifarm die Hand geleert?
-    if logged_cleanup and not logged_hand and game.tick > logged_cleanup + 300 then
-      logged_hand = true
-      local held = inserter.held_stack
-      log("[TIPS] cleanup_return erstes hand nach abfahrt " .. (held.valid_for_read and (held.name .. " x" .. held.count) or "leer"))
-    end
-  end
-end)
-]]
-
--- Wende-Greifarme am Abnehmer: statt der Entlade-Greifarme stehen dort Wende-Greifarme in
--- Laderichtung, verdrahtet mit der Auftrags-Ausgabe der Station. Kommt ein Zug zum Entladen, meldet
--- die Ausgabe utl-unloading = 1 – die Greifarme drehen sich um und entladen.
-local REVERSIBLE = [[
--- Die Auftrags-Ausgabe braucht „UTL: Ladesteuerung“; in der Tipps-Welt ist nichts erforscht.
--- Danach den Abnehmer neu einstellen – dabei legt UTL seine Ausgabe an.
-force.technologies["utl-loading-control"].researched = true
-force.technologies["utl-storage"].researched = true
-remote.call("utl", "configure_station", r_unit, { mode = "station" })
--- Keine Inaktivitäts-Wartezeit in dieser Szene: der Zug fährt, sobald er voll bzw. leer ist
-remote.call("utl", "set_map_config", "utl-load-timeout", 0)
-remote.call("utl", "set_map_config", "utl-unload-timeout", 0)
-local revs = {}
-for _, x in ipairs({ -18.5, -20.5 }) do
-  for _, e in pairs(s.find_entities_filtered({ name = "bulk-inserter", position = { x, -0.5 }, radius = 0.4 })) do e.destroy() end
-  revs[#revs + 1] = s.create_entity({ name = "utl-reversible-inserter", position = { x, -0.5 }, direction = 0,
-    force = force, raise_built = true })
-end
--- Die Auftrags-Ausgabe legt UTL erst einen Moment nach dem Aufbau an: verdrahten, sobald sie da
--- ist (eigener Takt 37 – im Test läuft die Szene in einem Mod, der 30 schon belegt).
-local R = defines.wire_connector_id.circuit_red
-local built, wired, logged = revs[1].direction, false, false
-script.on_nth_tick(37, function(e)
-  if not wired then
-    local output = s.find_entities_filtered({ name = "utl-station-output", position = requester.position, radius = 5 })[1]
-    if not output then return end
-    local relay_at = s.find_non_colliding_position("medium-electric-pole", { -24.5, -2.5 }, 4, 0.5)
-    local relay = relay_at and s.create_entity({ name = "medium-electric-pole", position = relay_at, force = force })
-    local previous = output.get_wire_connector(R, true)
-    if relay then
-      previous.connect_to(relay.get_wire_connector(R, true))
-      previous = relay.get_wire_connector(R, true)
-    end
-    for _, rev in ipairs(revs) do
-      previous.connect_to(rev.get_wire_connector(R, true))
-      previous = rev.get_wire_connector(R, true)
-    end
-    wired = true
-    if game.simulation then script.on_nth_tick(37, nil) end
-  elseif not logged and revs[1].valid and revs[1].direction ~= built then
-    -- nur für tools/tipstest: wann drehen sich die Greifarme zum ersten Mal?
-    log(("[TIPS] reversible erstes umdrehen nach %d s"):format(math.floor(e.tick / 60)))
-    logged = true
-    script.on_nth_tick(37, nil)
   end
 end)
 ]]
@@ -337,6 +277,6 @@ end
 
 
 return {
-  SIMPLE = SIMPLE, FUEL = FUEL, CLEANUP = CLEANUP, CLEANUP_RETURN = CLEANUP_RETURN, REVERSIBLE = REVERSIBLE, ROLES = ROLES, REQUESTS = REQUESTS,
+  SIMPLE = SIMPLE, FUEL = FUEL, CLEANUP = CLEANUP, CLEANUP_RETURN = CLEANUP_RETURN, ROLES = ROLES, REQUESTS = REQUESTS,
   DEPOTS = DEPOTS, COPY = COPY, ROLE_SIGNS = ROLE_SIGNS, scene = scene, window = window,
 }

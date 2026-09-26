@@ -1,8 +1,8 @@
 --- Szenario „UTL-Lager“: Aufbau. Marcels Rundkurs (Blaupause `rundkurs_scenarios`, wie
 --- UTL-Beispiele) mit neuen Rollen – Lage der Haltestelle in der Blaupause → Rolle:
 ---   oben, nach Osten:   Anbieter (Eisen, Kupfer) · Werkstatt (Eisen)
----                       Tankstelle · Cleanup (gibt zurück, ein Wende-Greifarm)
----   unten, nach Westen: Fabrik (Eisen) · Lager (Eisen, Mindest/Höchst, drei Wende-Greifarme)
+---                       Tankstelle · Cleanup (gibt zurück)
+---   unten, nach Westen: Fabrik (Eisen) · Lager (Eisen, Mindest/Höchst, Lade- und Entlade-Greifarme)
 ---                       Kupfer-Werkstatt A · Kupfer-Werkstatt B
 ---   links und rechts:   je ein Depot mit einem Zug
 --- Das Lager liegt näher an der Fabrik als der Anbieter, die Werkstatt näher am Anbieter.
@@ -68,32 +68,10 @@ local function wire(a, b, color)
   return a.get_wire_connector(id, true).connect_to(b.get_wire_connector(id, true))
 end
 
---- Wende-Greifarm über eine Blaupause bauen: so kommt seine Einstellung (Tag `utl_rev`) mit,
---- genau wie beim Spieler. `cfg` = nil → Standard (dreht sich, solange ein Zug hier entlädt).
-local function reversible(position, direction, cfg)
-  local inv = game.create_inventory(1)
-  inv[1].set_stack({ name = "blueprint" })
-  local tags = cfg and { utl_rev = { cfg = cfg, flipped = false } } or nil
-  inv[1].set_blueprint_entities({ { entity_number = 1, name = "utl-reversible-inserter", position = { 0.5, 0.5 },
-    direction = direction, tags = tags } })
-  local ghosts = inv[1].build_blueprint({ surface = surface, force = force,
-    position = { math.floor(position[1]), math.floor(position[2]) }, skip_fog_of_war = true, raise_built = true })
-  local made
-  for _, ghost in pairs(ghosts or {}) do
-    if ghost.valid then
-      local _, revived = ghost.revive({ raise_revive = true })
-      made = revived or made
-    end
-  end
-  inv.destroy()
-  return made
-end
-
 --- Ladestelle am Wagen: je Platz ein Greifarm (Seite Gleis) und eine Kiste; auf Wunsch dahinter ein
 --- Abfluss (Greifarm in eine Kiste, die alles vernichtet). Dazu Strom und zwei Masten, über die die
 --- Kabel zur Station laufen (ein Kabel reicht nur 9 Felder).
---- `opts` = { slots, behind, supply = { Ware je Platz }, reversible = cfg | true, unload_base,
----   drain = Greifarm-Name, bar }
+--- `opts` = { slots, behind, supply = { Ware je Platz }, drain = Greifarm-Name, bar }
 local function bay(stop, station, opts)
   local spot, d = spot_at(stop, opts.behind or 10)
   local grab_chest, grab_wagon = direction_of(d.r), direction_of(back(d.r))
@@ -101,12 +79,7 @@ local function bay(stop, station, opts)
   for i, f in ipairs(opts.slots or { -0.5 }) do
     local at = add(spot, d.f, f)
     local inserter_at = add(at, d.r, 1.5)
-    if opts.reversible then
-      out.inserters[i] = reversible(inserter_at, opts.unload_base and grab_wagon or grab_chest,
-        opts.reversible ~= true and opts.reversible or nil)
-    else
-      out.inserters[i] = entity("bulk-inserter", inserter_at, { direction = opts.supply and grab_chest or grab_wagon })
-    end
+    out.inserters[i] = entity("bulk-inserter", inserter_at, { direction = opts.supply and grab_chest or grab_wagon })
     local chest = entity(opts.supply and "infinity-chest" or "steel-chest", add(at, d.r, 2.5))
     if opts.supply then
       local item = opts.supply[i]
@@ -121,6 +94,58 @@ local function bay(stop, station, opts)
       local void = entity("infinity-chest", add(at, d.r, 4.5))
       void.remove_unfiltered_items = true
     end
+  end
+  out.pole = entity("medium-electric-pole", add(add(spot, d.f, 0.5), d.r, 3.5))
+  out.relay = entity("medium-electric-pole", add(add(spot, d.f, 6.5), d.r, 3.5))
+  local eei = entity("electric-energy-interface", add(add(spot, d.f, 3.5), d.r, 6))
+  eei.power_production = 200000
+  eei.electric_buffer_size = 2000000
+  wire(out.chests[1], out.pole)
+  wire(out.pole, out.relay)
+  local input = station.name == "utl-station-combinator" and W.combinator_input_green or W.circuit_green
+  out.relay.get_wire_connector(W.circuit_green, true).connect_to(station.get_wire_connector(input, true))
+  return out
+end
+
+local LOADING = { type = "virtual", name = "utl-loading" }
+
+--- Ein Greifarm, den die Auftrags-Ausgabe schaltet (Bedingung auf utl-loading).
+local function switched(position, direction, comparator)
+  local inserter = entity("bulk-inserter", position, { direction = direction })
+  local behavior = inserter.get_or_create_control_behavior()
+  behavior.circuit_enable_disable = true
+  behavior.circuit_condition = { first_signal = LOADING, comparator = comparator, constant = 0 }
+  return inserter
+end
+
+--- Bahnhof, der annimmt und abgibt: je Gruppe „Entlade-Greifarm → Kiste → Umlade-Greifarm → Kiste →
+--- Lade-Greifarm“ am Wagen (`groups` = Versatz der ersten Spalte jeder Gruppe). Die Auftrags-Ausgabe
+--- schaltet: Lade-Greifarme bei utl-loading > 0, Entlade-Greifarme bei utl-loading = 0 – so wird
+--- auch Restladung ohne Auftrag entladen. Die Umlade-Greifarme laufen immer. `drain` = Abfluss
+--- hinter den Lade-Kisten (kleine Fabrik).
+local function two_way(stop, station, groups, drain)
+  local spot, d = spot_at(stop, 10)
+  local out = { chests = {}, unloaders = {}, loaders = {}, inserters = {} }
+  local function chest(f)
+    local made = entity("steel-chest", add(add(spot, d.f, f), d.r, 2.5))
+    if #out.chests > 0 then wire(out.chests[#out.chests], made) end
+    out.chests[#out.chests + 1] = made
+    return made
+  end
+  for _, f in ipairs(groups) do
+    out.unloaders[#out.unloaders + 1] = switched(add(add(spot, d.f, f), d.r, 1.5), direction_of(back(d.r)), "=")
+    chest(f)
+    entity("fast-inserter", add(add(spot, d.f, f + 1), d.r, 2.5), { direction = direction_of(back(d.f)) })
+    chest(f + 2)
+    out.loaders[#out.loaders + 1] = switched(add(add(spot, d.f, f + 2), d.r, 1.5), direction_of(d.r), ">")
+    if drain then
+      entity(drain, add(add(spot, d.f, f + 2), d.r, 3.5), { direction = direction_of(back(d.r)) })
+      local void = entity("infinity-chest", add(add(spot, d.f, f + 2), d.r, 4.5))
+      void.remove_unfiltered_items = true
+    end
+  end
+  for _, list in ipairs({ out.unloaders, out.loaders }) do
+    for _, inserter in ipairs(list) do out.inserters[#out.inserters + 1] = inserter end
   end
   out.pole = entity("medium-electric-pole", add(add(spot, d.f, 0.5), d.r, 3.5))
   out.relay = entity("medium-electric-pole", add(add(spot, d.f, 6.5), d.r, 3.5))
@@ -240,15 +265,14 @@ function World.build()
   bay(made.stops["33/83"], station("33/83"), { drain = "inserter" })
   requester(u["33/83"], IRON, 400)
 
-  -- Lager: drei Wende-Greifarme (Standard: umgedreht, solange ein Zug hier entlädt) und dahinter
-  -- eine kleine Fabrik, die stetig Eisen verbraucht – so fällt es unter Mindest
-  made.bays.storage = bay(made.stops["79/83"], station("79/83"), { slots = SLOTS3, reversible = true, drain = "inserter" })
+  -- Lager: zwei Gruppen Entlade-/Umlade-/Lade-Greifarme und dahinter eine kleine Fabrik, die stetig
+  -- Eisen verbraucht – so fällt es unter Mindest
+  made.bays.storage = two_way(made.stops["79/83"], station("79/83"), { -2.5, 0.5 }, "inserter")
   remote.call("utl", "configure_station", u["79/83"], { mode = "storage",
     storage = { limits = { { signal = IRON, min = World.MIN, max = World.MAX } }, accept_leftover = false } })
 
-  -- Cleanup: gebaut zum Entladen; die Bedingung „utl-loading > 0“ dreht ihn nur zum Abholen um
-  made.bays.cleanup = bay(made.stops["115/19"], station("115/19"), { unload_base = true,
-    reversible = { signal = { type = "virtual", name = "utl-loading" }, comparator = ">", constant = 0, red = true, green = true } })
+  -- Cleanup: nimmt Reste an und gibt sie wieder ab – dieselbe Bauweise, eine Gruppe
+  made.bays.cleanup = two_way(made.stops["115/19"], station("115/19"), { -1.5 })
   -- Anbieter-Schwelle klein: ein Rest ist oft nur ein paar Dutzend Platten
   remote.call("utl", "configure_station", u["115/19"], { mode = "cleanup", cleanup = { offer = "first" }, provide_threshold = 50 })
 

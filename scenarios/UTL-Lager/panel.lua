@@ -1,13 +1,13 @@
 --- Szenario „UTL-Lager“: Erklärfenster (scripts/lib/explain-panel.lua) mit drei Teilen – Lager,
---- Wende-Greifarm, Cleanup gibt zurück. Die Schritte sind eine Legende: hervorgehoben ist, was
---- gerade zu sehen ist; die Kamera folgt dem beteiligten Zug bzw. Greifarm.
+--- Laden und Entladen am selben Bahnhof, Cleanup gibt zurück. Die Schritte sind eine Legende:
+--- hervorgehoben ist, was gerade zu sehen ist; die Kamera folgt dem beteiligten Zug bzw. Greifarm.
 local Explain = require("__UTLogistics__/scripts/lib/explain-panel")
 
 local Panel = {}
 
 local NAME = "utl_lager_panel"
 local NEXT = "next"
-local CHAPTERS = { "storage", "reversible", "cleanup" }
+local CHAPTERS = { "storage", "switch", "cleanup" }
 
 local last -- letzter Stand aus control.lua (für den Knopf zwischen zwei Sekunden)
 
@@ -42,19 +42,20 @@ local VIEW = {
     return current, follow, { "utl-lager.storage-big", v.storage_stock },
       { "utl-lager.storage-note", v.counts.into, v.counts.out, v.counts.workshop }
   end,
-  reversible = function(v)
-    local by, current, follow = v.by, 1, v.revs.storage
+  switch = function(v)
+    local by, current, follow = v.by, 1, v.sets.storage
     if by.into and by.into.state == "unloading" then
       current = 2
     elseif by.out and by.out.state == "loading" then
       current = 3
     elseif by.returned and by.returned.state == "loading" then
-      current, follow = 5, v.revs.cleanup
+      current, follow = 5, v.sets.cleanup
     elseif v.rest_train then
-      current, follow = 4, v.revs.cleanup
+      current, follow = 4, v.sets.cleanup
     end
-    return current, follow, { v.flipped and "utl-lager.rev-flipped" or "utl-lager.rev-normal" },
-      { "utl-lager.rev-note", v.counts.flips }
+    local now = (current == 3 or current == 5) and "switch-loading"
+      or (current == 2 or current == 4) and "switch-unloading" or "switch-idle"
+    return current, follow, { "utl-lager." .. now }, { "utl-lager.switch-note", v.counts.into, v.counts.out }
   end,
   cleanup = function(v)
     local by, current, follow = v.by, 1, v.stops.cleanup
@@ -73,7 +74,7 @@ local VIEW = {
       { "utl-lager.cleanup-note", v.counts.rest, v.counts.returned }
   end,
 }
-local STEP_COUNT = { storage = 6, reversible = 5, cleanup = 5 }
+local STEP_COUNT = { storage = 6, switch = 5, cleanup = 5 }
 
 function Panel.refresh(player, v)
   local index = storage.lager and storage.lager.chapter or 1

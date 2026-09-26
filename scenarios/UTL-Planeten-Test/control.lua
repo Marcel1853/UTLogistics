@@ -6,6 +6,7 @@
 --- Aquilo (Züge frieren ohne Heizung ein) und Fulgora (Blitze) bleiben absichtlich außen vor.
 --- Gebaut wird im ersten Tick – Szenario-Scripte laufen vor den Mods.
 local Verbund = require("__UTLogistics__/scenarios/UTL-Netzverbund/netzverbund")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local AREA = { { -40, -40 }, { 808, 808 } } -- Baugebiet des Netzes (2 × 224 + Rand) mit Reserve
 local PLANETS = { "nauvis", "vulcanus", "gleba" }
@@ -94,6 +95,8 @@ local function setup()
   for _, player in pairs(game.players) do place(player) end
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   if not storage.start and not storage.no_space_age then script.on_nth_tick(1, setup) end

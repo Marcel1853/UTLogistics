@@ -3,6 +3,7 @@
 --- vor den Mods, deren Speicher wird beim Start der Mod geleert.
 local Verbund = require("__UTLogistics__/scenarios/UTL-Netzverbund/netzverbund")
 local Panel = require("__UTLogistics__/scenarios/UTL-Netzverbund/panel")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local function place(player)
   local surface = game.surfaces[Verbund.SURFACE]
@@ -23,6 +24,8 @@ local function setup()
   for _, player in pairs(game.players) do place(player) end
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   if not storage.start then script.on_nth_tick(1, setup) end

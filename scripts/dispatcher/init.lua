@@ -9,7 +9,7 @@ local Reach = require("scripts.dispatcher.reach")
 local topology_filter = {}
 for _, type in ipairs(Reach.TOPOLOGY_TYPES) do topology_filter[#topology_filter + 1] = { filter = "type", type = type } end
 -- Die Filter aller Handler eines Events werden zusammengeführt (core/events.lua) – hier also auch
--- Haltestellen, Combinatoren, Wende-Greifarme. Nur echte Gleis-/Signaländerungen zählen.
+-- Haltestellen und Combinatoren. Nur echte Gleis-/Signaländerungen zählen.
 local topology_types = {}
 for _, type in ipairs(Reach.TOPOLOGY_TYPES) do topology_types[type] = true end
 local function topology_changed(event)

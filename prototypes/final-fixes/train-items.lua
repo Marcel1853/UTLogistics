@@ -38,7 +38,6 @@ end
 -- Zug-Steuerung, die kein Zug-Typ ist (eigene + bekannte Mods).
 local TRAIN_CIRCUITS = {
   C.station_combinator,
-  C.reversible_inserter,
   "ltn-combinator",                                                     -- LTN Combinator Modernized
   "smart-train-combinator", "stc-multi", "stc2-buffer-probe", "stc-typed-probe", -- Smart Train Combinator
 }

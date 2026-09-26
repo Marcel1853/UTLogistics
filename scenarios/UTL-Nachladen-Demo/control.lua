@@ -10,6 +10,7 @@
 --- Schaltung die Kisten (siehe world.lua), danach beginnt die nächste Runde.
 local World = require("__UTLogistics__/scenarios/UTL-Nachladen-Demo/world")
 local Panel = require("__UTLogistics__/scenarios/UTL-Nachladen-Demo/panel")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local KEY = World.KEY
 local FIRST, GROWN = 1000, 3000
@@ -139,6 +140,8 @@ local function tick()
   Panel.refresh_all()
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   if not storage.demo then script.on_nth_tick(1, setup) end

@@ -3,14 +3,16 @@ Version: 0.0.8
 Date: 2026-09-26
   Features:
     - Storage (for advanced players, research "UTL: Storage"): a new station role that takes in and gives out. Per good a minimum and a maximum stock: below the minimum it requests up to the maximum, whatever is above the minimum it offers like a normal provider – with the same amount the nearer station delivers. Two storages never shove goods back and forth. "Accept leftover cargo" (on by default) lets trains drop leftovers there, too. Map setting "Allow storage stations" (on).
-    - Reversible inserter (research "UTL: Storage"): a turquoise bulk inserter that turns around while its circuit condition is met. Signal, comparison, number and red/green wire are set in its own window next to the inserter window; default "train unloads here > 0". Things it still holds that are no longer ordered are put back where they came from. Blueprints and copy/paste keep its settings.
-    - Job output: new signals "train loads here" and "train unloads here" while a delivery train stands at the stop.
+    - Job output: new signals "train loads here" and "train unloads here" while a delivery train stands at the stop – for example to switch loading and unloading inserters at a storage.
     - Cleanup gives back: a cleanup station can offer its contents to the network again ("Offer contents again", off by default per station), only as a fallback, like any provider, or empty first. Leftovers are not brought back to the requester they came from for 5 minutes. Map setting "Cleanup may offer its contents again" (on).
-    - New scenario "UTL storage (to watch)": storage, reversible inserters and a cleanup that gives back on a ring with two trains; a window explains each part and a camera follows the train involved.
-    - Tips & tricks: new entries "Reversible inserter", "Cleanup gives back" and "Storage (advanced)", each with a scene.
+    - New scenario "UTL storage (to watch)": storage with loading and unloading inserters switched by the job output, and a cleanup that gives back on a ring with two trains; a window explains each part and a camera follows the train involved.
+    - Tips & tricks: new entries "Cleanup gives back" and "Storage (advanced)", each with a scene.
     - Scenarios "UTL examples" and "UTL network links" got the explanation window: it follows a train and explains what it is doing.
   Changes:
     - Fuel station: the train waits until all locomotives are full or nothing has changed for 30 s (before: at most 30 s in total).
+    - Scenarios: after a mod update, new research is researched right away in running scenario saves, and every player is in cheat mode.
+  Bugfixes:
+    - Scenario "UTL examples": the fuel station now refuels the rear locomotive, too (both locomotives face forward and use fuel).
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.7
 Date: 2026-09-26

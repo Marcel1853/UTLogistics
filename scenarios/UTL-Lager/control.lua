@@ -1,11 +1,12 @@
---- Szenario „UTL-Lager“: zeigt die drei Neuerungen aus 0.0.8 auf einem Rundkurs mit zwei Zügen –
---- Lager (Mindest/Höchst), Wende-Greifarm und „Cleanup gibt zurück“. Alles läuft gleichzeitig; das
---- Erklärfenster schaut jeweils auf einen Teil, ein Knopf wechselt zum nächsten.
+--- Szenario „UTL-Lager“: zeigt die Neuerungen aus 0.0.8 auf einem Rundkurs mit zwei Zügen – Lager
+--- (Mindest/Höchst), Laden und Entladen am selben Bahnhof und „Cleanup gibt zurück“. Alles läuft
+--- gleichzeitig; das Erklärfenster schaut jeweils auf einen Teil, ein Knopf wechselt zum nächsten.
 --- Gesteuert wird nur die Kupfer-Werkstatt A: Damit am Cleanup Reste ankommen, füllt das Szenario
 --- ihre Kiste auf, während ein Zug zu ihr unterwegs ist (das Fenster sagt das auch), und leert sie
 --- 20 s nach der Abfahrt wieder – die Werkstatt „verbraucht“ ihr Kupfer.
 local World = require("__UTLogistics__/scenarios/UTL-Lager/world")
 local Panel = require("__UTLogistics__/scenarios/UTL-Lager/panel")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local K = {
   provider = "65/3", workshop = "115/3", cleanup = "115/19", storage = "79/83",
@@ -32,10 +33,8 @@ local function setup()
   local made = World.build()
   storage.lager = {
     made = made, chapter = 1, wired = false, provoked = {}, seen = {}, at_cleanup = {},
-    counts = { into = 0, out = 0, workshop = 0, rest = 0, returned = 0, flips = 0 },
-    base_dir = made.bays.storage.inserters[1].direction,
+    counts = { into = 0, out = 0, workshop = 0, rest = 0, returned = 0 },
   }
-  storage.lager.last_dir = storage.lager.base_dir
   force.chart(made.surface, made.area)
   log("[LAGER] gebaut")
   for _, player in pairs(game.players) do place(player) end
@@ -122,24 +121,20 @@ local function tick()
     end
   end
 
-  local rev = made.bays.storage.inserters[1]
-  local flipped = rev.valid and rev.direction ~= st.base_dir
-  if rev.valid and rev.direction ~= st.last_dir then
-    st.last_dir = rev.direction
-    st.counts.flips = st.counts.flips + 1
-  end
-
   Panel.refresh_all({
     out_to_workshop = by.out ~= nil and by.out.requester == u[K.workshop],
-    by = by, rest_train = rest_train and rest_train.front_stock, flipped = flipped, counts = st.counts,
+    by = by, rest_train = rest_train and rest_train.front_stock, counts = st.counts,
     front = front, filled = st.filled,
     storage_stock = World.stock(made.bays.storage, "iron-plate"),
     cleanup_stock = World.stock(made.bays.cleanup, "copper-plate"),
     stops = { storage = made.stops[K.storage], cleanup = made.stops[K.cleanup] },
-    revs = { storage = rev, cleanup = made.bays.cleanup.inserters[1] },
+    -- Kameraziel im Teil „Laden und Entladen“: ein Lade-Greifarm am Lager bzw. am Cleanup
+    sets = { storage = made.bays.storage.loaders[1], cleanup = made.bays.cleanup.loaders[1] },
   })
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   if not storage.lager then script.on_nth_tick(1, setup) end

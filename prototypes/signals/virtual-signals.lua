@@ -44,7 +44,7 @@ local SIGNALS = {
   { "utl-train-wagons", own("train-wagons") },
   { "utl-cleanup-all-items", icon("cargo-wagon.png", "signal_everything.png") },
   { "utl-cleanup-all-fluids", icon("fluid-wagon.png", "signal_everything.png") },
-  -- Auftrags-Ausgabe: 1, solange ein Zug hier lädt bzw. entlädt (z. B. für Wende-Greifarme)
+  -- Auftrags-Ausgabe: 1, solange ein Zug hier lädt bzw. entlädt (z. B. um Lade- und Entlade-Greifarme zu schalten)
   { "utl-loading", arrow("cargo-wagon.png", "signal-input.png") },
   { "utl-unloading", arrow("cargo-wagon.png", "signal-output.png") },
 }

@@ -4,6 +4,7 @@
 local Build = require("__UTLogistics__/scenarios/UTL-Beispiele/build")
 local place_signs = require("__UTLogistics__/scenarios/UTL-Beispiele/signs")
 local Panel = require("__UTLogistics__/scenarios/UTL-Beispiele/panel")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local function place(player)
   local surface = game.surfaces["utl-beispiele"]
@@ -39,6 +40,8 @@ local function setup()
   for _, player in pairs(game.players) do place(player) end
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   -- Nach dem Laden sind die Takt-Anmeldungen weg: das Offene wieder anmelden.

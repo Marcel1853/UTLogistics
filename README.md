@@ -9,14 +9,13 @@ cleanup and an overview window in one mod**, built for high UPS.
 - Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
   circuit network). Upgrades: **“UTL: Loading control”** (wagon filters and job output) and
   **“UTL: Network links I–III”** (link a network with 1, 2 or 3 partner networks) and **“UTL: Storage”**
-  (storage stations and reversible inserters). The map
+  (storage stations). The map
   setting “UTL features need research” turns this off – then everything is available right away.
 
-> **Testing status.** UTL runs through an automated self test (126 checks) and a headless load
+> **Testing status.** UTL runs through an automated self test (122 checks) and a headless load
 > test with 384 trains on 12 × 12 city blocks; updates are checked by loading a save from the
 > previous version. The main features are shown in the scenarios. In real games it has so far been
-> played on small networks. Newest: **storage**, **reversible inserter** and **cleanup gives back**
-> (0.0.8), **topping up** (0.0.7, off by default) and **team separation** (0.0.6, not yet tried in a
+> played on small networks. Newest: **storage** and **cleanup gives back** (0.0.8), **topping up** (0.0.7, off by default) and **team separation** (0.0.6, not yet tried in a
 > real multiplayer game). If something goes wrong, please report it in
 > the [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save
 > and what you did. Keep a backup before adding UTL to a long-running base.
@@ -232,21 +231,15 @@ minimum and maximum are the thresholds. With **“Accept leftover cargo”** (on
 also drop leftovers here, like at a cleanup; goods without limits are offered completely, but only
 as a fallback. The map setting **“Allow storage stations”** switches storages off on the whole map.
 
-## Reversible inserter
+### Taking in and giving out at the same station
 
-*Needs research: “UTL: Storage”.*
-
-A bulk inserter that **turns around by circuit**: it works the way it was built, and while its
-condition is met it swaps pickup and drop side. Its window (next to the normal inserter window) sets
-the **signal**, **comparison**, **number** and whether the **red** and/or **green** wire is read.
-Default: **[utl-unloading] > 0** – wired to the job output of a UTL station, it loads trains that
-pick up and turns around to unload trains that deliver. One set of inserters is enough for a
-station that takes in and gives out, such as a storage. The job output also carries
-**“train loads here”** and **“train unloads here”** while a delivery train stands at the stop.
-
-If the inserter still holds something that is no longer ordered (for example after a filter
-change), it puts it back where it came from. It turns at most once a second. Blueprints, copy and
-paste keep its settings.
+A storage (or a cleanup that gives back) needs inserters in both directions. The usual vanilla way,
+all on one side of the track: **unloading inserter** (wagon → chest) → **transfer inserter** (chest →
+chest) → **loading inserter** (chest → wagon). Wire the job output to the unloading and loading
+inserters and set their enable conditions: loading inserters **[utl-loading] > 0**, unloading
+inserters **[utl-loading] = 0**. The job output carries **“train loads here”** and **“train unloads
+here”** while a delivery train stands at the stop; leftover cargo has no job, so with “= 0” it is
+unloaded as well. Scenario “UTL storage” shows it.
 
 ## Depots and train length
 
@@ -370,7 +363,7 @@ window explains every step, a camera follows the train, the load list floats abo
 the demand above the requester; a counter shows how many trips were needed with and without.
 
 **New game → Scenarios → UTL storage (to watch)**: the new things from 0.0.8 on the ring with two
-trains. A **storage** (minimum 400, maximum 1200 iron) with **reversible inserters** supplies the
+trains. A **storage** (minimum 400, maximum 1200 iron) with **loading and unloading inserters** supplies the
 nearby factory and refills from the provider when a small factory behind it has used it up below
 the minimum; the workshop next to the provider still gets its iron from the provider, because that
 is nearer (unless the provider is busy – then the storage helps out). A **cleanup** with “empty first” takes a leftover of copper and gives it back to another
@@ -399,7 +392,7 @@ infinity chests, infinity pipes and power sources are part of the base game.
 
 ## Tips & tricks
 
-The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: eighteen entries
+The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: seventeen entries
 explaining how to use the mod, each with a running example scene (some with an open UTL window,
 the manager and shift-click copying), among them: a UTL stop with provider, requester and depot; the same
 line with normal stops and UTL station combinators (wires visible); a train that refuels
@@ -407,7 +400,7 @@ first and then delivers; a train with leftover cargo that is emptied at a cleanu
 **two separate networks** side by side with a camera tour; linking two networks in the station
 window (pick from the list, create one with “New”); the manager tab by tab, its Networks tab with a
 link being made, and the Inventory tab where a click on a good lists stations and trains;
-reversible inserters at the job output turning round for a train that unloads; a cleanup that
+a cleanup that
 gives its contents back; a storage on a ring with two trains that supplies the nearby requester
 and refills below its minimum.
 Plus explanations of roles, requests, values and network, linking networks (star, research
