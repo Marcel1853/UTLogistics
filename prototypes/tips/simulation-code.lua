@@ -6,7 +6,7 @@ local Links = require("__UTLogistics__/prototypes/tips/scenes/links")
 local Manager = require("__UTLogistics__/prototypes/tips/scenes/manager")
 local scene, window = P.scene, P.window
 local SIMPLE, FUEL, CLEANUP, ROLES = P.SIMPLE, P.FUEL, P.CLEANUP, P.ROLES
-local CLEANUP_RETURN, REVERSIBLE = P.CLEANUP_RETURN, P.REVERSIBLE
+local CLEANUP_RETURN, REVERSIBLE, STORAGE = P.CLEANUP_RETURN, P.REVERSIBLE, P.STORAGE
 local REQUESTS, DEPOTS, COPY, ROLE_SIGNS = P.REQUESTS, P.DEPOTS, P.COPY, P.ROLE_SIGNS
 
 -- Anzeigefelder mit Erklärtext je Szene: { x, y, Sprachschlüssel (utl-sign.*), Symbol }
@@ -46,6 +46,9 @@ return {
   -- Zug mit Restladung wird zuerst an der Cleanup-Station geleert
   cleanup = scene({ SIMPLE, CLEANUP, signs({ { 13, 6, "cleanup", CLEANUP_ITEM } }), "train(-8, 150).cargo_wagons[1].insert({ name = 'copper-plate', count = 100 })",
     window('remote.call("utl", "open_station", player.index, c_unit, 2, true)') }),
+  -- Lager füllt sich aus dem Anbieter bis zum Höchstbestand, das Fenster zeigt die Grenzen
+  storage = scene({ SIMPLE, STORAGE, signs({ { -10, -6, "storage", '{ type = "item", name = "iron-plate" }' } }), "train(-8, 150)",
+    window('remote.call("utl", "open_station", player.index, l_unit, 1, true)') }),
   -- Wende-Greifarme am Abnehmer drehen sich um, sobald ein Zug zum Entladen kommt
   reversible = scene({ SIMPLE, REVERSIBLE, signs({ { -16.5, -5, "reversible", '{ type = "item", name = "utl-reversible-inserter" }' } }),
     "train(-8, 150)", "show()" }),

@@ -77,6 +77,7 @@ local interface = {
       config = copy(station.config),
       provide = copy(station.provide),
       request = copy(station.request),
+      provide_rank = copy(station.provide_rank or {}), -- Lager: [key] = 0 Reserve / 1 normal
       version = station.version,
     }
   end,

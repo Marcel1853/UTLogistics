@@ -48,8 +48,9 @@ end
 --- eine Weile zurück – sonst pendelt dieselbe Ware Abnehmer → Cleanup → Abnehmer.
 local RETURN_BLOCK = 5 * 60 * 60
 local function blocked(provider, requester_unit, key)
-  if provider.config.mode ~= "cleanup" then return false end
-  if not storage.cfg.cleanup_offer then return true end -- Kartenschalter: Cleanups bieten nichts an
+  local mode = provider.config.mode
+  if mode ~= "cleanup" and mode ~= "storage" then return false end -- Lager nimmt ebenfalls Restladung an
+  if mode == "cleanup" and not storage.cfg.cleanup_offer then return true end -- Kartenschalter
   local by_key = storage.dispatch.return_block[requester_unit]
   local since = by_key and by_key[key]
   if not since then return false end
@@ -79,15 +80,21 @@ local function collect_requests()
       for key, amount in pairs(station.request) do -- Items und Flüssigkeiten
         local need = amount - Deliveries.incoming(unit, key)
         local minimum = Reader.threshold(cfg.request_threshold, cfg.request_stack_threshold, key)
+        -- Lager: Mindest/Höchst sind seine Schwellen – eine Fahrt bis Höchst lohnt immer
+        if cfg.roles.storage and need > 0 and need < minimum then minimum = need end
         if need >= minimum then
           list[#list + 1] = { station = station, key = key, need = need, minimum = minimum,
-            priority = cfg.request_priority }
+            priority = cfg.request_priority, storage = cfg.roles.storage }
         end
       end
     end
   end
   dispatch.cursor = unit
-  table.sort(list, function(a, b) return a.priority > b.priority end)
+  -- höhere Priorität zuerst; bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer)
+  table.sort(list, function(a, b)
+    if a.priority ~= b.priority then return a.priority > b.priority end
+    return (not a.storage) and (b.storage == true)
+  end)
   return list
 end
 
@@ -117,7 +124,8 @@ local function find_providers(request)
         found[#found + 1] = {
           station = provider,
           amount = math.min(available, request.need),
-          rank = Fields.provider_rank(provider.config), -- Cleanup „Reserve“/„zuerst leeren“
+          -- Rang: Cleanup „Reserve“/„zuerst leeren“, Lager je Ware (über Höchst normal, sonst Reserve)
+          rank = provider.provide_rank and provider.provide_rank[request.key] or Fields.provider_rank(provider.config),
           priority = provider.config.provide_priority,
           distance = dist2(provider.stop.position, position),
         }

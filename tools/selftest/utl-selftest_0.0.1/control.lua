@@ -10,6 +10,7 @@ local st = {}
 ---@field config table
 ---@field provide table<string, integer>
 ---@field request table<string, integer>
+---@field provide_rank table<string, integer>
 
 --- UTL-Station abfragen (Remote-API); typisiert, damit der Linter die Felder kennt.
 ---@param unit integer?
@@ -1299,10 +1300,149 @@ function train_test_step()
         if inv then inv.clear() end
       end
       if r.seen_load and r.seen_unload then
-        st.done = true
+        -- Runde 24: erst die Hand-Rückgabe des Wende-Greifarms, dann das Lager
+        local s24, f24 = game.surfaces["nauvis"], game.forces["player"]
+        local R24 = defines.wire_connector_id.circuit_red
+        st.h_a = s24.create_entity{ name = "iron-chest", position = { 210.5, 0.5 }, force = f24 }
+        st.h_i = s24.create_entity{ name = "utl-reversible-inserter", position = { 210.5, 1.5 }, direction = 0,
+          force = f24, raise_built = true }
+        st.h_b = s24.create_entity{ name = "iron-chest", position = { 210.5, 2.5 }, force = f24 }
+        local eei = s24.create_entity{ name = "electric-energy-interface", position = { 213, 1 }, force = f24 }
+        eei.power_production, eei.electric_buffer_size = 1000000, 10000000
+        s24.create_entity{ name = "medium-electric-pole", position = { 211.5, 1.5 }, force = f24 }
+        st.h_cc = s24.create_entity{ name = "constant-combinator", position = { 209.5, 1.5 }, force = f24 }
+        st.h_cc.get_wire_connector(R24, true).connect_to(st.h_i.get_wire_connector(R24, true))
+        st.h_i.get_or_create_control_behavior().circuit_set_filters = true
+        f24.bulk_inserter_capacity_bonus = 11 -- große Hand: er greift mehr, als die Zielkiste nimmt
+        st.h_cc.get_control_behavior().get_section(1).set_slot(1,
+          { value = { type = "item", name = "copper-plate", quality = "normal" }, min = 1 })
+        st.h_a.insert{ name = "iron-plate", count = 200 }
+        st.h_a.insert{ name = "copper-plate", count = 200 }
+        -- Zielkiste mit Platz für nur 5 Kupfer: der Greifarm bleibt mit dem Rest in der Hand stehen
+        local hb = st.h_b.get_inventory(defines.inventory.chest)
+        hb.set_bar(2)
+        hb.insert{ name = "copper-plate", count = 95 }
+        st.r24 = { phase = "hand", deadline = tick + 240 }
+        st.round = 24
       elseif tick >= r.deadline then
         check("R23 auftrags-ausgabe: lade- und entladesignal gesehen", false,
           "laden " .. tostring(r.seen_load) .. ", entladen " .. tostring(r.seen_unload) .. ", " .. serpent.line(d))
+        st.done = true
+      end
+    end
+  elseif st.round == 24 then
+    local r = st.r24
+    local KEY = "item|iron-plate|normal"
+    local function limits(stop, stock_iron, stock_copper)
+      -- Bestand über einen Konstant-Kombinator (grün an die Haltestelle)
+      local section = stop.cc.get_control_behavior().get_section(1)
+      section.set_slot(1, { value = { type = "item", name = "iron-plate", quality = "normal" }, min = stock_iron })
+      if stock_copper and stock_copper > 0 then
+        section.set_slot(2, { value = { type = "item", name = "copper-plate", quality = "normal" }, min = stock_copper })
+      else
+        section.clear_slot(2)
+      end
+    end
+    local list = remote.call("utl", "get_deliveries") --[[@as table]]
+    local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
+    if r.phase == "hand" and tick >= r.deadline then
+      local held = st.h_i.held_stack
+      r.held = held.valid_for_read and held.count or 0
+      r.copper_before = st.h_a.get_item_count("copper-plate")
+      -- Auftrag wechselt auf Eisen: das Kupfer in der Hand passt nicht mehr
+      st.h_cc.get_control_behavior().get_section(1).set_slot(1,
+        { value = { type = "item", name = "iron-plate", quality = "normal" }, min = 1 })
+      r.phase, r.deadline = "hand-check", tick + 180
+    elseif r.phase == "hand-check" and tick >= r.deadline then
+      local held = st.h_i.held_stack
+      local now = st.h_a.get_item_count("copper-plate")
+      check("R24 wende-greifarm legt unbestelltes aus der hand zurück",
+        r.held > 0 and not (held.valid_for_read and held.name == "copper-plate") and now == r.copper_before + r.held,
+        "vorher " .. r.held .. " in der hand, kiste " .. r.copper_before .. " -> " .. now)
+      -- Lager S1 (südwärts, y 70) und S2 (y 76). Die Regeln erst im Netz „Z“ prüfen, in dem kein Zug
+      -- fährt – sonst startet UTL schon hier (richtig) Lieferungen. Bestand per Konstant-Kombinator.
+      local s24, f24 = game.surfaces["nauvis"], game.forces["player"]
+      local function storage_stop(name, y)
+        local e = s24.create_entity{ name = "utl-train-stop", position = { 119, y }, direction = defines.direction.south,
+          force = f24, raise_built = true }
+        e.backer_name = name
+        local cc = s24.create_entity{ name = "constant-combinator", position = { 116, y }, force = f24 }
+        cc.get_wire_connector(W.circuit_green, true).connect_to(e.get_wire_connector(W.circuit_green, true))
+        remote.call("utl", "configure_station", e.unit_number, { mode = "storage", network = "Z",
+          storage = { limits = { { signal = { type = "item", name = "iron-plate" }, min = 1000, max = 3000 } } } })
+        return { stop = e, cc = cc, unit = e.unit_number }
+      end
+      st.s1 = storage_stop("UTL-S1", 70)
+      st.s2 = storage_stop("UTL-S2", 76)
+      limits(st.s1, 500)
+      limits(st.s2, 2000)
+      r.phase, r.deadline = "below", tick + 180
+    elseif r.phase == "below" and tick >= r.deadline then
+      local s1 = station_info(st.s1.unit)
+      check("R24 lager unter mindest fordert bis höchst an", s1 ~= nil and s1.request[KEY] == 2500 and s1.provide[KEY] == nil,
+        serpent.line(s1 and { s1.request, s1.provide }))
+      limits(st.s1, 2000, 1500)
+      r.phase, r.deadline = "between", tick + 180
+    elseif r.phase == "between" and tick >= r.deadline then
+      local s1 = station_info(st.s1.unit)
+      check("R24 lager in der ruhezone fordert nichts an", s1 ~= nil and s1.request[KEY] == nil, serpent.line(s1 and s1.request))
+      check("R24 lager bietet über mindest an, als reserve",
+        s1 ~= nil and s1.provide[KEY] == 1000 and s1.provide_rank[KEY] == 0, serpent.line(s1 and { s1.provide, s1.provide_rank }))
+      check("R24 lager bietet ware ohne grenzen ganz an (restladung)",
+        s1 ~= nil and s1.provide["item|copper-plate|normal"] == 1500, serpent.line(s1 and s1.provide))
+      limits(st.s1, 4000)
+      r.phase, r.deadline = "above", tick + 180
+    elseif r.phase == "above" and tick >= r.deadline then
+      local s1 = station_info(st.s1.unit)
+      check("R24 lager über höchst bietet wie ein normaler anbieter an",
+        s1 ~= nil and s1.provide[KEY] == 3000 and s1.provide_rank[KEY] == 1, serpent.line(s1 and { s1.provide, s1.provide_rank }))
+      -- Zwei Lager in der Ruhezone, jetzt im Zugnetz R: nichts darf passieren
+      limits(st.s1, 2000)
+      limits(st.s2, 2000)
+      remote.call("utl", "configure_station", st.s1.unit, { network = "R" })
+      remote.call("utl", "configure_station", st.s2.unit, { network = "R" })
+      r.phase, r.deadline = "calm", tick + 1200
+    elseif r.phase == "calm" then
+      for _, d in pairs(list) do
+        if d.requester == st.s1.unit or d.requester == st.s2.unit then
+          r.calm_broken = (d.from or "?") .. " -> " .. (d.to or "?")
+        end
+      end
+      if tick >= r.deadline then
+        check("R24 zwei lager in der ruhezone schieben nichts hin und her", r.calm_broken == nil, tostring(r.calm_broken))
+        -- Lager S2 unter Mindest, Eisen hat sonst nur S1 (dem Anbieter PA das Eisen nehmen)
+        local umkreis = { { st.pa.position.x, st.pa.position.y - 3 }, { st.pa.position.x + 5, st.pa.position.y + 3 } }
+        local pa_cc = game.surfaces["nauvis"].find_entities_filtered({ name = "constant-combinator", area = umkreis })[1]
+        if pa_cc then pa_cc.get_control_behavior().get_section(1).clear_slot(1) end
+        limits(st.s2, 500)
+        r.phase, r.deadline = "move", tick + 3600
+      end
+    elseif r.phase == "move" then
+      local d = nil
+      for _, entry in pairs(list) do if entry.requester == st.s2.unit then d = entry end end
+      if d and not r.checked then
+        r.checked = true
+        check("R24 zu viel wandert zu zu wenig: lager S1 beliefert lager S2",
+          d.from == "UTL-S1" and d.manifest[KEY] == 1000, tostring(d.from) .. " " .. serpent.line(d.manifest))
+        r.id = d.id
+      end
+      -- Fahrt zu Ende bringen (Sackgleis: S1 und S2 liegen in Fahrtrichtung hinter dem Depot)
+      for _, entry in pairs(list) do
+        if entry.id == r.id and inv then
+          if entry.state == "loading" and not r.loaded then
+            r.loaded = true
+            inv.insert{ name = "iron-plate", count = entry.manifest[KEY] or 0 }
+          elseif entry.state == "unloading" then
+            inv.clear()
+            limits(st.s2, 2000) -- „angekommen“: S2 ist wieder in der Ruhezone
+          end
+        end
+      end
+      if r.checked and #list == 0 then
+        st.done = true
+      elseif tick >= r.deadline then
+        check("R24 zu viel wandert zu zu wenig: lager S1 beliefert lager S2", false,
+          "checked=" .. tostring(r.checked) .. " " .. serpent.line(list))
         st.done = true
       end
     end

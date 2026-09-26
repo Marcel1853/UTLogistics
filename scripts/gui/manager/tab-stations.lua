@@ -13,7 +13,7 @@ local COLUMNS = {
   { caption = { "utl-manager.col-trains" }, width = 60 },
 }
 
-local ROLE_ORDER = { "provider", "requester", "depot", "fuel", "cleanup" }
+local ROLE_ORDER = { "storage", "provider", "requester", "depot", "fuel", "cleanup" }
 
 -- Manager des laufenden Auffrischens (fill bekommt nur Zeile und Station)
 local current = nil
@@ -23,7 +23,8 @@ local function role_caption(station)
   local cfg = station.config
   local caption = { "" }
   for _, role in ipairs(ROLE_ORDER) do
-    if cfg.roles[role] then
+    -- ein Lager hat intern auch Anbieter/Abnehmer/Cleanup – angezeigt wird nur „Lager“
+    if cfg.roles[role] and not (cfg.roles.storage and role ~= "storage") then
       if #caption > 1 then caption[#caption + 1] = " + " end
       caption[#caption + 1] = { "utl-gui.role-" .. role }
     end

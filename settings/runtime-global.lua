@@ -138,6 +138,14 @@ data:extend({
     default_value = true,
     order = "e-e",
   },
+  -- Lager-Stationen (Mindest-/Höchstbestand) für die ganze Karte abschaltbar
+  {
+    type = "bool-setting",
+    name = "utl-storage",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "e-f",
+  },
   -- Team-Leiter, die so viele Tage (Spielzeit) nicht online waren, verlieren die Rechte (0 = nie)
   {
     type = "int-setting",

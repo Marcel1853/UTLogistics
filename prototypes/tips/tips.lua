@@ -34,6 +34,7 @@ data:extend({
   item("utl-fuel", "h", "fuel", { tag = "[item=coal]" }),
   item("utl-cleanup", "i", "cleanup"),
   item("utl-cleanup-return", "i2", "cleanup_return", { indent = 2 }),
+  item("utl-storage", "i3", "storage", { tag = "[item=steel-chest]" }),
   item("utl-copy", "j", "copy", { tag = "[item=blueprint]" }),
   item("utl-manager", "k", "manager", { tag = "[img=utility/search]" }),
   item("utl-manager-networks", "k2", "manager_networks", { indent = 2 }),

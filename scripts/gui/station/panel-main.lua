@@ -2,13 +2,14 @@
 local Builder = require("scripts.gui.common.builder")
 local Roles = require("scripts.stations.roles")
 local Nets = require("scripts.gui.station.section-networks")
+local Unlocks = require("scripts.core.unlocks")
 
 local Main = {}
 
 -- Häkchen in zwei Spalten: links Station (Anbieter/Abnehmer), rechts Sonderrollen.
 local ROLE_COLUMNS = {
   { "provider", "requester" },
-  { "depot", "fuel", "cleanup" },
+  { "depot", "fuel", "cleanup", "storage" },
 }
 
 local function role_checked(cfg, role)
@@ -43,11 +44,17 @@ function Main.build(parent, station, with_preview)
     flow.style.width = 190
     flow.style.vertical_spacing = 4
     for _, role in ipairs(column) do
+      -- Lager nur mit Forschung „UTL: Lager“ und eingeschaltetem Kartenschalter
+      local allowed = true
+      if role == "storage" then
+        allowed = storage.cfg.storage_enabled ~= false and Unlocks.storage(Unlocks.force_of(station))
+      end
       flow.add({
         type = "checkbox",
         state = role_checked(cfg, role),
         caption = { "utl-gui.role-" .. role },
-        tooltip = { "utl-gui.role-" .. role .. "-tooltip" },
+        tooltip = { allowed and ("utl-gui.role-" .. role .. "-tooltip") or "utl-gui.role-storage-locked" },
+        enabled = allowed or role_checked(cfg, role),
         tags = { utl_action = "role", role = role },
       })
     end

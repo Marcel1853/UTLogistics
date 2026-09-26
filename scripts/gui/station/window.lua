@@ -11,6 +11,7 @@ local Values = require("scripts.gui.station.panel-values")
 local RequestsSection = require("scripts.gui.station.section-requests")
 local Goods = require("scripts.gui.station.section-goods")
 local CleanupSection = require("scripts.gui.station.section-cleanup")
+local StorageSection = require("scripts.gui.station.section-storage")
 local Registry = require("scripts.stations.registry")
 local Fields = require("scripts.stations.fields")
 
@@ -19,7 +20,7 @@ local Window = {}
 local NAME = "utl_station_window"
 -- Bei jedem Umbau des Fensters erhöhen: offene Fenster aus alten Spielständen werden dann
 -- geschlossen statt mit falschem Aufbau aufgefrischt.
-local GUI_VERSION = 12 -- 11: Netzwerk-Abschnitt aufgeräumt (volle Breite, Knopf „Neu“)
+local GUI_VERSION = 13 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager
 -- Breiten passend zum Inhalt (Kasten-Innenrand 2 × 12 px):
 local LEFT_WIDTH = 10 * 40 + 24 -- 10 Slots
 local RIGHT_WIDTH = 380         -- Reset 20 + Symbol 32 + Beschriftung 190 + Feld 80 + Ränder
@@ -107,7 +108,9 @@ function Window.open(player, station, standalone)
   local left = box(left_parent, LEFT_WIDTH)
   local main = Main.build(left, station, not is_stop)
   left.add({ type = "line" })
-  local requests = RequestsSection.build(left, station)
+  -- Lager: Mindest/Höchst je Ware statt Anforderungs-Slots
+  local requests = nil
+  if not StorageSection.build(left, station) then requests = RequestsSection.build(left, station) end
   local goods = Goods.build(left, station)
 
   local right = box(right_parent, is_stop and LEFT_WIDTH or RIGHT_WIDTH)

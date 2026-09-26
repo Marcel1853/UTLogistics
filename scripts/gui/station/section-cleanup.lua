@@ -58,7 +58,8 @@ function Cleanup.build(parent, station)
   slots(inner, cleanup.items, Fields.cleanup_item_slots, "item", "cleanup_item")
   slots(inner, cleanup.fluids, Fields.cleanup_fluid_slots, "fluid", "cleanup_fluid")
 
-  -- Inhalt wieder anbieten (Kartenschalter kann es für alle abschalten)
+  -- Inhalt wieder anbieten (Kartenschalter kann es für alle abschalten). Ein Lager bietet ohnehin an.
+  if cfg.mode ~= "cleanup" then return end
   local allowed = storage.cfg.cleanup_offer
   local offer = inner.add({ type = "flow", direction = "horizontal" })
   offer.style.vertical_align = "center"
