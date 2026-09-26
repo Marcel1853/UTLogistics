@@ -47,7 +47,7 @@ return {
   cleanup = scene({ SIMPLE, CLEANUP, signs({ { 13, 6, "cleanup", CLEANUP_ITEM } }), "train(-8, 150).cargo_wagons[1].insert({ name = 'copper-plate', count = 100 })",
     window('remote.call("utl", "open_station", player.index, c_unit, 2, true)') }),
   -- Wende-Greifarme am Abnehmer drehen sich um, sobald ein Zug zum Entladen kommt
-  reversible = scene({ SIMPLE, REVERSIBLE, signs({ { -25, -5, "reversible", '{ type = "item", name = "utl-reversible-inserter" }' } }),
+  reversible = scene({ SIMPLE, REVERSIBLE, signs({ { -16.5, -5, "reversible", '{ type = "item", name = "utl-reversible-inserter" }' } }),
     "train(-8, 150)", "show()" }),
   -- Cleanup bietet seinen Inhalt wieder an: der Zug holt das Kupfer dort ab
   cleanup_return = scene({ SIMPLE, CLEANUP_RETURN, signs({ { 13, 6, "cleanup-return", CLEANUP_ITEM } }), "train(-8, 150)",
