@@ -129,11 +129,44 @@ function Reversible.wanted(entry)
   return compare(Reversible.value(entry), entry.cfg.constant or 0)
 end
 
+--- Passt das Gehaltene zu seinen Filtern? Nur relevant, wenn er Filter benutzt (z. B. „Filter
+--- setzen“ aus der Auftrags-Ausgabe). Ohne gesetzten Filter gilt: kein Auftrag – nichts halten.
+local function held_allowed(entity, held)
+  if not entity.use_filters then return true end
+  -- held_stack.quality ist ein Qualitäts-Prototyp, der Filter nennt nur den Namen
+  local quality = held.quality and held.quality.name or "normal"
+  for i = 1, entity.filter_slot_count do
+    local filter = entity.get_filter(i)
+    if filter and filter.name == held.name and (filter.quality == nil or filter.quality == quality) then
+      return true
+    end
+  end
+  return false -- kein Filter passt (oder gar keiner gesetzt: kein Auftrag)
+end
+
+--- Hand leeren: Hält er etwas, das nicht (mehr) bestellt ist, legt er es dorthin zurück, woher er es
+--- hat. Factorio macht das von selbst nicht – ein Greifarm mit falscher Ware in der Hand blockiert
+--- sonst, weil die Wagenfilter sie nicht annehmen (im Spiel geprüft, 2.1).
+function Reversible.return_hand(entity)
+  local held = entity.held_stack
+  if not (held and held.valid_for_read) or held_allowed(entity, held) then return false end
+  local source = entity.pickup_target
+  if not (source and source.valid) then return false end
+  local moved = source.insert(held)
+  if moved >= held.count then
+    held.clear()
+  elseif moved > 0 then
+    held.count = held.count - moved
+  end
+  return moved > 0
+end
+
 --- Richtung an den Sollzustand anpassen (mit Mindestabstand). Liefert true bei einer Drehung,
 --- "later", wenn er sich drehen müsste, die Mindestzeit aber noch nicht um ist.
 function Reversible.update(entry, tick)
   local entity = entry.entity
   if not entity.valid then return false end
+  Reversible.return_hand(entity)
   local want = Reversible.wanted(entry)
   if want == entry.flipped then return false end
   if tick - entry.last_flip < MIN_FLIP_TICKS then return "later" end

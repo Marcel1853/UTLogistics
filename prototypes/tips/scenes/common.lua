@@ -197,9 +197,15 @@ chest.infinity_container_filters = {
   { index = 2, name = "copper-plate", count = 1000, mode = "at-least" },
 }
 remote.call("utl", "set_request", r_unit, 1, { type = "item", name = "copper-plate" }, 200)
--- Der Greifarm filtert per Schaltung: „Filter setzen“ aus der Auftrags-Ausgabe des Cleanups – so
--- greift er nur die bestellte Ware. Die Ausgabe legt UTL einen Moment nach dem Einstellen an.
-local inserter = s.find_entities_filtered({ name = "bulk-inserter", position = { 3.5, 2.5 }, radius = 0.5 })[1]
+-- Ein Wende-Greifarm statt des Bulk-Greifarms: er filtert per Schaltung („Filter setzen“ aus der
+-- Auftrags-Ausgabe des Cleanups) und legt nach der Abfahrt zurück, was er noch in der Hand hat –
+-- ein normaler Greifarm behielte es und blockierte beim nächsten Auftrag mit anderer Ware.
+-- Die Ausgabe legt UTL einen Moment nach dem Einstellen an.
+force.technologies["utl-storage"].researched = true
+local old = s.find_entities_filtered({ name = "bulk-inserter", position = { 3.5, 2.5 }, radius = 0.5 })[1]
+local inserter = s.create_entity({ name = "utl-reversible-inserter", position = { 3.5, 2.5 }, direction = old.direction,
+  force = force, raise_built = true })
+old.destroy()
 local cb = inserter.get_or_create_control_behavior()
 cb.circuit_set_filters = true
 local wired = false
@@ -215,9 +221,15 @@ script.on_nth_tick(41, function()
     -- nur für tools/tipstest: fährt der Zug vom Cleanup, darf nur Kupfer im Wagen sein
     for _, t in pairs(game.train_manager.get_trains({ surface = s })) do
       if t.state == defines.train_state.on_the_path and t.get_item_count() > 0 and not logged_cleanup then
-        logged_cleanup = true
+        logged_cleanup = game.tick
         log("[TIPS] cleanup_return erstes abfahrt ladung " .. serpent.line(t.get_contents()))
       end
+    end
+    -- 5 s nach der Abfahrt: hat der Greifarm die Hand geleert?
+    if logged_cleanup and not logged_hand and game.tick > logged_cleanup + 300 then
+      logged_hand = true
+      local held = inserter.held_stack
+      log("[TIPS] cleanup_return erstes hand nach abfahrt " .. (held.valid_for_read and (held.name .. " x" .. held.count) or "leer"))
     end
   end
 end)
