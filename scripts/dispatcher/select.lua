@@ -11,6 +11,7 @@ local Util = require("scripts.lib.util")
 local Index = require("scripts.dispatcher.index")
 local Reach = require("scripts.dispatcher.reach")
 local Fuel = require("scripts.trains.fuel")
+local Fields = require("scripts.stations.fields")
 
 local Select = {}
 
@@ -41,6 +42,21 @@ end
 local function length_ok(cfg, length)
   return (cfg.min_train_length <= 0 or length >= cfg.min_train_length)
     and (cfg.max_train_length <= 0 or length <= cfg.max_train_length)
+end
+
+--- Rückweg-Sperre: Blieb Ware an diesem Abnehmer als Rest übrig, liefert kein Cleanup sie ihm
+--- eine Weile zurück – sonst pendelt dieselbe Ware Abnehmer → Cleanup → Abnehmer.
+local RETURN_BLOCK = 5 * 60 * 60
+local function blocked(provider, requester_unit, key)
+  if provider.config.mode ~= "cleanup" then return false end
+  if not storage.cfg.cleanup_offer then return true end -- Kartenschalter: Cleanups bieten nichts an
+  local by_key = storage.dispatch.return_block[requester_unit]
+  local since = by_key and by_key[key]
+  if not since then return false end
+  if game.tick - since < RETURN_BLOCK then return true end
+  by_key[key] = nil -- abgelaufen
+  if next(by_key) == nil then storage.dispatch.return_block[requester_unit] = nil end
+  return false
 end
 
 --- Offene Anfragen einsammeln (reihum über die Abnehmer).
@@ -95,12 +111,13 @@ local function find_providers(request)
     elseif unit ~= requester.unit and usable(provider) and provider.config.roles.provider
       and provider.stop.surface_index == surface and provider.stop.force_index == force
       and Networks.related(place, provider.config.network, network)
-      and has_room(provider) then
+      and has_room(provider) and not blocked(provider, requester.unit, request.key) then
       local available = (provider.provide[request.key] or 0) - Deliveries.outgoing(unit, request.key)
       if available > 0 then
         found[#found + 1] = {
           station = provider,
           amount = math.min(available, request.need),
+          rank = Fields.provider_rank(provider.config), -- Cleanup „Reserve“/„zuerst leeren“
           priority = provider.config.provide_priority,
           distance = dist2(provider.stop.position, position),
         }
@@ -108,6 +125,7 @@ local function find_providers(request)
     end
   end
   table.sort(found, function(a, b)
+    if a.rank ~= b.rank then return a.rank > b.rank end
     if a.priority ~= b.priority then return a.priority > b.priority end
     if a.amount ~= b.amount then return a.amount > b.amount end
     return a.distance < b.distance
@@ -136,7 +154,7 @@ local function build_manifest(request, provider, record, amount)
     if free <= 0 then break end
     local size2 = stack_size(key)
     local offered = p.provide[key]
-    if key ~= request.key and size2 and offered then
+    if key ~= request.key and size2 and offered and not blocked(p, r.unit, key) then
       local need = wanted - Deliveries.incoming(r.unit, key)
       local available = offered - Deliveries.outgoing(p.unit, key)
       local minimum = Reader.threshold(r_cfg.request_threshold, r_cfg.request_stack_threshold, key)

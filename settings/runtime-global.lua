@@ -129,6 +129,15 @@ data:extend({
     default_value = false,
     order = "e-d",
   },
+  -- Cleanup darf seinen Inhalt wieder anbieten (je Station zusätzlich ein Häkchen, Standard aus).
+  -- Hier für die ganze Karte abschaltbar.
+  {
+    type = "bool-setting",
+    name = "utl-cleanup-offer",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "e-e",
+  },
   -- Team-Leiter, die so viele Tage (Spielzeit) nicht online waren, verlieren die Rechte (0 = nie)
   {
     type = "int-setting",

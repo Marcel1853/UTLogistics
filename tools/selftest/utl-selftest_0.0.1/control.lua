@@ -1048,11 +1048,164 @@ function train_test_step()
         check("R21 mit abgeschaltetem nachladen bleibt die ladeliste gleich",
           menge == r.first and r.first < 4000,
           tostring(r.first) .. " -> " .. tostring(menge) .. " (Zug fasst 4000)")
+        -- Runde 22: Cleanup gibt zurück. Erst alles zur Ruhe bringen, dann kurze Zeitlimits:
+        -- eine Fahrt ohne Ladung bricht nach 5 s von selbst ab, so lässt sich Anbieter-Wahl um
+        -- Anbieter-Wahl prüfen.
+        remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
+        remote.call("utl", "set_request", st.ra.unit_number, 2, nil)
+        remote.call("utl", "set_map_config", "utl-load-timeout", 5)
+        remote.call("utl", "set_map_config", "utl-unload-timeout", 5)
+        st.r22 = { phase = "drain", deadline = tick + 7200 }
+        st.round = 22
+      end
+    end
+  elseif st.round == 22 then
+    -- Das Reserve-Gleis ist ein Sackgleis ohne Wendeschleife: Haltestellen nur in Fahrtrichtung
+    -- anfahren und keine Fahrt am Anbieter abbrechen lassen (sonst findet der Zug nicht mehr
+    -- „richtig herum“ ins Depot, no_path). Der Test bringt deshalb jede Fahrt selbst zu Ende.
+    -- Aufbau: Depot RD (nordwärts, y -9) · Cleanup RC als Anbieter (südwärts, y 28, vor dem
+    -- Abnehmer) · Abnehmer RA (südwärts, y 40) · Cleanup RC2 für die Restladung (südwärts, y 50).
+    local r = st.r22
+    local list = remote.call("utl", "get_deliveries") --[[@as table]]
+    local d = nil
+    for _, entry in pairs(list) do
+      if entry.requester == st.ra.unit_number then d = entry end
+    end
+    local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
+    local function request(name, count)
+      remote.call("utl", "set_request", st.ra.unit_number, 1, name and { type = "item", name = name } or nil, count)
+    end
+    local function fail(name, info)
+      check(name, false, info)
+      st.done = true
+    end
+    --- Fahrt zu Ende bringen: am Anbieter das Bestellte einladen, am Abnehmer leeren.
+    local function feed(entry)
+      if not inv then return end
+      r.fed = r.fed or {}
+      if entry.state == "loading" and not r.fed[entry.id] then
+        r.fed[entry.id] = true
+        for key, amount in pairs(entry.manifest) do
+          local _, name = string.match(key, "^(%a+)|([^|]+)")
+          if name then inv.insert{ name = name, count = amount } end
+        end
+      elseif entry.state == "unloading" then
+        inv.clear()
+      end
+    end
+    local at_depot = st.ntrain.valid and st.ntrain.station == st.nd
+    if r.phase == "drain" then
+      for _, entry in pairs(list) do feed(entry) end
+      if #list == 0 and at_depot then
+        if inv then inv.clear() end
+        local s22, f22 = game.surfaces["nauvis"], game.forces["player"]
+        local function stop22(name, y)
+          local e = s22.create_entity{ name = "utl-train-stop", position = { 119, y }, direction = defines.direction.south,
+            force = f22, raise_built = true }
+          e.backer_name = name
+          return e
+        end
+        st.rc = stop22("UTL-RC", 28)
+        st.rc2 = stop22("UTL-RC2", 50)
+        -- ein Konstant-Kombinator spielt den Kisteninhalt des Cleanups RC
+        st.rc_cc = s22.create_entity{ name = "constant-combinator", position = { 116, 28 }, force = f22 }
+        -- Kupfer statt Eisen: Eisen blieb in R18 an RA als Rest übrig und ist für Cleanups dorthin
+        -- noch gesperrt (Rückweg-Sperre, 5 min) – das würde den Rang-Test verfälschen
+        st.rc_cc.get_control_behavior().get_section(1).set_slot(1,
+          { value = { type = "item", name = "copper-plate", quality = "normal" }, min = 3000 })
+        st.rc_cc.get_wire_connector(W.circuit_green, true).connect_to(st.rc.get_wire_connector(W.circuit_green, true))
+        remote.call("utl", "configure_station", st.rc.unit_number, { mode = "cleanup", network = "R" })
+        remote.call("utl", "configure_station", st.rc2.unit_number, { mode = "cleanup", network = "R" })
+        r.phase, r.deadline = "off", tick + 180
+      elseif tick >= r.deadline then
+        fail("R22 vorbereitung: zug ist frei im depot", serpent.line(list))
+      end
+    elseif r.phase == "off" and tick >= r.deadline then
+      local rc = station_info(st.rc.unit_number)
+      check("R22 cleanup ohne häkchen bietet nichts an", rc ~= nil and next(rc.provide) == nil,
+        serpent.line(rc and rc.provide))
+      remote.call("utl", "configure_station", st.rc.unit_number, { cleanup = { offer = "reserve" } })
+      r.phase, r.deadline = "reserve", tick + 180
+    elseif r.phase == "reserve" and tick >= r.deadline then
+      local rc = station_info(st.rc.unit_number)
+      check("R22 cleanup mit häkchen bietet seinen inhalt an",
+        rc ~= nil and (rc.provide["item|copper-plate|normal"] or 0) == 3000, serpent.line(rc and rc.provide))
+      check("R22 häkchen setzen behält die übrigen cleanup-einstellungen",
+        rc ~= nil and rc.config.cleanup.all_items == true, serpent.line(rc and rc.config.cleanup))
+      request("copper-plate", 500)
+      r.phase, r.deadline = "reserve-pick", tick + 3600
+    elseif r.phase == "reserve-pick" then
+      if d and not r.picked then
+        r.picked = true
+        check("R22 reserve: normaler anbieter geht vor", d.from == "UTL-PA", tostring(d.from))
+        request(nil)
+      end
+      for _, entry in pairs(list) do feed(entry) end
+      if r.picked and #list == 0 and at_depot then
+        remote.call("utl", "configure_station", st.rc.unit_number, { cleanup = { offer = "first" } })
+        request("copper-plate", 500)
+        r.phase, r.deadline = "first-pick", tick + 3600
+      elseif tick >= r.deadline then
+        fail("R22 reserve: fahrt vom normalen anbieter", "picked=" .. tostring(r.picked) .. " " .. serpent.line(list))
+      end
+    elseif r.phase == "first-pick" then
+      if d then
+        check("R22 zuerst leeren: cleanup geht vor", d.from == "UTL-RC", tostring(d.from))
+        r.id = d.id
+        r.phase, r.deadline = "leftover", tick + 7200
+      elseif tick >= r.deadline then
+        fail("R22 zuerst leeren: lieferung kam zustande", "frei=" .. remote.call("utl", "idle_train_count")
+          .. " " .. serpent.line(list))
+      end
+    elseif r.phase == "leftover" then
+      -- Am Cleanup RC 500 Kupfer laden; der Abnehmer nimmt nur 300 ab: 200 bleiben als Rest im
+      -- Zug → Rückweg-Sperre für Kupfer an diesem Abnehmer. (Fremde Ware lässt sich nicht als Rest
+      -- unterschieben: die Wagenfilter lassen nur das Bestellte in den Wagen.)
+      local own = nil
+      for _, entry in pairs(list) do if entry.id == r.id then own = entry end end
+      if own and own.state == "loading" and not r.loaded and inv then
+        inv.insert{ name = "copper-plate", count = 500 }
+        r.loaded = true
+      elseif own and own.state == "unloading" and not r.unloaded and inv then
+        inv.remove{ name = "copper-plate", count = 300 }
+        request(nil)
+        r.unloaded = true
+      end
+      -- Rest am Cleanup RC2 (hinter dem Abnehmer) – dort leert der Test den Wagen
+      if st.ntrain.valid and st.ntrain.station then
+        r.visits = r.visits or {}
+        r.visits[st.ntrain.station.backer_name] = true
+      end
+      if r.unloaded and st.ntrain.valid and st.ntrain.station == st.rc2 and inv then
+        r.cleaned = true
+        inv.clear()
+      end
+      if r.cleaned and not own and #list == 0 and at_depot and inv and inv.is_empty() then
+        -- Kupfer hat jetzt nur noch der Cleanup RC: dem normalen Anbieter PA das Kupfer nehmen
+        local umkreis = { { st.pa.position.x, st.pa.position.y - 3 }, { st.pa.position.x + 5, st.pa.position.y + 3 } }
+        local pa_cc = game.surfaces["nauvis"].find_entities_filtered({ name = "constant-combinator", area = umkreis })[1]
+        if pa_cc then pa_cc.get_control_behavior().get_section(1).clear_slot(2) end
+        request("copper-plate", 300)
+        r.phase, r.deadline = "block", tick + 1500
+      elseif tick >= r.deadline then
+        fail("R22 rest: zug bringt die restladung zum cleanup", serpent.line(list) .. " station="
+          .. tostring(st.ntrain.valid and st.ntrain.station and st.ntrain.station.backer_name)
+          .. " besucht=" .. serpent.line(r.visits) .. " ladung=" .. serpent.line(inv and inv.get_contents())
+          .. " geladen=" .. tostring(r.loaded) .. " entladen=" .. tostring(r.unloaded))
+      end
+    elseif r.phase == "block" then
+      if d then
+        fail("R22 rückweg-sperre: cleanup bringt den rest nicht gleich zurück", "lieferung von " .. tostring(d.from))
+      elseif tick >= r.deadline then
+        -- aussagekräftig nur, wenn der Zug die ganze Zeit frei war
+        check("R22 rückweg-sperre: cleanup bringt den rest nicht gleich zurück",
+          remote.call("utl", "idle_train_count") >= 1, "frei=" .. remote.call("utl", "idle_train_count"))
+        request(nil)
         st.done = true
       end
     end
   end
-  if not st.done and tick >= 149900 then
+  if not st.done and tick >= 199900 then
     check("zugtest vollständig", false, "runde " .. st.round .. " " .. serpent.line(st.seen) .. " idle=" .. remote.call("utl","idle_train_count") .. " state=" .. st.train.state
       .. " deliveries=" .. serpent.line(remote.call("utl","get_deliveries"))
       .. (st.ntrain and st.ntrain.valid and (" ntrain=" .. st.ntrain.state .. " " .. tostring(st.ntrain.station and st.ntrain.station.backer_name)) or ""))

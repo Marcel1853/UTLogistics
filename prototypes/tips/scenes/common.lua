@@ -181,6 +181,16 @@ remote.call("utl", "configure_station", c_unit, { mode = "cleanup" })
 equip({ 3.5 }, 2.5, false, nil, nil)
 ]]
 
+-- Cleanup mit „Inhalt wieder anbieten“: seine Kiste hat Kupfer, der Abnehmer will Kupfer – das hat
+-- sonst niemand, also holt der Zug es am Cleanup ab.
+local CLEANUP_RETURN = [[
+local cleanup = stop("Cleanup", 13, true, false)
+c_unit = cleanup.unit_number
+remote.call("utl", "configure_station", c_unit, { mode = "cleanup", cleanup = { offer = "first" } })
+equip({ 3.5 }, 2.5, true, "copper-plate", cleanup.get_wire_connector(W.circuit_green, true))
+remote.call("utl", "set_request", r_unit, 1, { type = "item", name = "copper-plate" }, 200)
+]]
+
 -- Alle Rollen nebeneinander (Namen per Alt-Ansicht sichtbar); Cleanup steht nur zum Zeigen da.
 local ROLES = [[
 local cleanup = stop("Cleanup", 5, false, false)
@@ -235,6 +245,6 @@ end
 
 
 return {
-  SIMPLE = SIMPLE, FUEL = FUEL, CLEANUP = CLEANUP, ROLES = ROLES, REQUESTS = REQUESTS,
+  SIMPLE = SIMPLE, FUEL = FUEL, CLEANUP = CLEANUP, CLEANUP_RETURN = CLEANUP_RETURN, ROLES = ROLES, REQUESTS = REQUESTS,
   DEPOTS = DEPOTS, COPY = COPY, ROLE_SIGNS = ROLE_SIGNS, scene = scene, window = window,
 }

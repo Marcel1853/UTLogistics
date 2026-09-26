@@ -91,6 +91,17 @@ function Fields.fill(cfg)
   cfg.cleanup = cfg.cleanup or { all_items = true, all_fluids = true, items = {}, fluids = {} }
   cfg.cleanup.items = cfg.cleanup.items or {}   -- [slot] = Item-Name
   cfg.cleanup.fluids = cfg.cleanup.fluids or {} -- [slot] = Flüssigkeits-Name
+  -- Inhalt wieder anbieten: false | "reserve" | "normal" | "first" (Rang als Anbieter)
+  if cfg.cleanup.offer == nil then cfg.cleanup.offer = false end
+  cfg.cleanup.offer_tier = cfg.cleanup.offer_tier or "reserve" -- gemerkt, auch wenn aus
+end
+
+--- Rang als Anbieter: 2 = zuerst leeren, 1 = normal (jeder gewöhnliche Anbieter), 0 = Reserve.
+--- Wird vor der Anbieter-Priorität verglichen.
+local OFFER_RANK = { first = 2, normal = 1, reserve = 0 }
+function Fields.provider_rank(cfg)
+  if cfg.mode == "cleanup" then return OFFER_RANK[cfg.cleanup and cfg.cleanup.offer] or 0 end
+  return 1
 end
 
 Fields.cleanup_item_slots = 10

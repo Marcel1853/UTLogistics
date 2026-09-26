@@ -1,9 +1,13 @@
 --- Abschnitt „Cleanup“ im rechten Kasten (nur mit Rolle Cleanup): was hier geleert werden darf.
 --- Zwei Schalter „Alle Items“/„Alle Flüssigkeiten“ und Slots für einzelne Items und Flüssigkeiten.
 --- Ausdrücklich eingetragene Waren haben Vorrang vor den Schaltern (siehe cleanup-route.lua).
+--- Darunter: „Inhalt wieder anbieten“ mit Rang (Reserve / normal / zuerst leeren).
 local Fields = require("scripts.stations.fields")
+local Roles = require("scripts.stations.roles")
 
 local Cleanup = {}
+
+Cleanup.TIERS = { "reserve", "normal", "first" }
 
 local function toggle(parent, cleanup, key, signal)
   local on = cleanup[key] == true
@@ -53,6 +57,50 @@ function Cleanup.build(parent, station)
   row.add({ type = "label", caption = { "utl-gui.cleanup-or-single" } })
   slots(inner, cleanup.items, Fields.cleanup_item_slots, "item", "cleanup_item")
   slots(inner, cleanup.fluids, Fields.cleanup_fluid_slots, "fluid", "cleanup_fluid")
+
+  -- Inhalt wieder anbieten (Kartenschalter kann es für alle abschalten)
+  local allowed = storage.cfg.cleanup_offer
+  local offer = inner.add({ type = "flow", direction = "horizontal" })
+  offer.style.vertical_align = "center"
+  offer.style.top_margin = 4
+  offer.add({
+    type = "checkbox",
+    caption = { "utl-gui.cleanup-offer" },
+    state = cleanup.offer ~= false,
+    enabled = allowed,
+    tooltip = { allowed and "utl-gui.cleanup-offer-tooltip" or "utl-gui.cleanup-offer-disabled" },
+    tags = { utl_action = "cleanup_offer" },
+  })
+  local items, selected = {}, 1
+  for i, tier in ipairs(Cleanup.TIERS) do
+    items[i] = { "utl-gui.cleanup-offer-" .. tier }
+    if tier == (cleanup.offer or cleanup.offer_tier) then selected = i end
+  end
+  offer.add({
+    type = "drop-down",
+    items = items,
+    selected_index = selected,
+    enabled = allowed and cleanup.offer ~= false,
+    tooltip = { "utl-gui.cleanup-offer-tier-tooltip" },
+    tags = { utl_action = "cleanup_offer_tier" },
+  })
+end
+
+--- „Inhalt wieder anbieten“ an/aus. Der gewählte Rang bleibt beim Ausschalten gemerkt.
+function Cleanup.set_offer(cfg, on)
+  local cleanup = cfg.cleanup
+  if cleanup.offer then cleanup.offer_tier = cleanup.offer end
+  cleanup.offer = on and (cleanup.offer_tier or "reserve") or false
+  Roles.derive(cfg)
+end
+
+--- Rang gewählt (Index in Cleanup.TIERS).
+function Cleanup.set_tier(cfg, index)
+  local tier = Cleanup.TIERS[index]
+  if not tier then return false end
+  cfg.cleanup.offer_tier = tier
+  if cfg.cleanup.offer then cfg.cleanup.offer = tier end
+  return true
 end
 
 --- Schalter umlegen.

@@ -157,6 +157,9 @@ Events.on(defines.events.on_gui_checked_state_changed, function(event)
     changed(event, station, true)
   elseif tags.utl_action == "toggle" then
     if Values.toggle(station.config, tags.key, event.element.state) then changed(event, station, false) end
+  elseif tags.utl_action == "cleanup_offer" then
+    CleanupSection.set_offer(station.config, event.element.state)
+    changed(event, station, true)
   end
 end)
 
@@ -172,6 +175,8 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
       Networks.invalidate()
       changed(event, station, true)
     end
+  elseif action == "cleanup_offer_tier" then
+    if CleanupSection.set_tier(station.config, element.selected_index) then changed(event, station, false) end
   elseif action == "network_add_pick" then
     local index = element.selected_index
     if index > 0 then

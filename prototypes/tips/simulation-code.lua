@@ -6,6 +6,7 @@ local Links = require("__UTLogistics__/prototypes/tips/scenes/links")
 local Manager = require("__UTLogistics__/prototypes/tips/scenes/manager")
 local scene, window = P.scene, P.window
 local SIMPLE, FUEL, CLEANUP, ROLES = P.SIMPLE, P.FUEL, P.CLEANUP, P.ROLES
+local CLEANUP_RETURN = P.CLEANUP_RETURN
 local REQUESTS, DEPOTS, COPY, ROLE_SIGNS = P.REQUESTS, P.DEPOTS, P.COPY, P.ROLE_SIGNS
 
 -- Anzeigefelder mit Erklärtext je Szene: { x, y, Sprachschlüssel (utl-sign.*), Symbol }
@@ -44,6 +45,9 @@ return {
   fuel = scene({ SIMPLE, FUEL, FUEL_SIGN, "train(-8, 8)", "show()" }),
   -- Zug mit Restladung wird zuerst an der Cleanup-Station geleert
   cleanup = scene({ SIMPLE, CLEANUP, signs({ { 13, 6, "cleanup", CLEANUP_ITEM } }), "train(-8, 150).cargo_wagons[1].insert({ name = 'copper-plate', count = 100 })",
+    window('remote.call("utl", "open_station", player.index, c_unit, 2, true)') }),
+  -- Cleanup bietet seinen Inhalt wieder an: der Zug holt das Kupfer dort ab
+  cleanup_return = scene({ SIMPLE, CLEANUP_RETURN, signs({ { 13, 6, "cleanup-return", CLEANUP_ITEM } }), "train(-8, 150)",
     window('remote.call("utl", "open_station", player.index, c_unit, 2, true)') }),
   -- Einstellungen vom Abnehmer auf „Abnehmer 2“ kopieren (einmal, ohne Zug), danach dessen Fenster
   copy = scene({ SIMPLE, COPY, signs({ { -9, -4, "copy", '{ type = "item", name = "blueprint" }' } }), [[

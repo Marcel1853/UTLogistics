@@ -8,6 +8,7 @@ local Config = require("scripts.core.config")
 local Pending = require("scripts.trains.pending")
 local Reader = require("scripts.stations.reader")
 local Roles = require("scripts.stations.roles")
+local Fields = require("scripts.stations.fields")
 local Requests = require("scripts.stations.requests")
 local Paste = require("scripts.stations.settings-paste")
 local Blueprint = require("scripts.stations.blueprint")
@@ -87,9 +88,16 @@ local interface = {
     local cfg = station.config
     for key, value in pairs(changes) do
       if key ~= "roles" and cfg[key] ~= nil and type(cfg[key]) == type(value) then
-        cfg[key] = value
+        if type(value) == "table" and key ~= "requests" and key ~= "request_map" then
+          -- verschachtelte Einstellungen (cleanup, storage) zusammenführen statt ersetzen –
+          -- sonst verlöre { cleanup = { offer = … } } die Warenliste
+          for sub, v in pairs(value) do cfg[key][sub] = v end
+        else
+          cfg[key] = value
+        end
       end
     end
+    Fields.fill(cfg)
     Roles.derive(cfg)
     Reader.read(station)
     Registry.config_changed(station)

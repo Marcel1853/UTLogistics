@@ -272,6 +272,13 @@ function Deliveries.on_depart(delivery)
       Depot.send_service(train, delivery.network or "default")
     end
     if train.valid and Depot.has_cargo(train) then
+      -- Rückweg-Sperre: diese Waren liefert ein Cleanup dem Abnehmer vorerst nicht zurück
+      local block = storage.dispatch.return_block[delivery.requester] or {}
+      for _, stack in pairs(train.get_contents()) do
+        block[Util.signal_key({ type = "item", name = stack.name, quality = stack.quality })] = game.tick
+      end
+      for name in pairs(train.get_fluid_contents()) do block[Util.signal_key({ type = "fluid", name = name })] = game.tick end
+      storage.dispatch.return_block[delivery.requester] = block
       local requester = Registry.get(delivery.requester)
       local stop = requester and requester.stop
       Alerts.raise("cargo", "cargo", stop and stop.valid and stop or train.front_stock,
