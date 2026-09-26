@@ -1201,6 +1201,108 @@ function train_test_step()
         check("R22 rückweg-sperre: cleanup bringt den rest nicht gleich zurück",
           remote.call("utl", "idle_train_count") >= 1, "frei=" .. remote.call("utl", "idle_train_count"))
         request(nil)
+        -- Runde 23: Wende-Greifarm auf freiem Feld bei x = 200: Kiste A – Greifarm – Kiste B.
+        -- Ein Konstant-Kombinator (rotes Kabel) schaltet das Standard-Signal utl-unloading.
+        local s23, f23 = game.surfaces["nauvis"], game.forces["player"]
+        s23.request_to_generate_chunks({ 200, 0 }, 1)
+        s23.force_generate_chunk_requests()
+        for _, e in pairs(s23.find_entities_filtered{ area = { { 195, -5 }, { 206, 6 } } }) do
+          if e.type ~= "character" then e.destroy() end
+        end
+        st.ra_chest = s23.create_entity{ name = "iron-chest", position = { 200.5, -0.5 }, force = f23 }
+        st.rev = s23.create_entity{ name = "utl-reversible-inserter", position = { 200.5, 0.5 },
+          direction = defines.direction.north, force = f23, raise_built = true }
+        st.rb_chest = s23.create_entity{ name = "iron-chest", position = { 200.5, 1.5 }, force = f23 }
+        local eei = s23.create_entity{ name = "electric-energy-interface", position = { 203, 0 }, force = f23 }
+        eei.power_production, eei.electric_buffer_size = 1000000, 10000000
+        s23.create_entity{ name = "medium-electric-pole", position = { 201.5, 0.5 }, force = f23 }
+        st.rev_cc = s23.create_entity{ name = "constant-combinator", position = { 199.5, 0.5 }, force = f23 }
+        st.rev_cc.get_wire_connector(W.circuit_red, true).connect_to(st.rev.get_wire_connector(W.circuit_red, true))
+        st.ra_chest.insert{ name = "iron-plate", count = 50 }
+        st.rb_chest.insert{ name = "copper-plate", count = 50 }
+        st.r23 = { phase = "normal", deadline = tick + 180, base = st.rev.direction }
+        st.round = 23
+      end
+    end
+  elseif st.round == 23 then
+    local r = st.r23
+    local function set_signal(value)
+      local section = st.rev_cc.get_control_behavior().get_section(1)
+      if value and value ~= 0 then
+        section.set_slot(1, { value = { type = "virtual", name = "utl-unloading", quality = "normal" }, min = value })
+      else
+        section.clear_slot(1)
+      end
+    end
+    local function counts()
+      return st.ra_chest.get_item_count("iron-plate"), st.rb_chest.get_item_count("iron-plate"),
+        st.ra_chest.get_item_count("copper-plate"), st.rb_chest.get_item_count("copper-plate")
+    end
+    if r.phase == "normal" and tick >= r.deadline then
+      -- ohne Signal: arbeitet wie gebaut – eine Ware ist hinübergewandert
+      local a_iron, b_iron, a_copper, b_copper = counts()
+      r.flow = b_iron > 0 and "A-B" or (a_copper > 0 and "B-A" or nil)
+      check("R23 wende-greifarm ohne signal arbeitet wie gebaut", r.flow ~= nil and st.rev.direction == r.base,
+        "fluss " .. tostring(r.flow) .. ", eisen A/B " .. a_iron .. "/" .. b_iron .. ", kupfer A/B " .. a_copper .. "/" .. b_copper)
+      set_signal(1)
+      r.phase, r.deadline = "flipped", tick + 240
+    elseif r.phase == "flipped" and tick >= r.deadline then
+      local a_iron, b_iron, a_copper, b_copper = counts()
+      local reversed = (r.flow == "A-B" and a_copper > 0) or (r.flow == "B-A" and b_iron > 0)
+      check("R23 wende-greifarm mit signal dreht sich um", reversed and st.rev.direction == (r.base + 8) % 16,
+        "richtung " .. st.rev.direction .. " (gebaut " .. r.base .. "), eisen A/B " .. a_iron .. "/" .. b_iron
+        .. ", kupfer A/B " .. a_copper .. "/" .. b_copper)
+      r.phase, r.deadline, r.changes, r.last_dir = "flicker", tick + 180, 0, st.rev.direction
+    elseif r.phase == "flicker" then
+      -- flackerndes Signal (alle 10 Ticks um): höchstens eine Drehung je Sekunde
+      set_signal((tick / 10) % 2 == 0 and 1 or 0)
+      if st.rev.direction ~= r.last_dir then
+        r.changes = r.changes + 1
+        r.last_dir = st.rev.direction
+      end
+      if tick >= r.deadline then
+        check("R23 flackerndes signal: höchstens eine drehung je sekunde", r.changes <= 4,
+          r.changes .. " drehungen in 3 s")
+        set_signal(0)
+        -- Auftrags-Ausgabe: Lade- und Entlade-Signal während eines echten Zugs
+        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 500)
+        r.phase, r.deadline = "output", tick + 7200
+      end
+    elseif r.phase == "output" then
+      local function output_of(stop)
+        local found = stop.surface.find_entities_filtered{ name = "utl-station-output",
+          area = { { stop.position.x - 3, stop.position.y - 3 }, { stop.position.x + 3, stop.position.y + 3 } } }[1]
+        local out = {}
+        local section = found and found.get_control_behavior().get_section(1)
+        for _, filter in pairs(section and section.filters or {}) do
+          if filter.value then out[filter.value.name] = filter.min end
+        end
+        return out
+      end
+      local d = nil
+      for _, entry in pairs(remote.call("utl", "get_deliveries") --[[@as table]]) do
+        if entry.requester == st.ra.unit_number then d = entry end
+      end
+      local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
+      if d and d.state == "loading" and not r.seen_load then
+        local out = output_of(st.pa)
+        r.seen_load = true
+        check("R23 auftrags-ausgabe am anbieter: zug lädt", out["utl-loading"] == 1 and out["utl-unloading"] == nil,
+          serpent.line(out))
+        if inv then inv.insert{ name = "iron-plate", count = 500 } end
+      elseif d and d.state == "unloading" and not r.seen_unload then
+        local out = output_of(st.ra)
+        r.seen_unload = true
+        check("R23 auftrags-ausgabe am abnehmer: zug entlädt", out["utl-unloading"] == 1 and out["utl-loading"] == nil,
+          serpent.line(out))
+        remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
+        if inv then inv.clear() end
+      end
+      if r.seen_load and r.seen_unload then
+        st.done = true
+      elseif tick >= r.deadline then
+        check("R23 auftrags-ausgabe: lade- und entladesignal gesehen", false,
+          "laden " .. tostring(r.seen_load) .. ", entladen " .. tostring(r.seen_unload) .. ", " .. serpent.line(d))
         st.done = true
       end
     end

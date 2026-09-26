@@ -12,6 +12,9 @@ local Blueprint = {}
 local TAG = "utl"
 local NAMES = { [C.train_stop] = true, [C.station_combinator] = true }
 
+--- Weitere Entities mit eigenen Tags (z. B. Wende-Greifarm): [Name] = function(entity) → Tag, Wert.
+Blueprint.extra = {}
+
 --- Blaupause des Events: Item im Cursor/Bibliothek-Eintrag (2.x: stack oder record).
 local function blueprint_of(event, player)
   local bp = event.stack or event.record
@@ -43,6 +46,14 @@ function Blueprint.tag(bp, mapping, surface)
       local station = entity and entity.unit_number and Registry.get(entity.unit_number)
       if station then
         bp.set_blueprint_entity_tag(index, TAG, station.config)
+        tagged = tagged + 1
+      end
+    elseif Blueprint.extra[entry.name] then
+      local entity = real_entity(surface, mapping, index, entry)
+      local tag, value = nil, nil
+      if entity then tag, value = Blueprint.extra[entry.name](entity) end
+      if tag then
+        bp.set_blueprint_entity_tag(index, tag, value)
         tagged = tagged + 1
       end
     end

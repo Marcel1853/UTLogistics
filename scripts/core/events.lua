@@ -30,9 +30,17 @@ function Events.on_configuration_changed(fn)
   config_changed[#config_changed + 1] = fn
 end
 
+local init_handlers = {} -- zusätzliche Handler für on_init (neues Spiel / Mod neu hinzugefügt)
+
+--- Modul-Handler für on_init (laufen nach State/Config).
+function Events.on_init(fn)
+  init_handlers[#init_handlers + 1] = fn
+end
+
 local function on_init()
   State.init()
   Config.refresh()
+  for _, fn in ipairs(init_handlers) do fn() end
   Heartbeat.update_registration()
 end
 

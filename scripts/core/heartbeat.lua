@@ -28,7 +28,8 @@ end
 
 --- Gibt es gerade etwas zu tun? Ohne Stationen und Lieferungen schläft der Takt.
 function Heartbeat.is_needed()
-  return storage.stations.count > 0 or storage.deliveries.count > 0
+  local reversible = storage.reversible
+  return storage.stations.count > 0 or storage.deliveries.count > 0 or (reversible ~= nil and reversible.count > 0)
 end
 
 --- Registriert den Takt passend zu storage. Darf auch in on_load laufen.

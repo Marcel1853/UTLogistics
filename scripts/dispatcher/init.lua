@@ -8,7 +8,14 @@ local Reach = require("scripts.dispatcher.reach")
 -- Gleisnetz geändert (Gleise/Signale gebaut oder abgerissen): Erreichbarkeits-Cache verwerfen.
 local topology_filter = {}
 for _, type in ipairs(Reach.TOPOLOGY_TYPES) do topology_filter[#topology_filter + 1] = { filter = "type", type = type } end
-local function topology_changed() Reach.invalidate() end
+-- Die Filter aller Handler eines Events werden zusammengeführt (core/events.lua) – hier also auch
+-- Haltestellen, Combinatoren, Wende-Greifarme. Nur echte Gleis-/Signaländerungen zählen.
+local topology_types = {}
+for _, type in ipairs(Reach.TOPOLOGY_TYPES) do topology_types[type] = true end
+local function topology_changed(event)
+  local entity = event.entity
+  if not (entity and entity.valid) or topology_types[entity.type] then Reach.invalidate() end
+end
 for _, event in ipairs({
   defines.events.on_built_entity, defines.events.on_robot_built_entity, defines.events.script_raised_built,
   defines.events.script_raised_revive, defines.events.on_player_mined_entity, defines.events.on_robot_mined_entity,

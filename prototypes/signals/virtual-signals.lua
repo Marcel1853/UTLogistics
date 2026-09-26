@@ -15,6 +15,14 @@ local function icon(base, overlay)
   }
 end
 
+--- Wie icon(), aber mit einem Pfeil aus icons/arrows als kleinem Zeichen.
+local function arrow(base, overlay)
+  return {
+    { icon = ICONS .. base, icon_size = 64 },
+    { icon = ICONS .. "arrows/" .. overlay, icon_size = 64, scale = 0.28, shift = { 8, 8 } },
+  }
+end
+
 local SIGNALS = {
   { "utl-min-train-length", icon("cargo-wagon.png", "signal-greater-than-or-equal-to.png") },
   { "utl-max-train-length", icon("cargo-wagon.png", "signal-less-than-or-equal-to.png") },
@@ -36,6 +44,9 @@ local SIGNALS = {
   { "utl-train-wagons", own("train-wagons") },
   { "utl-cleanup-all-items", icon("cargo-wagon.png", "signal_everything.png") },
   { "utl-cleanup-all-fluids", icon("fluid-wagon.png", "signal_everything.png") },
+  -- Auftrags-Ausgabe: 1, solange ein Zug hier lädt bzw. entlädt (z. B. für Wende-Greifarme)
+  { "utl-loading", arrow("cargo-wagon.png", "signal-input.png") },
+  { "utl-unloading", arrow("cargo-wagon.png", "signal-output.png") },
 }
 
 local prototypes = {

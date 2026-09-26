@@ -51,6 +51,13 @@ local CIRCUIT_ICON = "__base__/graphics/technology/circuit-network.png"
 data:extend({
   upgrade("utl-loading-control", CIRCUIT_ICON, { "utl-train-logistics" }, 150, { RED, GREEN },
     { "utl-tech-effect.loading-control" }),
+  -- Lager und Wende-Greifarm (Fortgeschrittene): Stationsart „Lager“ + Rezept Wende-Greifarm
+  (function()
+    local tech = upgrade("utl-storage", CIRCUIT_ICON, { "utl-loading-control", "chemical-science-pack" }, 200,
+      { RED, GREEN, BLUE }, { "utl-tech-effect.storage" })
+    tech.effects[#tech.effects + 1] = { type = "unlock-recipe", recipe = C.reversible_inserter }
+    return tech
+  end)(),
   upgrade("utl-networks-1", RAIL_ICON, { "utl-train-logistics" }, 100, { RED, GREEN },
     { "utl-tech-effect.networks", "1" }),
   upgrade("utl-networks-2", RAIL_ICON, { "utl-networks-1", "chemical-science-pack" }, 200, { RED, GREEN, BLUE },

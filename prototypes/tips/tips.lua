@@ -24,6 +24,7 @@ data:extend({
   item("utl-overview", "a", "basic", { is_title = true, indent = 0 }),
   item("utl-train-stop", "b", "stop_window", { tag = "[item=utl-train-stop]" }),
   item("utl-combinator", "c", "combinator", { tag = "[item=utl-station-combinator]" }),
+  item("utl-reversible", "c2", "reversible", { indent = 2, tag = "[item=utl-reversible-inserter]" }),
   item("utl-roles", "d", "roles"),
   item("utl-requests", "e", "requests"),
   item("utl-values", "f", "values"),

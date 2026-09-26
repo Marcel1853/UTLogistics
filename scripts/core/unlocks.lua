@@ -29,6 +29,16 @@ function Unlocks.networks_limit(force)
   return limit
 end
 
+Unlocks.STORAGE_TECH = "utl-storage"
+
+--- Braucht UTL auf dieser Karte Forschung? (Map-Einstellung „UTL-Funktionen brauchen Forschung“)
+Unlocks.research_required = research_required
+
+--- Lager und Wende-Greifarm freigeschaltet?
+function Unlocks.storage(force)
+  return not research_required() or researched(force, Unlocks.STORAGE_TECH)
+end
+
 --- Wagenfilter und Auftrags-Ausgabe freigeschaltet?
 function Unlocks.loading(force)
   return not research_required() or researched(force, Unlocks.LOADING_TECH)

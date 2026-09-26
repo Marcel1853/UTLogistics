@@ -191,7 +191,8 @@ local function stop_unit_of(unit)
 end
 
 --- Zug an einer Station vermerken (für die Auftrags-Ausgabe) bzw. wieder löschen.
-local function train_at(unit, train)
+--- `mode` = "load" | "unload": wird dort geladen oder entladen (Signale utl-loading/utl-unloading).
+local function train_at(unit, train, mode)
   local at = storage.deliveries.at_station
   if train and train.valid then
     local wagons = #train.cargo_wagons + #train.fluid_wagons
@@ -200,6 +201,7 @@ local function train_at(unit, train)
       length = #train.carriages,
       locos = #train.locomotives.front_movers + #train.locomotives.back_movers,
       wagons = wagons,
+      mode = mode,
     }
   else
     at[unit] = nil
@@ -213,10 +215,10 @@ function Deliveries.on_arrive(delivery, stop)
   if delivery.state == "to_provider" and unit == stop_unit_of(delivery.provider) then
     delivery.state = "loading"
     Filters.repair(delivery) -- Slots, die beim Losschicken noch belegt waren
-    train_at(delivery.provider, delivery.train)
+    train_at(delivery.provider, delivery.train, "load")
   elseif delivery.state == "to_requester" and unit == stop_unit_of(delivery.requester) then
     delivery.state = "unloading"
-    train_at(delivery.requester, delivery.train)
+    train_at(delivery.requester, delivery.train, "unload")
   end
 end
 

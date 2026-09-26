@@ -3,7 +3,7 @@
 set -euo pipefail
 MOD_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 FACTORIO="${FACTORIO:-/mnt/6459bc3a-dd91-42e5-8723-71427d99d0ba/SteamLibrary/steamapps/common/Factorio/bin/x64/factorio}"
-for scene in ${SCENES:-basic stop_window combinator roles requests values networks links depots fuel cleanup cleanup_return copy manager manager_networks manager_inventory}; do
+for scene in ${SCENES:-basic stop_window combinator reversible roles requests values networks links depots fuel cleanup cleanup_return copy manager manager_networks manager_inventory}; do
   WORK="$(mktemp -d)"
   mkdir -p "$WORK/mods" "$WORK/data"
   ln -s "$MOD_DIR" "$WORK/mods/$(basename "$MOD_DIR")"

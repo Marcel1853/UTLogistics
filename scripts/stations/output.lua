@@ -12,6 +12,7 @@ local Config = require("scripts.core.config")
 local Registry = require("scripts.stations.registry")
 local Util = require("scripts.lib.util")
 local Unlocks = require("scripts.core.unlocks")
+local Reversible = require("scripts.inserters.reversible")
 
 local Output = {}
 
@@ -117,6 +118,15 @@ function Output.write(station)
     put_signal("utl-train-length", train.length)
     put_signal("utl-train-locos", train.locos)
     put_signal("utl-train-wagons", train.wagons)
+    -- für Wende-Greifarme und eigene Schaltungen: wird hier gerade geladen oder entladen?
+    put_signal("utl-loading", train.mode == "load" and 1 or 0)
+    put_signal("utl-unloading", train.mode == "unload" and 1 or 0)
+  end
+
+  -- Wende-Greifarme an diesem Schaltnetz sofort prüfen lassen (statt auf den Rundgang zu warten)
+  for _, id in ipairs({ defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green }) do
+    local net = output.get_circuit_network(id)
+    if net then Reversible.wake_network(net.network_id) end
   end
 end
 

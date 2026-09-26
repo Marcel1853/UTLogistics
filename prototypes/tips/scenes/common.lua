@@ -191,6 +191,51 @@ equip({ 3.5 }, 2.5, true, "copper-plate", cleanup.get_wire_connector(W.circuit_g
 remote.call("utl", "set_request", r_unit, 1, { type = "item", name = "copper-plate" }, 200)
 ]]
 
+-- Wende-Greifarme am Abnehmer: statt der Entlade-Greifarme stehen dort Wende-Greifarme in
+-- Laderichtung, verdrahtet mit der Auftrags-Ausgabe der Station. Kommt ein Zug zum Entladen, meldet
+-- die Ausgabe utl-unloading = 1 – die Greifarme drehen sich um und entladen.
+local REVERSIBLE = [[
+-- Die Auftrags-Ausgabe braucht „UTL: Ladesteuerung“; in der Tipps-Welt ist nichts erforscht.
+-- Danach den Abnehmer neu einstellen – dabei legt UTL seine Ausgabe an.
+force.technologies["utl-loading-control"].researched = true
+force.technologies["utl-storage"].researched = true
+remote.call("utl", "configure_station", r_unit, { mode = "station" })
+local revs = {}
+for _, x in ipairs({ -18.5, -20.5 }) do
+  for _, e in pairs(s.find_entities_filtered({ name = "bulk-inserter", position = { x, -0.5 }, radius = 0.4 })) do e.destroy() end
+  revs[#revs + 1] = s.create_entity({ name = "utl-reversible-inserter", position = { x, -0.5 }, direction = 0,
+    force = force, raise_built = true })
+end
+-- Die Auftrags-Ausgabe legt UTL erst einen Moment nach dem Aufbau an: verdrahten, sobald sie da
+-- ist (eigener Takt 37 – im Test läuft die Szene in einem Mod, der 30 schon belegt).
+local R = defines.wire_connector_id.circuit_red
+local built, wired, logged = revs[1].direction, false, false
+script.on_nth_tick(37, function(e)
+  if not wired then
+    local output = s.find_entities_filtered({ name = "utl-station-output", position = requester.position, radius = 5 })[1]
+    if not output then return end
+    local relay_at = s.find_non_colliding_position("medium-electric-pole", { -24.5, -2.5 }, 4, 0.5)
+    local relay = relay_at and s.create_entity({ name = "medium-electric-pole", position = relay_at, force = force })
+    local previous = output.get_wire_connector(R, true)
+    if relay then
+      previous.connect_to(relay.get_wire_connector(R, true))
+      previous = relay.get_wire_connector(R, true)
+    end
+    for _, rev in ipairs(revs) do
+      previous.connect_to(rev.get_wire_connector(R, true))
+      previous = rev.get_wire_connector(R, true)
+    end
+    wired = true
+    if game.simulation then script.on_nth_tick(37, nil) end
+  elseif not logged and revs[1].valid and revs[1].direction ~= built then
+    -- nur für tools/tipstest: wann drehen sich die Greifarme zum ersten Mal?
+    log(("[TIPS] reversible erstes umdrehen nach %d s"):format(math.floor(e.tick / 60)))
+    logged = true
+    script.on_nth_tick(37, nil)
+  end
+end)
+]]
+
 -- Alle Rollen nebeneinander (Namen per Alt-Ansicht sichtbar); Cleanup steht nur zum Zeigen da.
 local ROLES = [[
 local cleanup = stop("Cleanup", 5, false, false)
@@ -245,6 +290,6 @@ end
 
 
 return {
-  SIMPLE = SIMPLE, FUEL = FUEL, CLEANUP = CLEANUP, CLEANUP_RETURN = CLEANUP_RETURN, ROLES = ROLES, REQUESTS = REQUESTS,
+  SIMPLE = SIMPLE, FUEL = FUEL, CLEANUP = CLEANUP, CLEANUP_RETURN = CLEANUP_RETURN, REVERSIBLE = REVERSIBLE, ROLES = ROLES, REQUESTS = REQUESTS,
   DEPOTS = DEPOTS, COPY = COPY, ROLE_SIGNS = ROLE_SIGNS, scene = scene, window = window,
 }

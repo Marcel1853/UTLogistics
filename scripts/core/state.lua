@@ -55,6 +55,12 @@ function State.init()
   deliveries.at_station = deliveries.at_station or {}
   storage.deliveries = deliveries
 
+  -- Wende-Greifarme (scripts/inserters/reversible.lua): [unit] = { entity, base, flipped, last_flip, cfg }
+  local reversible = storage.reversible or {}
+  reversible.by_unit = reversible.by_unit or {}
+  reversible.count = reversible.count or 0
+  storage.reversible = reversible
+
   -- Verbundene Netze (Stern je Oberfläche), siehe scripts/stations/networks.lua
   storage.network_links = storage.network_links or {}
 
