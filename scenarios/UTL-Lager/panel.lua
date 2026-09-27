@@ -43,15 +43,18 @@ local VIEW = {
       { "utl-lager.storage-note", v.counts.into, v.counts.out, v.counts.workshop }
   end,
   switch = function(v)
-    local by, current, follow = v.by, 1, v.sets.storage
+    -- Spielstände, die vor 0.0.8 (Wende-Greifarm entfernt) gestartet wurden, haben noch die alte
+    -- control.lua des Szenarios im Spielstand: sie liefert `revs` statt `sets`
+    local sets = v.sets or v.revs or {}
+    local by, current, follow = v.by, 1, sets.storage
     if by.into and by.into.state == "unloading" then
       current = 2
     elseif by.out and by.out.state == "loading" then
       current = 3
     elseif by.returned and by.returned.state == "loading" then
-      current, follow = 5, v.sets.cleanup
+      current, follow = 5, sets.cleanup
     elseif v.rest_train then
-      current, follow = 4, v.sets.cleanup
+      current, follow = 4, sets.cleanup
     end
     local now = (current == 3 or current == 5) and "switch-loading"
       or (current == 2 or current == 4) and "switch-unloading" or "switch-idle"
