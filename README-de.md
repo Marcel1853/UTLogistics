@@ -517,6 +517,10 @@ Stationen und Züge zeigt; ein Cleanup, der seinen Inhalt zurückgibt; ein Lager
 mit zwei Zügen, das den nahen Abnehmer beliefert und sich unter Mindest wieder auffüllt. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
 Netze verbinden (Stern, Forschung „Netzverbund“), Depots, Einstellungen kopieren/Blaupausen und Manager.
 
+Nach einem Update schreibt UTL einmal eine kurze Zeile mit dem Wichtigsten in den Chat; der Link
+darin öffnet die Tipps-&-Tricks-Seite **„Neu in UTL“**. Je Spieler abschaltbar: *Update-Hinweise im
+Chat*.
+
 ## Häufige Fragen
 
 - **Es fährt nur ein Zug.** Wahrscheinlich reicht einer: Der Zielbestand ist ein Bestand, keine

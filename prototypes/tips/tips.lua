@@ -22,6 +22,8 @@ end
 data:extend({
   { type = "tips-and-tricks-item-category", name = "utl", order = "f-[trains]-z[utl]" },
   item("utl-overview", "a", "basic", { is_title = true, indent = 0 }),
+  -- „Neu in UTL“: das Wichtigste der aktuellen Version, verlinkt aus dem Update-Hinweis im Chat
+  item("utl-news", "a1", nil),
   item("utl-train-stop", "b", "stop_window", { tag = "[item=utl-train-stop]" }),
   item("utl-combinator", "c", "combinator", { tag = "[item=utl-station-combinator]" }),
   item("utl-roles", "d", "roles"),

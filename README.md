@@ -406,6 +406,9 @@ and refills below its minimum.
 Plus explanations of roles, requests, values and network, linking networks (star, research
 “Network links”), depots, copying settings/blueprints and the manager.
 
+After an update, UTL writes one short line into the chat with the most important news; the link in
+it opens the tips & tricks page **“New in UTL”**. Switch it off per player: *Update notes in chat*.
+
 ## FAQ
 
 - **Only one train runs:** one is probably enough (target stock, see above), or there are no

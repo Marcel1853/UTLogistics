@@ -7,6 +7,7 @@ Date: 2026-09-27
     - Cleanup gives back: a cleanup station can offer its contents to the network again ("Offer contents again", off by default per station), only as a fallback, like any provider, or empty first. Leftovers are not brought back to the requester they came from for 5 minutes. Map setting "Cleanup may offer its contents again" (on).
     - New scenario "UTL storage (to watch)": storage with loading and unloading inserters switched by the job output, and a cleanup that gives back on a ring with two trains; a window explains each part and a camera follows the train involved.
     - Tips & tricks: new entries "Cleanup gives back" and "Storage (advanced)", each with a scene.
+    - Update notes: after an update, every player gets one short chat line with the most important news and a link that opens the new tips & tricks page "New in UTL". Can be switched off per player ("Update notes in chat").
     - Scenarios "UTL examples" and "UTL network links" got the explanation window: it follows a train and explains what it is doing.
   Changes:
     - Fuel station: the train waits until all locomotives are full or nothing has changed for 30 s (before: at most 30 s in total).

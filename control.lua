@@ -9,5 +9,6 @@ require("scripts.gui.manager.init")
 require("scripts.gui.admin.init")
 require("scripts.commands.init")
 require("scripts.api.remote")
+require("scripts.core.news")
 
 Events.register()
