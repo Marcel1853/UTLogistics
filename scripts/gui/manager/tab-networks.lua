@@ -9,9 +9,11 @@ local Filter = require("scripts.gui.manager.surface-filter")
 local Tab = {}
 
 local COLUMNS = {
-  { caption = { "utl-manager.col-station" }, width = 260 },
-  { caption = { "utl-manager.col-role" }, width = 220 },
-  { caption = { "utl-manager.col-network" }, width = 140 },
+  -- zusammen mit der Netzliste links (230) höchstens so breit wie der Manager-Inhalt (880),
+  -- Rahmen und Scrollbalken eingerechnet – vorher ragte die Liste rechts aus dem Fenster
+  { caption = { "utl-manager.col-station" }, width = 240 },
+  { caption = { "utl-manager.col-role" }, width = 180 },
+  { caption = { "utl-manager.col-network" }, width = 130 },
 }
 
 local ROLE_ORDER = { "storage", "provider", "requester", "depot", "fuel", "cleanup" }
