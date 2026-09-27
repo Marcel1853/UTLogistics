@@ -206,8 +206,8 @@ werden sollen, **positiv**; Waren, die hier ankommen, **negativ**. Solange ein L
 Bahnsteig steht, kommen vier Signale dazu: **Zug-Nummer**, **Zuglänge** (Teile), **Loks** und
 **Wagen im Zug**. Damit schaltest du
 Filter-Greifarme, Anzeigen – und Pumpen: Für Flüssigkeiten gibt es keine Slot-Filter, so öffnest
-du bei einem Anbieter mit mehreren Tanks die richtige Pumpe. Überschüssige Flüssigkeit ablassen
-bleibt deine Sache.
+du bei einem Anbieter mit mehreren Tanks die richtige Pumpe. Übrig gebliebene Flüssigkeit
+bringt der Zug zu einem Cleanup für diese Flüssigkeit.
 
 Die Ausgabe setzt und entfernt UTL zusammen mit der Station; sie ist nicht baubar und nicht
 abbaubar. Kabele sie nicht an den Eingang der Station – der Auftrag liefe sonst als Bestand
@@ -264,8 +264,9 @@ Ein Zug mit Restladung fährt zur nächsten passenden **Cleanup-Station** und da
 UTL plant daraus eine Route: Einzeln eingetragene Waren kommen vor „Alle …“; reicht eine
 Station nicht (z. B. Kohle und Wasser im Zug), fährt der Zug mehrere Cleanups nacheinander an.
 An jeder Station wartet er, bis die Waren dieser Station weg sind (höchstens 30 s ohne Bewegung,
-falls die Kiste voll ist). Flüssigkeiten leerst du mit Pumpen am Wagen; „Alle Flüssigkeiten“
-nur mit Abfluss, sonst mischen sie sich im Rohr.
+falls die Kiste voll ist). Flüssigkeiten leerst du mit Pumpen am Wagen in einen Lagertank – je Flüssigkeit ein eigenes
+Cleanup, denn ein Tank fasst nur eine Sorte; mit „Alle Flüssigkeiten“ fließt jede andere Sorte
+nicht ab, und der Zug fährt nach 30 s weiter.
 
 Gibt es für eine Ware kein passendes, freies Cleanup, bleibt der Zug im Depot, es kommt die
 Warnung „kein passendes Cleanup für [Ware]“, und UTL versucht es alle 10 s erneut.

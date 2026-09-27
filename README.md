@@ -168,7 +168,7 @@ carries the running jobs as signals: goods to be loaded here are **positive**, g
 here are **negative**. While a delivery train stands at the stop, four more signals are added:
 **train number**, **train length** (carriages), **locomotives** and **wagons in the train**. Wire it to filter inserters, to displays – and to pumps: for fluids there
 are no slot filters, so this is how you open the right pump at a provider with several tanks.
-Draining leftover fluid stays your job.
+Leftover fluid goes to a cleanup for that fluid.
 
 The output is placed and removed by UTL together with the station; it cannot be built or mined.
 Do not wire it to the station's input – that would feed the job back in as stock.
@@ -203,7 +203,7 @@ fully unloaded at the requester) go to the nearest matching **cleanup station**.
 station accepts is set in its window ("Values" tab, "Cleanup" section, not via the stop name): **All items** and **All fluids** switches (both on by default) or single items and
 fluids. Goods entered one by one come before "All …"; if one station is not enough, the train
 visits several in a row and waits at each until its goods are gone (max. 30 s without change).
-Empty fluids with pumps; use "All fluids" only with a drain, fluids mix in pipes. Without a
+Empty fluids with pumps into a storage tank – one cleanup per fluid, because a tank only holds one kind; with "All fluids" any other kind does not flow and the train moves on after 30 s. Without a
 fitting free cleanup, the train waits in the depot with the alert "no fitting cleanup for
 [good]" and UTL retries every 10 s.
 
