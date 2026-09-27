@@ -1,0 +1,48 @@
+# Bilder der Mod-Seite erneuern (nur von Hand starten).
+# Lädt Bilder aus dem GitHub-Wiki dieses Repositorys, lädt sie auf das Mod-Portal hoch und setzt
+# die Reihenfolge: zuerst die Bilder aus „keep“ (vorhandene Bild-IDs), dann die neuen.
+# Nicht genannte Bilder verschwinden von der Mod-Seite.
+# Braucht das Secret FACTORIO_MOD_PORTAL_TOKEN mit dem Recht „ModPortal: Edit Mods“.
+name: Portal-Bilder
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: "Vorhandene Bild-IDs, die vorne bleiben (Komma-getrennt, in dieser Reihenfolge)"
+        required: false
+        default: ""
+      images:
+        description: "Neue Bilder als Pfade im Wiki unter images/ (Komma-getrennt), z. B. shots/en/admin-fenster.jpg"
+        required: true
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bilder hochladen und Reihenfolge setzen
+        env:
+          TOKEN: ${{ secrets.FACTORIO_MOD_PORTAL_TOKEN }}
+          KEEP: ${{ inputs.keep }}
+          IMAGES: ${{ inputs.images }}
+          WIKI_RAW: https://raw.githubusercontent.com/wiki/${{ github.repository }}/images
+          API: https://mods.factorio.com/api/v2/mods
+        run: |
+          set -euo pipefail
+          MOD=$(curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/info.json" | jq -r .name)
+          echo "Mod: $MOD"
+          ids="$KEEP"
+          for name in ${IMAGES//,/ }; do
+            curl -fsSL -o bild "$WIKI_RAW/$name"
+            add=$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -F "mod=$MOD" "$API/images/add")
+            url=$(echo "$add" | jq -r '.upload_url // empty')
+            if [ -z "$url" ]; then echo "images/add: $(echo "$add" | jq -c '{error, message}')"; exit 1; fi
+            up=$(curl -sS -X POST -F "image=@bild;filename=$(basename "$name")" "$url")
+            id=$(echo "$up" | jq -r '.id // empty')
+            if [ -z "$id" ]; then echo "Upload $name: $(echo "$up" | jq -c '{error, message}')"; exit 1; fi
+            echo "hochgeladen: $name -> $id"
+            ids="${ids:+$ids,}$id"
+          done
+          result=$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -F "mod=$MOD" -F "images=$ids" "$API/images/edit")
+          echo "$result" | jq -c '{success, error, message, count: (.images | length?)}'
+          [ "$(echo "$result" | jq -r '.success // false')" = "true" ]
