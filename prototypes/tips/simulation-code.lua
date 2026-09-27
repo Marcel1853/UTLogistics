@@ -49,7 +49,8 @@ return {
   -- Lager auf dem Rundkurs: füllt sich aus dem Anbieter, gibt an den nahen Abnehmer ab
   storage = require("__UTLogistics__/prototypes/tips/scenes/storage"),
   -- Cleanup bietet seinen Inhalt wieder an: der Zug holt das Kupfer dort ab
-  cleanup_return = scene({ SIMPLE, CLEANUP_RETURN, signs({ { 13, 6, "cleanup-return", CLEANUP_ITEM } }), "train(-8, 150)",
+  cleanup_return = scene({ SIMPLE, CLEANUP_RETURN, signs({ { 13, 6, "cleanup-return", CLEANUP_ITEM } }),
+    "local wagon = train(-8, 150).cargo_wagons[1]; wagon.insert({ name = 'copper-plate', count = 300 }); wagon.insert({ name = 'iron-plate', count = 200 })",
     window('remote.call("utl", "open_station", player.index, c_unit, 2, true)') }),
   -- Einstellungen vom Abnehmer auf „Abnehmer 2“ kopieren (einmal, ohne Zug), danach dessen Fenster
   copy = scene({ SIMPLE, COPY, signs({ { -9, -4, "copy", '{ type = "item", name = "blueprint" }' } }), [[

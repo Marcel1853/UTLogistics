@@ -181,43 +181,70 @@ remote.call("utl", "configure_station", c_unit, { mode = "cleanup" })
 equip({ 3.5 }, 2.5, false, nil, nil)
 ]]
 
--- Cleanup mit „Inhalt wieder anbieten“: seine Kiste hat Kupfer, der Abnehmer will Kupfer – das hat
--- sonst niemand, also holt der Zug es am Cleanup ab.
 local CLEANUP_RETURN = [[
 -- Die Auftrags-Ausgabe braucht „UTL: Ladesteuerung“; in der Tipps-Welt ist nichts erforscht.
 force.technologies["utl-loading-control"].researched = true
 local cleanup = stop("Cleanup", 13, true, false)
 c_unit = cleanup.unit_number
-remote.call("utl", "configure_station", c_unit, { mode = "cleanup", cleanup = { offer = "first" } })
-equip({ 3.5 }, 2.5, true, "copper-plate", cleanup.get_wire_connector(W.circuit_green, true))
--- Gemischte Restladung: Eisen und Kupfer in derselben Kiste. Der Abnehmer will nur Kupfer.
-local chest = s.find_entities_filtered({ name = "infinity-chest", position = { 3.5, 3.5 }, radius = 0.5 })[1]
-chest.infinity_container_filters = {
-  { index = 1, name = "iron-plate", count = 1000, mode = "at-least" },  -- über der Anbieter-Schwelle
-  { index = 2, name = "copper-plate", count = 1000, mode = "at-least" },
-}
+-- kleine Anbieter-Schwelle: der Rest im Cleanup ist nur ein paar hundert Platten
+remote.call("utl", "configure_station", c_unit, { mode = "cleanup", cleanup = { offer = "first" }, provide_threshold = 50 })
 remote.call("utl", "set_request", r_unit, 1, { type = "item", name = "copper-plate" }, 200)
--- Der Greifarm filtert per Schaltung („Filter setzen“ aus der Auftrags-Ausgabe des Cleanups) und
--- greift so nur das bestellte Kupfer. Die Ausgabe legt UTL einen Moment nach dem Einstellen an.
-local inserter = s.find_entities_filtered({ name = "bulk-inserter", position = { 3.5, 2.5 }, radius = 0.5 })[1]
-local cb = inserter.get_or_create_control_behavior()
-cb.circuit_set_filters = true
+local LOADING = { type = "virtual", name = "utl-loading" }
+local function switched(x, direction, comparator)
+  local e = s.create_entity({ name = "bulk-inserter", position = { x, 2.5 }, direction = direction, force = force })
+  local cb = e.get_or_create_control_behavior()
+  cb.circuit_enable_disable = true
+  cb.circuit_condition = { first_signal = LOADING, comparator = comparator, constant = 0 }
+  return e, cb
+end
+local unloader = switched(1.5, 0, "=")                -- greift vom Wagen (Norden)
+local loader, loader_cb = switched(3.5, 8, ">")        -- greift aus der Kiste (Süden)
+loader_cb.circuit_set_filters = true                  -- nur die bestellte Ware (Kupfer)
+s.create_entity({ name = "bulk-inserter", position = { 2.5, 3.5 }, direction = 12, force = force }) -- Kiste → Kiste
+-- Kabel reichen nur 9 Felder: Kisten → Mast → Zwischenmast → Haltestelle
+local pole = s.create_entity({ name = "medium-electric-pole", position = { 2.5, 4.5 }, force = force })
+local relay = s.create_entity({ name = "medium-electric-pole", position = { 8.5, 4.5 }, force = force })
+local G = W.circuit_green
+local target = pole.get_wire_connector(G, true)
+for _, x in ipairs({ 1.5, 3.5 }) do
+  local chest = s.create_entity({ name = "steel-chest", position = { x, 3.5 }, force = force })
+  chest.get_wire_connector(G, true).connect_to(target)
+  target = chest.get_wire_connector(G, true)
+end
+pole.get_wire_connector(G, true).connect_to(relay.get_wire_connector(G, true))
+relay.get_wire_connector(G, true).connect_to(cleanup.get_wire_connector(G, true))
+local eei = s.create_entity({ name = "electric-energy-interface", position = { 2.5, 6.5 }, force = force })
+eei.power_production = 100000
+eei.electric_buffer_size = 1000000
+-- Die Ausgabe legt UTL einen Moment nach dem Einstellen an: dann rot an beide Greifarme
+local R = defines.wire_connector_id.circuit_red
 local wired = false
 script.on_nth_tick(41, function()
   if not wired then
     local output = s.find_entities_filtered({ name = "utl-station-output", position = cleanup.position, radius = 5 })[1]
     if not output then return end
-    output.get_wire_connector(defines.wire_connector_id.circuit_red, true)
-      .connect_to(inserter.get_wire_connector(defines.wire_connector_id.circuit_red, true))
+    output.get_wire_connector(R, true).connect_to(relay.get_wire_connector(R, true))
+    relay.get_wire_connector(R, true).connect_to(pole.get_wire_connector(R, true))
+    pole.get_wire_connector(R, true).connect_to(loader.get_wire_connector(R, true))
+    loader.get_wire_connector(R, true).connect_to(unloader.get_wire_connector(R, true))
     wired = true
     if game.simulation then script.on_nth_tick(41, nil) end
   elseif not game.simulation then
-    -- nur für tools/tipstest: fährt der Zug vom Cleanup, darf nur Kupfer im Wagen sein
-    for _, t in pairs(game.train_manager.get_trains({ surface = s })) do
-      if t.state == defines.train_state.on_the_path and t.get_item_count() > 0 and not logged_cleanup then
-        logged_cleanup = game.tick
-        log("[TIPS] cleanup_return erstes abfahrt ladung " .. serpent.line(t.get_contents()))
+    -- nur für tools/tipstest: womit fährt der Zug vom Cleanup ab, und was liegt danach in den Kisten?
+    for _, d in pairs(remote.call("utl", "get_deliveries")) do
+      if d.provider == c_unit and d.state == "to_requester" and not logged_cleanup then
+        logged_cleanup = true
+        local t = game.train_manager.get_train_by_id(d.train_id)
+        log("[TIPS] cleanup_return erstes abfahrt ladung " .. serpent.line(t and t.get_contents()))
       end
+    end
+    if not logged_stock and game.tick > 3600 then
+      logged_stock = true
+      local n = {}
+      for _, c in pairs(s.find_entities_filtered({ name = "steel-chest", area = { { 0, 3 }, { 5, 4 } } })) do
+        for _, it in pairs(c.get_inventory(defines.inventory.chest).get_contents()) do n[#n + 1] = it.name .. " " .. it.count end
+      end
+      log("[TIPS] cleanup_return erstes kisten nach 60 s: " .. table.concat(n, ", "))
     end
   end
 end)

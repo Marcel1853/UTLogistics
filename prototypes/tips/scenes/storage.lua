@@ -127,12 +127,22 @@ for _, depot in pairs({ found[0][1], found[8][1] }) do
   schedule.go_to_station(1)
 end
 
--- Schilder neben dem Lager und Abnehmer 2
+-- Schilder neben dem Lager und Abnehmer 2: an einer Stelle, an der unter dem ganzen Text kein Gleis
+-- und kein Signal liegt (auf dem Rundkurs sind überall Gleise), nächste zuerst
+local TRACK = { "straight-rail", "curved-rail-a", "curved-rail-b", "half-diagonal-rail", "rail-signal", "rail-chain-signal",
+  "train-stop" }
 local function sign_near(stop, key, icon)
   local p = stop.position
-  for d = 3, 12 do
-    if sign(p.x, p.y + d, key, icon) or sign(p.x, p.y - d, key, icon) then return end
+  local best
+  for dy = -14, 14 do
+    for dx = -8, 8, 2 do
+      local x, y = p.x + dx, p.y + dy
+      local free = s.count_entities_filtered({ area = { { x - 9, y - 2.5 }, { x + 9, y + 1 } }, type = TRACK }) == 0
+      local d = dx * dx + dy * dy
+      if free and (not best or d < best.d) then best = { x = x, y = y, d = d } end
+    end
   end
+  if best then sign(best.x, best.y, key, icon) end
 end
 sign_near(bottom_utl, "storage", IRON)
 sign_near(top_vanilla, "storage-far", IRON)
