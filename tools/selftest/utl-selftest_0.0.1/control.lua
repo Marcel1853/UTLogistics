@@ -1324,6 +1324,16 @@ function train_test_step()
         local pa_cc = game.surfaces["nauvis"].find_entities_filtered({ name = "constant-combinator", area = umkreis })[1]
         if pa_cc then pa_cc.get_control_behavior().get_section(1).clear_slot(1) end
         limits(st.s2, 500)
+        -- zweite Ware: Stahl hat nur S1 (Grenze 0/…, bietet alles an), S2 braucht Stahl (Mindest 100) –
+        -- die Ladeliste muss beides enthalten (für Lager gilt nicht die allgemeine Bedarfs-Schwelle)
+        st.s1.cc.get_control_behavior().get_section(1).set_slot(3,
+          { value = { type = "item", name = "steel-plate", quality = "normal" }, min = 1500 })
+        remote.call("utl", "configure_station", st.s1.unit, { storage = { limits = {
+          { signal = { type = "item", name = "iron-plate" }, min = 1000, max = 3000 },
+          { signal = { type = "item", name = "steel-plate" }, min = 0, max = 3000 } } } })
+        remote.call("utl", "configure_station", st.s2.unit, { storage = { limits = {
+          { signal = { type = "item", name = "iron-plate" }, min = 1000, max = 3000 },
+          { signal = { type = "item", name = "steel-plate" }, min = 100, max = 300 } } } })
         r.phase, r.deadline = "move", tick + 3600
       end
     elseif r.phase == "move" then
@@ -1333,6 +1343,8 @@ function train_test_step()
         r.checked = true
         check("R24 zu viel wandert zu zu wenig: lager S1 beliefert lager S2",
           d.from == "UTL-S1" and d.manifest[KEY] == 1000, tostring(d.from) .. " " .. serpent.line(d.manifest))
+        check("R24 lager bekommt zwei waren in einer fahrt",
+          (d.manifest["item|steel-plate|normal"] or 0) == 300, serpent.line(d.manifest))
         r.id = d.id
       end
       -- Fahrt zu Ende bringen (Sackgleis: S1 und S2 liegen in Fahrtrichtung hinter dem Depot)
@@ -1340,7 +1352,10 @@ function train_test_step()
         if entry.id == r.id and inv then
           if entry.state == "loading" and not r.loaded then
             r.loaded = true
-            inv.insert{ name = "iron-plate", count = entry.manifest[KEY] or 0 }
+            for key, count in pairs(entry.manifest) do
+              local name = key:match("^item|([^|]+)|")
+              if name and count > 0 then inv.insert{ name = name, count = count } end
+            end
           elseif entry.state == "unloading" then
             inv.clear()
             limits(st.s2, 2000) -- „angekommen“: S2 ist wieder in der Ruhezone

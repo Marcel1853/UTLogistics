@@ -15,7 +15,7 @@ cleanup and an overview window in one mod**, built for high UPS.
   (storage stations). The map
   setting “UTL features need research” turns this off – then everything is available right away.
 
-> **Testing status.** UTL runs through an automated self test (122 checks) and a headless load
+> **Testing status.** UTL runs through an automated self test (123 checks) and a headless load
 > test with 384 trains on 12 × 12 city blocks; updates are checked by loading a save from the
 > previous version. The main features are shown in the scenarios. In real games it has so far been
 > played on small networks. Newest: **storage** and **cleanup gives back** (0.0.8), **topping up** (0.0.7, off by default) and **team separation** (0.0.6, not yet tried in a
