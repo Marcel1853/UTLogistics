@@ -26,17 +26,35 @@ end
 --- (die Oberfläche hat die Karteneinstellungen des Planeten), und das Abräumen der Felsen über
 --- 848 × 848 Felder dauert ewig. Deshalb dort die Chunks löschen und mit Laborboden neu erzeugen;
 --- auf Nauvis wird nur geräumt, weil dort der Spieler steht.
+--- Gegner loswerden: Friedensmodus reicht nicht – auf Vulcanus kommen Demolisher aus ihren
+--- Revieren, und Chunks, die später entstehen, bringen neue Gegner mit. Deshalb: keine Gegner mehr
+--- erzeugen, vorhandene entfernen und die Reviere der Chunks leeren.
+local function no_enemies(surface, area)
+  for _, e in pairs(surface.find_entities_filtered({ force = "enemy", area = area })) do
+    if e.valid then e.destroy() end
+  end
+end
+
+local function clear_territories(surface)
+  local chunks = {}
+  for chunk in surface.get_chunks() do chunks[#chunks + 1] = { x = chunk.x, y = chunk.y } end
+  if #chunks > 0 then surface.clear_territory_for_chunks(chunks) end
+end
+
 local function clear(surface)
   log("[PLANETEN] " .. surface.name .. ": Gelände vorbereiten …")
   surface.generate_with_lab_tiles = true
   surface.always_day = true
   surface.peaceful_mode = true
+  surface.no_enemies_mode = true
   if surface.name ~= "nauvis" then
     for chunk in surface.get_chunks() do
       surface.delete_chunk({ x = chunk.x, y = chunk.y })
     end
     surface.request_to_generate_chunks({ 384, 384 }, 14)
     surface.force_generate_chunk_requests()
+    no_enemies(surface)
+    clear_territories(surface)
     log("[PLANETEN] " .. surface.name .. ": Platz ist frei (leer erzeugt)")
     return
   end
@@ -101,6 +119,14 @@ script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   if not storage.start and not storage.no_space_age then script.on_nth_tick(1, setup) end
 end)
+-- Später erzeugte Chunks (Spieler fährt herum, Radar) ebenfalls ohne Gegner und ohne Revier
+script.on_event(defines.events.on_chunk_generated, function(event)
+  local surface = event.surface
+  if not (storage.start and surface.valid and surface.no_enemies_mode) then return end
+  no_enemies(surface, event.area)
+  surface.clear_territory_for_chunks({ event.position })
+end)
+
 script.on_event(defines.events.on_player_created, function(event)
   local player = game.get_player(event.player_index)
   if player then place(player) end

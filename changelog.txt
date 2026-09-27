@@ -13,6 +13,7 @@ Date: 2026-09-26
     - Scenarios: after a mod update, new research is researched right away in running scenario saves, and every player is in cheat mode.
   Bugfixes:
     - Scenario "UTL examples": the fuel station now refuels the rear locomotive, too (both locomotives face forward and use fuel).
+    - Scenario "UTL planet test": no more enemies on Vulcanus and Gleba – no-enemies mode, existing enemies and demolisher territories removed, also in chunks generated later.
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.7
 Date: 2026-09-26
