@@ -4,6 +4,7 @@
 local Registry = require("scripts.stations.registry")
 local Networks = require("scripts.stations.networks")
 local Pending = require("scripts.trains.pending")
+local Capacity = require("scripts.trains.capacity")
 
 local ServiceStops = {}
 
@@ -71,11 +72,12 @@ function ServiceStops.candidates(train, network, role)
       set[unit] = nil
     else
       local stop, cfg = station.stop, station.config
-      -- Zuglimit der Haltestelle beachten: UTL fährt per Schienen-Wegpunkt direkt davor, da
-      -- greift das Vanilla-Limit nicht – ein Stau würde sonst die Hauptstrecke blockieren.
+      -- „max. Züge“ und Zuglimit der Haltestelle beachten: UTL fährt per Schienen-Wegpunkt direkt
+      -- davor, da greift das Vanilla-Limit nicht von selbst – ein Stau würde sonst die Hauptstrecke
+      -- blockieren.
       if stop and stop.valid and cfg.roles[role] and stop.surface_index == surface and stop.force_index == force
         and Networks.related(place, cfg.network, network) and length_ok(cfg, length)
-        and stop.trains_count + (heading[stop.unit_number] or 0) < (stop.trains_limit or math.huge) then
+        and Capacity.has_room(stop, cfg, heading) then
         list[#list + 1] = { stop = stop, config = cfg }
       end
     end

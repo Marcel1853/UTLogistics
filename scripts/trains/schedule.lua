@@ -166,6 +166,23 @@ function Schedule.send_waypoint(train, stop)
   return true
 end
 
+--- Schienen-Wegpunkt vor `stop` direkt vor den Fahrplan-Halt `index` setzen (der Zug fährt
+--- schon dorthin): er erreicht so genau diese Haltestelle, auch wenn mehrere gleich heißen.
+function Schedule.waypoint_before(train, stop, index)
+  local schedule = train.get_schedule()
+  local rail = stop.connected_rail
+  if not (schedule and rail) then return false end
+  schedule.add_record({
+    rail = rail,
+    rail_direction = stop.connected_rail_direction,
+    temporary = true,
+    wait_conditions = {},
+    index = { schedule_index = index },
+  })
+  schedule.go_to_station(index)
+  return true
+end
+
 --- Alle von UTL angelegten (temporären, nicht von Interrupts stammenden) Halte entfernen.
 function Schedule.clear(train)
   if not train.valid then return end

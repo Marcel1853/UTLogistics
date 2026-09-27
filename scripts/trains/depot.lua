@@ -8,6 +8,7 @@ local CleanupRoute = require("scripts.trains.cleanup-route")
 local Alerts = require("scripts.alerts.alerts")
 local Networks = require("scripts.stations.networks")
 local Pending = require("scripts.trains.pending")
+local DepotRoute = require("scripts.trains.depot-route")
 
 local Depot = {}
 
@@ -187,41 +188,8 @@ function Depot.send_service(train, network)
   return true, nil
 end
 
---- `network` = nil: Netzwerk egal (Zug steht an einer Haltestelle ohne Depot-Rolle).
---- Passendes freies Depot mit gleichem Namen suchen und den Zug per Schienen-Wegpunkt
---- davor schicken; sein Depot-Halt im Fahrplan führt ihn dann genau dorthin.
-local MAX_DEPOT_CANDIDATES = 20
-function Depot.relocate(train, current, network, after_service)
-  local name, length, surface = current.backer_name, #train.carriages, current.surface_index
-  -- Team des Zuges (nicht der Haltestelle: die kann einem anderen Team gehören)
-  local front = train.front_stock
-  local force = front and front.force_index or current.force_index
-  local place = Networks.place(surface, force)
-  local goals, stops = {}, {}
-  -- Züge, die schon per Wegpunkt zu einem Depot unterwegs sind, zählen mit: sonst schickt UTL
-  -- mehrere zum selben freien Depot, und die übrigen stauen sich davor.
-  local heading = Pending.counts()
-  for _, station in pairs(storage.stations.by_unit) do
-    local stop, cfg = station.stop, station.config
-    if cfg.roles.depot and stop and stop.valid and stop ~= current and stop.backer_name == name
-      and stop.surface_index == surface and stop.force_index == force
-      and (network == nil or Networks.related(place, cfg.network, network))
-      and length_ok(cfg, length)
-      and stop.trains_count == 0 and (heading[stop.unit_number] or 0) == 0 then
-      stops[#stops + 1] = stop
-      goals[#goals + 1] = { train_stop = stop }
-      if #goals >= MAX_DEPOT_CANDIDATES then break end
-    end
-  end
-  if #goals == 0 then return false end
-  local result = game.train_manager.request_train_path({ train = train, goals = goals, steps_limit = 20000 })
-  if not result.found_path then return false end
-  local target = stops[result.goal_index]
-  if not Schedule.send_waypoint(train, target) then return false end
-  Pending.reserve(train.id, { target })
-  storage.trains.service[train.id] = after_service and "relocate-serviced" or "relocate"
-  return true
-end
+--- Umsetzen in ein freies echtes Depot gleichen Namens (depot-route.lua).
+Depot.relocate = DepotRoute.relocate
 
 --- Freie Züge, die knapp an Treibstoff sind, zum Tanken schicken (z. B. nach dem Anlegen
 --- einer Tankstelle oder dem Ändern der Grenze).
