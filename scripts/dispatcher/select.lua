@@ -167,7 +167,10 @@ local function build_manifest(request, provider, record, amount)
     if key ~= request.key and size2 and offered and not blocked(p, r.unit, key) then
       local need = wanted - Deliveries.incoming(r.unit, key)
       local available = offered - Deliveries.outgoing(p.unit, key)
-      local minimum = Reader.threshold(r_cfg.request_threshold, r_cfg.request_stack_threshold, key)
+      -- Lager: Mindest und Höchst sind die Schwellen, die allgemeine Bedarfs-Schwelle gilt nicht
+      -- (sonst käme eine zweite Ware nie mit, solange sie unter 1000 liegt)
+      local minimum = r_cfg.roles.storage and 1
+        or Reader.threshold(r_cfg.request_threshold, r_cfg.request_stack_threshold, key)
       local take = math.min(need, available, free * size2)
       if take > 0 and (take >= minimum or take == free * size2) and need >= minimum then
         manifest[key] = take

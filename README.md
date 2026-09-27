@@ -369,7 +369,11 @@ the minimum; the workshop next to the provider still gets its iron from the prov
 is nearer (unless the provider is busy – then the storage helps out). A **cleanup** with “empty first” takes a leftover of copper and gives it back to another
 copper workshop. A window explains each of the three parts (button: next part), a camera follows
 the train involved. So that leftovers really happen, the scenario fills the chest of copper
-workshop A while a train is on its way there – the window says so.
+workshop A while a train is on its way there – the window says so. Below the ring, four small
+example lines each explain one more thing: **two storages** (too full gives once to too empty, then
+it is calm), a **storage taking leftovers** when there is no cleanup, the **cleanup levels** side by
+side (who delivers with “Only as a fallback”, “Like any provider”, “Empty first”) and a **storage
+with two goods** that gets both in one trip. The window has a part for each of them.
 
 All scenarios and the tips & tricks scenes carry **display panels** with short explanations next to
 the stations (in your game language).

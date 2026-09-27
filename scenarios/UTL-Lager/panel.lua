@@ -7,7 +7,8 @@ local Panel = {}
 
 local NAME = "utl_lager_panel"
 local NEXT = "next"
-local CHAPTERS = { "storage", "switch", "cleanup" }
+local CHAPTERS = { "storage", "switch", "cleanup", "two", "rest", "tiers", "multi" }
+Panel.CHAPTER_COUNT = #CHAPTERS
 
 local last -- letzter Stand aus control.lua (für den Knopf zwischen zwei Sekunden)
 
@@ -77,15 +78,23 @@ local VIEW = {
       { "utl-lager.cleanup-note", v.counts.rest, v.counts.returned }
   end,
 }
-local STEP_COUNT = { storage = 6, switch = 5, cleanup = 5 }
+-- Beispiel-Strecken: examples.lua liefert Schritt, Kamera, große Zeile und Notiz fertig
+for _, key in ipairs({ "two", "rest", "tiers", "multi" }) do
+  VIEW[key] = function(v)
+    local e = v.examples and v.examples[key]
+    if not e then return 1, nil, { "utl-lager.example-missing" }, "" end
+    return e.current, e.follow, e.big, e.note
+  end
+end
+local STEP_COUNT = { storage = 6, switch = 5, cleanup = 5, two = 5, rest = 5, tiers = 3, multi = 4 }
 
 function Panel.refresh(player, v)
   local index = storage.lager and storage.lager.chapter or 1
   local chapter = CHAPTERS[index]
   local current, follow, big, note = VIEW[chapter](v)
   Explain.update(player, NAME, {
-    headline = { "utl-lager.headline", index, { "utl-lager.chapter-" .. chapter } },
-    button = { "utl-lager.next", { "utl-lager.chapter-" .. CHAPTERS[index % 3 + 1] } },
+    headline = { "utl-lager.headline", index, #CHAPTERS, { "utl-lager.chapter-" .. chapter } },
+    button = { "utl-lager.next", { "utl-lager.chapter-" .. CHAPTERS[index % #CHAPTERS + 1] } },
     steps = steps(chapter, STEP_COUNT[chapter]),
     current = current,
     legend = true,

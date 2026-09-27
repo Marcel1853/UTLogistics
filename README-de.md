@@ -477,7 +477,11 @@ Mindest verbraucht hat; die Werkstatt neben dem Anbieter bekommt ihr Eisen weite
 weil der näher ist (außer der Anbieter ist gerade belegt – dann hilft das Lager aus). Ein **Cleanup** mit „zuerst leeren“ nimmt einen Kupfer-Rest an und gibt ihn an
 eine andere Kupfer-Werkstatt zurück. Ein Fenster erklärt jeden der drei Teile (Knopf: nächster
 Teil), eine Kamera folgt dem beteiligten Zug. Damit wirklich Reste entstehen, füllt das Szenario
-die Kiste der Kupfer-Werkstatt A auf, während ein Zug dorthin unterwegs ist – das Fenster sagt das.
+die Kiste der Kupfer-Werkstatt A auf, während ein Zug dorthin unterwegs ist – das Fenster sagt das. Unter dem Rundkurs erklären vier
+kleine Beispiel-Strecken je noch eine Sache: **zwei Lager** (zu voll gibt einmal an zu leer, dann ist
+Ruhe), ein **Lager nimmt Restladung**, wenn es kein Cleanup gibt, die **Cleanup-Stufen** im Vergleich
+(wer liefert bei „Nur als Reserve“, „Wie ein Anbieter“, „Zuerst leeren“) und ein **Lager mit zwei
+Waren**, das beides in einer Fahrt bekommt. Das Fenster hat für jedes einen eigenen Teil.
 
 In allen Szenarien und in den Tipps-&-Tricks-Szenen stehen **Anzeigefelder** mit kurzen
 Erklärungen neben den Bahnhöfen (in deiner Spielsprache).

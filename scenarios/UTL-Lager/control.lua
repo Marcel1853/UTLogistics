@@ -6,6 +6,7 @@
 --- 20 s nach der Abfahrt wieder – die Werkstatt „verbraucht“ ihr Kupfer.
 local World = require("__UTLogistics__/scenarios/UTL-Lager/world")
 local Panel = require("__UTLogistics__/scenarios/UTL-Lager/panel")
+local Examples = require("__UTLogistics__/scenarios/UTL-Lager/examples")
 local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local K = {
@@ -34,8 +35,9 @@ local function setup()
   storage.lager = {
     made = made, chapter = 1, wired = false, provoked = {}, seen = {}, at_cleanup = {},
     counts = { into = 0, out = 0, workshop = 0, rest = 0, returned = 0 },
+    ex = Examples.build(made.surface, force),
   }
-  force.chart(made.surface, made.area)
+  force.chart(made.surface, { { -8, -8 }, { 160, 300 } }) -- Rundkurs und Beispiel-Strecken
   log("[LAGER] gebaut")
   for _, player in pairs(game.players) do place(player) end
 end
@@ -80,9 +82,11 @@ local function tick()
   if not st then return end
   local made, u = st.made, st.made.units
   if not st.wired then st.wired = World.wire(made) end
+  if st.ex and not st.ex_wired then st.ex_wired = Examples.wire(st.ex) end
 
   local by = {}
-  for _, d in pairs(remote.call("utl", "get_deliveries") --[[@as table]]) do
+  local list = remote.call("utl", "get_deliveries") --[[@as table]]
+  for _, d in pairs(list) do
     provoke_rest(st, d)
     local kind = d.requester == u[K.storage] and "into"
       or d.provider == u[K.storage] and "out"
@@ -130,6 +134,8 @@ local function tick()
     stops = { storage = made.stops[K.storage], cleanup = made.stops[K.cleanup] },
     -- Kameraziel im Teil „Laden und Entladen“: ein Lade-Greifarm am Lager bzw. am Cleanup
     sets = { storage = made.bays.storage.loaders[1], cleanup = made.bays.cleanup.loaders[1] },
+    -- Beispiel-Strecken (fehlen in Runden, die vor den Beispielen gestartet wurden)
+    examples = st.ex and Examples.tick(st.ex, list) or nil,
   })
 end
 
@@ -148,7 +154,7 @@ end)
 
 script.on_event(defines.events.on_gui_click, function(event)
   if storage.lager and Panel.on_click(event) then
-    storage.lager.chapter = storage.lager.chapter % 3 + 1
+    storage.lager.chapter = storage.lager.chapter % Panel.CHAPTER_COUNT + 1
     Panel.refresh_all()
   end
 end)
