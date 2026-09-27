@@ -25,7 +25,7 @@ local function close() remote.call("utl", "close_windows", 1) end
 local function stations(surface)
   local found = { provider = {}, requester = {}, depot = {}, fuel = {}, cleanup = {} }
   for _, e in pairs(surface.find_entities_filtered({ name = { "utl-train-stop", "utl-station-combinator" } })) do
-    local st = remote.call("utl", "get_station", e.unit_number)
+    local st = remote.call("utl", "get_station", e.unit_number) --[[@as table?]]
     if st and st.config then
       local roles, entry = st.config.roles or {}, { unit = e.unit_number, entity = e, st = st }
       for _, role in ipairs({ "provider", "requester", "depot", "fuel", "cleanup" }) do
@@ -91,7 +91,7 @@ local function plan(surface)
     for _, e in ipairs(list) do
       local name = (e.st.config.network ~= "" and e.st.config.network) or "default"
       if STAR[name] == nil then
-        local ok, star = pcall(remote.call, "utl", "get_network_star", surface.index, name, e.entity.force.name)
+        local ok, star = pcall(remote.call, "utl", "get_network_star", surface.index, name, e.entity.force.name) ---@cast star table?
         STAR[name] = ok and star and star.role == "center" or false
       end
     end

@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.8
-Date: 2026-09-26
+Date: 2026-09-27
   Features:
     - Storage (for advanced players, research "UTL: Storage"): a new station role that takes in and gives out. Per good a minimum and a maximum stock: below the minimum it requests up to the maximum, whatever is above the minimum it offers like a normal provider – with the same amount the nearer station delivers. Two storages never shove goods back and forth. "Accept leftover cargo" (on by default) lets trains drop leftovers there, too. Map setting "Allow storage stations" (on).
     - Job output: new signals "train loads here" and "train unloads here" while a delivery train stands at the stop – for example to switch loading and unloading inserters at a storage.
