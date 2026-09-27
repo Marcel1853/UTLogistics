@@ -5,6 +5,9 @@ cleanup and an overview window in one mod**, built for high UPS.
 
 *Auf Deutsch lesen: [README-de.md](https://github.com/Marcel1853/UTLogistics/blob/main/README-de.md) im GitHub-Repository.*
 
+> **📖 Wiki with pictures:** [github.com/Marcel1853/UTLogistics/wiki](https://github.com/Marcel1853/UTLogistics/wiki) – every feature explained step by step, in
+> English and German, with screenshots. This page is the short version.
+
 - Requires: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age is optional.
 - Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
   circuit network). Upgrades: **“UTL: Loading control”** (wagon filters and job output) and
@@ -67,111 +70,35 @@ section.
 
 ## Networks
 
-Every station has **one network name** (field "Network" in its window). Empty means `default`.
-Two stations only work together when the name is **exactly the same** – there is no numbering
-and no bitmask.
+Every station has **one network name** (field “Network” in its window, empty = `default`). Stations,
+depots, fuel stations and cleanups only work with the **exact same name** – so one map can carry
+several separate systems, each with its own depot, fuel station and cleanup. Leave the field empty
+everywhere for one big network. A typo or a capital letter is a different network.
 
-This applies to **all roles**:
+**Linking networks** (research “UTL: Network links I–III”, 1–3 partners): linked networks help
+each other with trains, depots, fuel stations and cleanups. A link is a **star** – one center,
+partners that help the center and are helped by it, but **not each other**; a network belongs to at
+most one star, links count per surface. Set it up in the station window (“Linked with”) or in the
+UTL Manager, tab “Networks”. Example: a depot in its own network `Reserve` linked to `Ore` and
+`Plates` serves both, while ore and plate stations still ignore each other.
 
-| Role | Effect of the network |
-|---|---|
-| Provider | is only offered to requesters with the same name |
-| Requester | is only served from providers with the same name |
-| Depot | hands its trains only to that network |
-| Fuel station | a train only refuels in its own network |
-| Cleanup | a train is only emptied in its own network |
-
-Example: two separate systems on one map.
-
-| Station | Network |
-|---|---|
-| Iron mine, iron smelter, depot "Ore depot" | `Ore` |
-| Plate storage, plate consumers, depot "Plate depot" | `Plates` |
-
-Ore trains never take a plate job, and each system needs **its own depot, fuel and cleanup
-stations** – unless you link the networks (see below). Leave the field empty everywhere if you just
-want one big network.
-
-### Linking networks
-
-*Needs research: “UTL: Network links I”, II and III allow 1, 2 and 3 partners per network.*
-
-**How many networks you create is not limited** – name as many as you like. Research only limits
-how many networks you can **link** with each other.
-
-Linked networks **help each other**: trains, depots, fuel stations and cleanups of one also serve
-the other. A link is a **star**:
-
-- One network is the **center**, the networks linked to it are its **partners**.
-- Center and partner help each other in **both directions**.
-- **Partners do not help each other.** They only share the center.
-- A network belongs to **at most one star**: a partner cannot get partners of its own and cannot be
-  linked to a second center. This keeps everything clear – no chains where half the map ends up in
-  one network by accident.
-- Links count **per surface**. Networks on Nauvis and on Vulcanus are linked separately, even if they
-  have the same name; each planet can have its own stars.
-
-Example: an iron network as center with three partners (needs “Network links III”).
-
-| Network | Role | helps / gets help from |
-|---|---|---|
-| `Iron` | center | `Copper`, `Coal`, `Stone` |
-| `Copper` | partner | `Iron` only |
-| `Coal` | partner | `Iron` only |
-| `Stone` | partner | `Iron` only |
-
-A free train from the iron depot takes copper, coal and stone jobs, and a copper train may take an
-iron job – but a copper train never takes a coal job. `Copper`, `Coal` and `Stone` cannot be linked to
-any further network while they belong to `Iron`.
-
-This also makes a **reserve depot** easy: put a depot in its own network `Reserve`, link `Ore` and
-`Plates` to it. Its trains serve both, while ore and plate stations still ignore each other.
-
-**Where to set it up** – both ways do the same thing, a link always applies to the whole network on
-that surface, not just to one station:
-
-- **Station window:** the box “Linked with” below the home network. Pick a network from the list or
-  create a new one with “New”; each partner appears as a button, a click removes the link. If the
-  network is a partner itself, the button shows its center, and a click leaves that star.
-- **UTL Manager, “Networks” tab:** pick a network on the left; above the station list you add and
-  remove partners the same way.
-
-The counter shows how many partners are used and allowed, e.g. `Linked with (2 / 3)`. When the
-limit is reached, the tooltip names the research that allows more.
-
-The UTL Manager shows the network in brackets behind the station name when it is not `default`,
-links as `[Iron ↔ Copper, Coal]` for a center and `[Copper → Iron]` for a partner. The **Networks**
-tab lists every network per surface with free trains, running deliveries and the stations of the
-star.
-
-**Typical mistakes**
-
-- Depot in the wrong network → alert "no free train in network …", although trains are waiting.
-- Fuel station in the wrong network → low trains are not sent (see *Refueling*).
-- A typo or a capital letter is a different network: `Ore` and `ore` do not work together.
+More, with examples and all messages: [wiki – Networks](https://github.com/Marcel1853/UTLogistics/wiki/Networks).
 
 ## Mixed providers
 
 *Needs research: “UTL: Loading control”.*
 
-A provider may keep several goods in **one** chest. UTL makes sure a train only takes what its
-job asks for – in two ways that work together:
+A provider may keep several goods in **one** chest:
 
-**1. Wagon filters (no wiring).** While a delivery runs, UTL sets the cargo wagon slots to the
-goods of that job and locks the remaining slots. A plain inserter pulling from a mixed chest
-then loads only the ordered item; everything else simply does not fit. Switch it off per station
-("Load only the current job" in the Values tab) or for the whole map (map settings). Wagons where
-**you** set filters yourself are never touched.
+- **Wagon filters (no wiring):** while a delivery runs, UTL sets the wagon slots to the goods of that
+  job, so a plain inserter from a mixed chest loads only what was ordered. Off per station or map-wide;
+  wagons you filtered yourself are never touched.
+- **Job output:** a small output next to every stop carries the running jobs as signals – goods to
+  load here positive, goods arriving negative; while a delivery train stands there also train number,
+  length, locomotives, wagons, **“train loads here”** and **“train unloads here”**. Use it for filter
+  inserters, displays and pumps (fluids have no slot filters). Do not wire it to the station's input.
 
-**2. The job as circuit signals.** Next to every train stop sits a small **job output**. It
-carries the running jobs as signals: goods to be loaded here are **positive**, goods arriving
-here are **negative**. While a delivery train stands at the stop, four more signals are added:
-**train number**, **train length** (carriages), **locomotives** and **wagons in the train**. Wire it to filter inserters, to displays – and to pumps: for fluids there
-are no slot filters, so this is how you open the right pump at a provider with several tanks.
-Leftover fluid goes to a cleanup for that fluid.
-
-The output is placed and removed by UTL together with the station; it cannot be built or mined.
-Do not wire it to the station's input – that would feed the job back in as stock.
+More, with examples: [wiki – Mixed providers and job output](https://github.com/Marcel1853/UTLogistics/wiki/Mixed-providers-and-job-output).
 
 ## How trains run
 
@@ -252,68 +179,31 @@ and remains available.
 
 ## UTL Manager
 
-Open with the **locomotive button in the shortcut bar** or **Ctrl + Shift + U** (or **Ctrl + Alt + U** – on Linux, IBus sometimes grabs Ctrl + Shift + U). Tabs:
-**Depots** (trains with composition, status, cargo), **Stations** (role, provided/requested,
-in transit, trains), **Networks** (every network with its stations, free trains and deliveries),
-**Inventory** (network totals; click an item for details), **History**
-(last 100 deliveries, canceled ones in red), **Alerts** (last 100 alerts, repeats merged). Search by station name; click a station to view it
-on the map, click a train to follow it.
+Open with the **locomotive button** in the shortcut bar or **Ctrl + Shift + U** (or **Ctrl + Alt + U**).
+Tabs: **Depots**, **Stations**, **Networks**, **Inventory** (click a good for details), **History**
+(last 100 deliveries), **Alerts** (last 100), **Settings**. Search by station name, click a station to
+see it on the map, click a train to follow it. With Space Age a drop-down picks the planet.
 
-**Several planets (Space Age only):** a drop-down next to the
-magnifier picks what is shown – *Automatic* (the planet you are on or looking at, default – empty if it has no UTL stations yet), *All
-planets*, or one planet (planets from other mods included). Depots with the same name on different
-planets stay separate; inventory counts only the chosen planet. Without Space Age the drop-down is
-hidden.
+**Alerts** come as regular Factorio alerts in three groups – no suitable train (after 5 minutes),
+leftover/missing cargo, train problems – each can be turned off per player.
 
-## Alerts
-
-UTL reports problems as regular Factorio alerts (bottom right; click to see the spot) in three
-groups: **no suitable train** (only after a request has been unserved for 5 minutes – map
-setting – and no train with the item is on its way), **leftover/missing cargo**, **train problems** (no path, no free
-depot, refueling failed, delivery canceled). Each group can be turned off per player in
-**Settings → Mod settings → Per player**. The same alert repeats at most every 10 seconds.
-
-## Trains tab
-
-Rails, elevated rails, signals, stops, locomotives, wagons and train combinators – also from
-other mods – get their own crafting tab (startup setting).
+More: [wiki – UTL Manager and alerts](https://github.com/Marcel1853/UTLogistics/wiki/UTL-Manager-and-alerts).
 
 ## Map settings
 
-Heartbeat (10 ticks), stations per heartbeat (20), new deliveries per cycle (2), next job right
-away (on), **load only the current job** (on, wagon filters), **job output at the train stop**
-(on), **UTL features need research** (on), refuel below (40 %), “no train” alert after (5 minutes), default supply/demand threshold
-(1000), **loading inactivity (30 s)**, **unloading inactivity (30 s)**, **cargo and/or inactivity** (or), drop team leaders after … days offline (3), **top up while loading** (off), **cleanup may offer
-its contents again** (on), **allow storage stations** (on), debug log (off).
+The most important ones: **next job right away** (on), **load only the current job** (on, wagon
+filters), **job output at the train stop** (on), **UTL features need research** (on), **refuel below**
+(40 %), **loading / unloading inactivity** (30 s each) combined with the cargo by **or** (default: also
+leave when nothing changed for that long, with what is loaded) or **and**, **top up while loading**
+(off), **cleanup may offer its contents again** (on), **allow storage stations** (on).
 
-The three **loading values** (loading inactivity, unloading inactivity, cargo and/or inactivity) can
-also be changed in the **UTL Manager, tab “Settings”** – no need to leave the game. Below them,
-**admins** also see all other map settings (*Map / server*); other players do not see that part.
-- **Without teams** (all players in one team) the tab shows the three values for everyone; only an
-  admin may change them. A value changed there applies instead of the mod settings value (the tab
-  shows both); changing it in the mod settings menu again makes the menu win.
-- **With teams** (players on several forces, or in an own force) each team has its own values.
-  Whoever joins a team first is its **team leader**; leaders (and admins) may change the values,
-  appoint further leaders and take the rights away again – one leader always stays. When the last
-  leader leaves, the longest-serving member takes over. A leader who has not been online for
-  **3 days** (map setting *drop team leaders after … days offline*, game time while the server runs,
-  0 = never) loses the rights, and the longest-serving active member takes over. Without an own
-  value the map value applies.
+The loading values can also be changed in the **UTL Manager, tab “Settings”** – with teams, each team
+has its own values, managed by team leaders; admins open **`/utl-admin`** to manage any team.
 
-**Admins:** the command **`/utl-admin`** opens a window to pick any team and set its leaders and
-values – for when a team is stuck.
+A startup setting gives rails, stops, locomotives, wagons and train combinators (also from other
+mods) their own **“Trains”** crafting tab.
 
-**Loading and unloading inactivity** – seconds without any change to the cargo, like the vanilla
-wait condition – work in one of two ways (setting *cargo and/or inactivity*):
-- **Cargo or inactivity** (default): the train also leaves once nothing has changed for that long – at the
-  provider with what it has –
-  the delivery is shortened to what was really loaded, so the requester orders the rest again. If it
-  loaded nothing at all, the delivery is cancelled and the train goes back to its depot. At the
-  requester it leaves after that; anything left goes to a cleanup station.
-- **Cargo and inactivity:** the train leaves only when it is full or empty **and** nothing has
-  changed for that long.
-
-`0` = no inactivity condition (wait until full or empty, as before 0.0.6).
+All settings with defaults, teams and leaders: [wiki – Settings](https://github.com/Marcel1853/UTLogistics/wiki/Settings).
 
 ## Performance
 
@@ -334,81 +224,28 @@ UPS of a whole megabase.
 
 ## Scenarios
 
-**New game → Scenarios → UTL examples (mixed provider)**: a small practice network on Marcel's
-ring with sidings. One provider keeps iron plates, copper plates and gears in three chests with
-three inserters, and the job output enables only the one whose good is ordered. One requester needs iron **and**
-copper and gets both in one trip. A fluid provider has two tanks,
-oil and water have their own requesters, and the pumps are switched by the **job output**. Two
-depots in a row, a fuel station and a cleanup. Two trains, no measuring – made for trying out.
+**New game → Scenarios** (everything researched, cheat mode on, display panels with explanations):
 
-**New game → Scenarios → UTL network links (2 × 2 city blocks)**: four networks on 2 × 2 city
-blocks, each in its own part of the map. `Eisen` (iron, middle) is the center of a star with a
-depot (4 trains), fuel station and cleanup. Its partners: `Kupfer` (copper) has **no trains of its
-own** – the iron trains run its jobs – and `Kohle` (coal) has its own depot with 2 trains, which
-also help iron but **never** copper, because partners do not help each other. `Stein` (stone) is
-linked to nobody and only runs its own trains. Open the UTL Manager, tab **Networks**, to remove
-a link or add `Stein`, and watch in **History** who goes where.
+- **UTL examples (mixed provider)** – mixed provider with the job output, two goods in one trip,
+  oil and water with switched pumps.
+- **UTL network links** – four networks, a star with a partner that has no trains of its own.
+- **UTL teams** – four teams with the same station and network names; `/utl-team rot` switches.
+- **UTL top up (to watch)** – with and without topping up, round by round, with an explanation window.
+- **UTL storage (to watch)** – new in 0.0.8: a **storage** with loading and unloading inserters on a
+  ring with two trains, a **cleanup** that gives back, and four small example lines (two storages,
+  storage taking leftovers, cleanup levels side by side, storage with two goods). A window explains
+  each part.
+- **UTL planet test (Space Age)** – the same network on Nauvis, Vulcanus and Gleba.
+- **UTL load test (384 trains)** – a 12 × 12 city-block grid for measuring; the first start builds it
+  by script and takes up to a minute.
 
-**New game → Scenarios → UTL teams (four teams)**: four teams – Standard, Rot, Blau and Grün –
-each with its own 2 × 2 grid of city blocks. The four grids stand apart, no track connects them.
-All four deliberately use the **same station names** (Depot, Anbieter, Abnehmer, Tankstelle,
-Cleanup) and the same network name `Eisen` – schedules only know names, not teams, so this is
-exactly the situation where trains could serve the wrong team. Switch teams with `/utl-team rot`,
-single player too. In the UTL Manager each team only sees itself.
-
-**New game → Scenarios → UTL top up (to watch)**: shows what topping up does. A train sets off to
-fetch 1000 iron – on its way the demand rises to 3000. With topping up, the extra amount goes onto
-the load list of the same train; without it, the rest needs a second trip. The rounds alternate. A
-window explains every step, a camera follows the train, the load list floats above the train and
-the demand above the requester; a counter shows how many trips were needed with and without.
-
-**New game → Scenarios → UTL storage (to watch)**: the new things from 0.0.8 on the ring with two
-trains. A **storage** (minimum 400, maximum 1200 iron) with **loading and unloading inserters** supplies the
-nearby factory and refills from the provider when a small factory behind it has used it up below
-the minimum; the workshop next to the provider still gets its iron from the provider, because that
-is nearer (unless the provider is busy – then the storage helps out). A **cleanup** with “empty first” takes a leftover of copper and gives it back to another
-copper workshop. A window explains each of the three parts (button: next part), a camera follows
-the train involved. So that leftovers really happen, the scenario fills the chest of copper
-workshop A while a train is on its way there – the window says so. Below the ring, four small
-example lines each explain one more thing: **two storages** (too full gives once to too empty, then
-it is calm), a **storage taking leftovers** when there is no cleanup, the **cleanup levels** side by
-side (who delivers with “Only as a fallback”, “Like any provider”, “Empty first”) and a **storage
-with two goods** that gets both in one trip. The window has a part for each of them.
-
-All scenarios and the tips & tricks scenes carry **display panels** with short explanations next to
-the stations (in your game language).
-
-The scenarios are practice and test maps, not game content. If they pile up, older ones are removed
-again – only what demonstrates or checks a feature is kept.
-
-## Load test scenario
-
-**New game → Scenarios → UTL load test (384 trains)**: a ready-made city-block grid (12 × 12,
-4 tracks per corridor, chain-signalled crossings). 5 depots of 72 trains in depot-only blocks
-plus "Depot Flüssig" with 24 fluid trains; 496 stations with room for 3 trains each, providers
-and requesters mixed, crude oil and petroleum gas with pumps and tanks, 16 fuel and 6 cleanup
-stations spread evenly; every fourth station is a normal stop with a **UTL station combinator**.
-
-**The first start takes a moment:** the scenario builds about 48,000 rail pieces, 3,840 signals,
-880 stations and 384 trains by script. Depending on your machine the game freezes for a few
-seconds up to a minute – that is normal and happens only once. **No other mods needed**:
-infinity chests, infinity pipes and power sources are part of the base game.
+Details and pictures: [wiki – Scenarios and tips](https://github.com/Marcel1853/UTLogistics/wiki/Scenarios-and-tips).
 
 ## Tips & tricks
 
-The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: seventeen entries
-explaining how to use the mod, each with a running example scene (some with an open UTL window,
-the manager and shift-click copying), among them: a UTL stop with provider, requester and depot; the same
-line with normal stops and UTL station combinators (wires visible); a train that refuels
-first and then delivers; a train with leftover cargo that is emptied at a cleanup station first;
-**two separate networks** side by side with a camera tour; linking two networks in the station
-window (pick from the list, create one with “New”); the manager tab by tab, its Networks tab with a
-link being made, and the Inventory tab where a click on a good lists stations and trains;
-a cleanup that
-gives its contents back; a storage on a ring with two trains that supplies the nearby requester
-and refills below its minimum.
-Plus explanations of roles, requests, values and network, linking networks (star, research
-“Network links”), depots, copying settings/blueprints and the manager.
+The in-game **Tips & tricks** menu has a **Unified Train Logistics** category: seventeen entries,
+each with a running example scene – from the first delivery to networks, cleanup giving back,
+storage and the manager.
 
 After an update, UTL writes one short line into the chat with the most important news; the link in
 it opens the tips & tricks page **“New in UTL”**. Switch it off per player: *Update notes in chat*.
@@ -421,6 +258,8 @@ it opens the tips & tricks page **“New in UTL”**. Switch it off per player: 
   automatic mode? Does its length fit provider and requester?
 - **A train does not refuel:** is there a reachable fuel station in the same network whose
   train length fits?
+
+Step-by-step troubleshooting: [wiki – FAQ and troubleshooting](https://github.com/Marcel1853/UTLogistics/wiki/FAQ-and-troubleshooting).
 
 ## Teams and surfaces
 
@@ -452,9 +291,5 @@ Collecting from a second provider on the way (one trip still picks up at exactly
 
 ## For mod authors
 
-Remote interface `utl`: `station_count`, `get_station(unit)`, `configure_station(unit, changes)`,
-`set_request(unit, slot, signal, count)`, `copy_settings(from, to)`, `tag_blueprint(stack, mapping, surface)`, `idle_train_count`,
-`delivery_count`, `get_deliveries`, `get_alerts`, `link_networks(surface, center, partner)`,
-`unlink_networks(surface, a, b)`, `get_network_star(surface, name)`,
-`set_team_config(force, key, value)`, `get_team_config(force, key)` (keys `load_timeout`, `unload_timeout`,
-`timeout_mode`; team values only count when there are teams), `set_map_config(setting, value)`.
+Remote interface `utl` (station data, deliveries, alerts, configuring stations and requests, network
+links, team and map values, tagging script-made blueprints): [wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
