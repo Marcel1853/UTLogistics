@@ -31,7 +31,9 @@ end
 Examples.count = count
 
 local function depot(line, network, name)
-  local stop = Lines.stop(line, name, -3, true)
+  -- bei x = 9: ein geparkter Zug (x −12 … 9) steht dann nicht vor den Greifarmen des linken
+  -- Bahnhofs (x −22 … −16) – sonst zögen sie der hinteren Lok die Kohle heraus
+  local stop = Lines.stop(line, name, 9, true)
   configure(stop, { mode = "depot", network = network })
   return stop
 end
@@ -76,7 +78,7 @@ function Examples.build(surface, force)
     storage = { limits = { { signal = IRON, min = 400, max = 800 } }, accept_leftover = false } })
   a.full_bay = Lines.bay(a.full, L, Lines.columns(29, true), true, "steel-chest", { { ["iron-plate"] = 800 } })
   a.empty_bay = Lines.bay(a.empty, L, Lines.columns(-29, false), false, "steel-chest")
-  a.train = Lines.train(L, -8, "Depot A")
+  a.train = Lines.train(L, 4, "Depot A")
   a.round, a.calm = 1, nil
   ex.two = a
 
@@ -90,7 +92,7 @@ function Examples.build(surface, force)
   configure(b.requester, { mode = "station", network = "Restladung", provide = false, request = true, request_threshold = 50 })
   remote.call("utl", "set_request", b.requester.unit_number, 1, COPPER, 200)
   Lines.bay(b.requester, L, Lines.columns(-29, false), false, "infinity-chest", nil, true)
-  b.train, b.wagon = Lines.train(L, -8, "Depot B")
+  b.train, b.wagon = Lines.train(L, 4, "Depot B")
   b.wagon.insert({ name = "copper-plate", count = 300 })
   b.given, b.taken = 1, 0
   ex.rest = b
@@ -110,7 +112,7 @@ function Examples.build(surface, force)
   configure(c.requester, { mode = "station", network = "Cleanup-Stufen", provide = false, request = true, request_threshold = 50 })
   remote.call("utl", "set_request", c.requester.unit_number, 1, COPPER, 200)
   Lines.bay(c.requester, L, Lines.columns(-29, false), false, "infinity-chest", nil, true)
-  c.train = Lines.train(L, -8, "Depot C")
+  c.train = Lines.train(L, 4, "Depot C")
   c.results = {}
   ex.tiers = c
 
@@ -126,7 +128,7 @@ function Examples.build(surface, force)
     { signal = IRON, min = 200, max = 600 }, { signal = COPPER, min = 100, max = 300 } } } })
   d.bay = Lines.bay(d.storage, L, Lines.columns(-29, false), false, "steel-chest",
     { { ["iron-plate"] = 600 }, { ["copper-plate"] = 300 } })
-  d.train = Lines.train(L, -8, "Depot D")
+  d.train = Lines.train(L, 4, "Depot D")
   d.trips, d.both, d.seen = 0, 0, {}
   ex.multi = d
 
