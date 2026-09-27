@@ -10,11 +10,14 @@ Date: 2026-09-27
     - Update notes: after an update, every player gets one short chat line with the most important news and a link that opens the new tips & tricks page "New in UTL". Can be switched off per player ("Update notes in chat").
     - Scenarios "UTL examples" and "UTL network links" got the explanation window: it follows a train and explains what it is doing.
   Changes:
+    - "Max. trains" now also counts at fuel stations, cleanups and depots, so these work without a vanilla train limit. A train returning to the depot without a next job is sent to a depot stop of its name that still has room. A vanilla train limit still applies as before – use either one or both.
     - Fuel station: the train waits until all locomotives are full or nothing has changed for 30 s (before: at most 30 s in total).
+    - Scenario "UTL load test": the track network is now part of the map, so the start only places stations and trains (a few seconds instead of up to a minute). New: 8 storage stations and 9 cleanups spread evenly like the fuel stations, item cleanups that offer their contents again, three networks (West and Ost linked with Mitte) and topping up, requesters that stay full for a while (SR latch drain) and requesters that only take trains of one fixed length (2 to 5 parts, with just as many wagon bays). Map tags mark the special stations. Signals: a chain signal into every junction and at every siding merge, normal ones out, and corridor blocks long enough for a locomotive with 4 wagons.
     - Scenarios: after a mod update, new research is researched right away in running scenario saves, and every player is in cheat mode.
   Bugfixes:
     - Next job right away now respects the provide priority and the provider rank (cleanup "Empty first" / "Only as a fallback", leftovers in a storage). Before, a chained job only compared amount and distance.
     - Scenario "UTL examples": the fuel station now refuels the rear locomotive, too (both locomotives face forward and use fuel).
+    - Scenarios built from city blocks: trains in depots with a station combinator no longer raise a "no depot" warning right after the start.
     - Scenario "UTL planet test": no more enemies on Vulcanus and Gleba – no-enemies mode, existing enemies and demolisher territories removed, also in chunks generated later.
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.7
