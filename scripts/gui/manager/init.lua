@@ -3,6 +3,7 @@ local Events = require("scripts.core.events")
 local Heartbeat = require("scripts.core.heartbeat")
 local C = require("scripts.core.constants")
 local Manager = require("scripts.gui.manager.window")
+local Statistics = require("scripts.deliveries.statistics")
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
 local Filter = require("scripts.gui.manager.surface-filter")
@@ -105,6 +106,9 @@ Events.on(defines.events.on_gui_click, function(event)
     if locomotive then remote_view(player, manager, locomotive.surface_index, locomotive.position, locomotive) end
   elseif action == "ware" then
     manager.ware = manager.ware ~= tags.key and tags.key or nil
+    Manager.refresh(event.player_index)
+  elseif action == "reset_statistics" then
+    Statistics.reset()
     Manager.refresh(event.player_index)
   elseif action == "clear_history" then
     storage.history = {}

@@ -210,7 +210,16 @@ script.on_nth_tick(10, function(e)
     train_test_step()
   elseif st.done and not st.finished then
     -- Hauptzugtest fertig: R27 läuft allein (ein zusätzlicher Zug stört dessen Zählungen)
-    if not st.r27 then build_wait_test() end
+    if not st.r27 then
+      -- R28 Statistik: nach dem Hauptzugtest steht Eisen im Durchsatz, der Testzug hat Lieferungen
+      local stats = remote.call("utl", "get_statistics") --[[@as table]]
+      local iron = stats.goods["item|iron-plate|normal"]
+      local tr = st.train and st.train.valid and stats.trains[st.train.id]
+      check("R28 statistik: eisen im durchsatz der letzten stunde", iron ~= nil and iron.hour > 0, serpent.line(iron))
+      check("R28 statistik: testzug mit lieferungen und auslastung", tr ~= nil and tr.deliveries >= 1 and tr.utilization > 0,
+        serpent.line(tr))
+      build_wait_test()
+    end
     watch_wait_test()
     if st.r27.done or e.tick >= 199900 then
       if not st.r27.done then check("R27 wartezeit: die ältere anfrage bekommt den zug", false, "zeit abgelaufen") end

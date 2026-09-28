@@ -17,6 +17,7 @@ local Window = require("scripts.gui.station.window")
 local Manager = require("scripts.gui.manager.window")
 local Readouts = require("scripts.readout.readouts")
 local ReadoutOutput = require("scripts.readout.output")
+local Statistics = require("scripts.deliveries.statistics")
 local util = require("util")
 
 local function copy(t)
@@ -34,6 +35,27 @@ local interface = {
     local entry = Readouts.get(unit)
     if not entry then return nil end
     return { config = copy(entry.config), values = copy(ReadoutOutput.compute(entry)) }
+  end,
+
+  --- Statistik (Manager-Reiter „Statistik“): { since, deliveries, goods = { [key] = { ten, hour } },
+  --- trains = { [zug] = { deliveries, utilization } } } über alle Oberflächen und Teams.
+  get_statistics = function()
+    local stats = Statistics.data()
+    local goods, deliveries = {}, 0
+    for place in pairs(stats.places) do
+      local by_key, count = Statistics.goods(place)
+      deliveries = deliveries + count
+      for key, entry in pairs(by_key) do
+        local sum = goods[key] or { ten = 0, hour = 0 }
+        sum.ten, sum.hour = sum.ten + entry.ten, sum.hour + entry.hour
+        goods[key] = sum
+      end
+    end
+    local trains = {}
+    for id, entry in pairs(stats.trains) do
+      trains[id] = { deliveries = entry.deliveries, utilization = (Statistics.utilization(id)) }
+    end
+    return { since = stats.since, deliveries = deliveries, goods = goods, trains = trains }
   end,
 
   --- Netz-Kombinator einstellen, z. B. { network = "Eisen", mode = "shortage", star = true }.

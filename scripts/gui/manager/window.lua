@@ -7,6 +7,7 @@ local Tabs = {
   networks = require("scripts.gui.manager.tab-networks"),
   inventory = require("scripts.gui.manager.tab-inventory"),
   history = require("scripts.gui.manager.tab-history"),
+  statistics = require("scripts.gui.manager.tab-statistics"),
   alerts = require("scripts.gui.manager.tab-alerts"),
   settings = require("scripts.gui.manager.tab-settings"),
 }
@@ -17,11 +18,11 @@ local Manager = {}
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 7
-local ORDER = { "depots", "stations", "networks", "inventory", "history", "alerts", "settings" }
+local GUI_VERSION = 8 -- 8: Reiter „Statistik“
+local ORDER = { "depots", "stations", "networks", "inventory", "history", "statistics", "alerts", "settings" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste;
 -- Einstellungen nie, sonst überschriebe der Takt das Feld beim Tippen).
-local AUTO_REFRESH = { depots = true, stations = true, networks = true, history = true, alerts = true }
+local AUTO_REFRESH = { depots = true, stations = true, networks = true, history = true, statistics = true, alerts = true }
 
 local function frame_button(parent, sprite, tooltip, action)
   return parent.add({
