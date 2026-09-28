@@ -267,9 +267,9 @@ Gemessen mit dem Lasttest-Szenario, headless (ohne Grafik, also ohne FPS):
 | Netz | Messung | UTL pro Tick (Schnitt) | ganzes Spiel pro Tick (Schnitt) | Ticks unter 60 UPS |
 |---|---|---|---|---|
 | 9 × 9, 180 Züge, 340 Bahnhöfe | 40 min, ~1300 Lieferungen | 0,045 ms | – | 0 |
-| 12 × 12, 384 Züge (davon 24 Flüssigkeit), 496 Bahnhöfe mit 8 Lagern, 3 verbundene Netze, Nachladen | 10 min | 0,094 ms | 3,9 ms | 26 von 36 000 |
+| 12 × 12, 384 Züge (davon 24 Flüssigkeit), 496 Bahnhöfe mit 8 Lagern, 3 verbundene Netze, Nachladen | 10 min | 0,072 ms | 2,9 ms | 5 von 36 000 |
 
-UTL selbst hat Spitzen bis etwa 15 ms, wenn es Züge losschickt (das Losschicken löst die
+UTL selbst hat Spitzen bis etwa 13 ms, wenn es Züge losschickt (das Losschicken löst die
 Pfadsuche des Spiels aus). Den größten Teil der Zeit brauchen die Züge des Spiels selbst
 (Bewegung und Pfadsuche).
 

@@ -224,9 +224,9 @@ Measured headless (no graphics, so no FPS) with the load test scenario:
 | Network | Run | UTL per tick (avg.) | whole game per tick (avg.) | ticks below 60 UPS |
 |---|---|---|---|---|
 | 9 × 9, 180 trains, 340 stations | 40 min, ~1300 deliveries | 0.045 ms | – | 0 |
-| 12 × 12, 384 trains (24 fluid), 496 stations incl. 8 storages, 3 linked networks, topping up | 10 min | 0.094 ms | 3.9 ms | 26 of 36,000 |
+| 12 × 12, 384 trains (24 fluid), 496 stations incl. 8 storages, 3 linked networks, topping up | 10 min | 0.072 ms | 2.9 ms | 5 of 36,000 |
 
-UTL itself peaks at about 15 ms when it sends trains (sending triggers the game's pathfinding).
+UTL itself peaks at about 13 ms when it sends trains (sending triggers the game's pathfinding).
 Most of the time is spent by the game's own trains (movement and pathfinding).
 
 **Important:** the map is otherwise **almost empty** (no factory, belts or biters) – the numbers show
