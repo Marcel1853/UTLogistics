@@ -179,6 +179,8 @@ Mehr, mit Beispielen: [Wiki – Gemischte Anbieter und Auftrags-Ausgabe](https:/
 - Ein Schienen-Wegpunkt vor jeder Haltestelle sorgt dafür, dass der Zug genau diese anfährt, auch
   wenn mehrere gleich heißen.
 - Beim Anbieter wartet der Zug, bis die bestellte Menge geladen ist, beim Abnehmer, bis er leer ist.
+- Anfragen gleicher Priorität kommen **der Reihe nach** dran – die älteste zuerst, so wartet kein
+  Abnehmer ewig.
 - Auswahl: Anbieter mit höchster Priorität und Menge, dann ein freier, naher Zug, der möglichst viel
   auf einmal mitnimmt; die Erreichbarkeit prüft die Pfadsuche. Reservierungen verhindern doppelte
   Fahrten.

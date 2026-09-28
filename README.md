@@ -142,6 +142,7 @@ More, with examples: [wiki – Mixed providers and job output](https://github.co
   stops share the name.
 - The train waits at the provider until the ordered amount is loaded, at the requester until
   it is empty.
+- Requests of the same priority are served **oldest first**, so no requester is left waiting forever.
 - Selection: highest provider priority and amount, then a free train that carries as much as
   possible in one trip and is close; reachability is checked with the pathfinder.
 - Reservations prevent several trains from being sent for the same demand.

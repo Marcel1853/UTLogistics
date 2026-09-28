@@ -208,6 +208,15 @@ script.on_nth_tick(10, function(e)
   elseif e.tick > 260 and not st.done then
     watch_readouts()
     train_test_step()
+  elseif st.done and not st.finished then
+    -- Hauptzugtest fertig: R27 läuft allein (ein zusätzlicher Zug stört dessen Zählungen)
+    if not st.r27 then build_wait_test() end
+    watch_wait_test()
+    if st.r27.done or e.tick >= 199900 then
+      if not st.r27.done then check("R27 wartezeit: die ältere anfrage bekommt den zug", false, "zeit abgelaufen") end
+      st.finished = true
+      for _, r in ipairs(results) do log("[SELFTEST] " .. r) end
+    end
   end
 end)
 
@@ -310,6 +319,70 @@ function build_network_test()
   remote.call("utl", "configure_readout", st.ro_a.unit_number, { network = "A", mode = "trains" })
   remote.call("utl", "configure_readout", st.ro_r.unit_number, { network = "R", mode = "trains" })
   st.max_borrowed, st.max_lent = 0, 0
+end
+
+--- R27 Anfragen nach Wartezeit: eigenes Gleis bei x = 211, Netz „WZ“. Abnehmer B wird zuerst gebaut
+--- (kleinere Nummer, bei pairs meist vorn), A meldet aber zuerst Bedarf. Der einzige Zug steht erst
+--- im Handbetrieb und wird freigegeben, wenn beide warten – er muss zu A (wartet länger).
+function build_wait_test()
+  local s, force = game.surfaces["nauvis"], game.forces["player"]
+  local t = {} for x = 204, 220 do for y = -90, 90 do t[#t + 1] = { name = "concrete", position = { x, y } } end end
+  s.set_tiles(t)
+  for _, ent in pairs(s.find_entities_filtered{ area = {{204,-90},{220,90}} }) do if ent.type ~= "character" then ent.destroy() end end
+  for y = -80, 80, 2 do s.create_entity{ name = "straight-rail", position = { 211, y }, direction = defines.direction.north, force = force } end
+  local function stop(name, pos, dir)
+    local e = s.create_entity{ name = "utl-train-stop", position = pos, direction = dir, force = force, raise_built = true }
+    e.backer_name = name
+    return e
+  end
+  local wb = stop("UTL-WB", { 209, 40 }, defines.direction.south) -- zuerst gebaut
+  local wa = stop("UTL-WA", { 209, 60 }, defines.direction.south)
+  local wd = stop("UTL-WD", { 213, -20 }, defines.direction.north)
+  local wp = stop("UTL-WP", { 213, -60 }, defines.direction.north)
+  local cc = s.create_entity{ name = "constant-combinator", position = { 215, -60 }, force = force }
+  cc.get_control_behavior().get_section(1).set_slot(1, { value = { type = "item", name = "iron-plate", quality = "normal" }, min = 5000 })
+  cc.get_wire_connector(W.circuit_green, true).connect_to(wp.get_wire_connector(W.circuit_green, true))
+  remote.call("utl", "configure_station", wd.unit_number, { mode = "depot", network = "WZ" })
+  remote.call("utl", "configure_station", wp.unit_number, { mode = "station", provide = true, request = false, network = "WZ", provide_threshold = 100 })
+  for _, r in ipairs({ wa, wb }) do
+    remote.call("utl", "configure_station", r.unit_number, { mode = "station", provide = false, request = true, network = "WZ", request_threshold = 100 })
+  end
+  remote.call("utl", "set_request", wa.unit_number, 1, { type = "item", name = "iron-plate" }, 1000) -- A zuerst
+  local l1 = s.create_entity{ name = "locomotive", position = { 211, 0 }, direction = defines.direction.north, force = force }
+  s.create_entity{ name = "cargo-wagon", position = { 211, 7 }, direction = defines.direction.north, force = force }
+  local l2 = s.create_entity{ name = "locomotive", position = { 211, 14 }, direction = defines.direction.south, force = force }
+  for _, l in ipairs({ l1, l2 }) do l.insert{ name = "coal", count = 120 } end
+  local sch = l1.train.get_schedule()
+  sch.add_record{ station = "UTL-WD", wait_conditions = {{ type = "inactivity", ticks = 300 }} }
+  l1.train.manual_mode = true
+  st.r27 = { start = game.tick, train = l1.train, wb = wb }
+end
+
+--- R27 Ablauf: nach 5 s wünscht auch B, nach 15 s fährt der Zug; die erste Lieferung zählt.
+function watch_wait_test()
+  local r = st.r27
+  if not r or r.done then return end
+  local age = game.tick - r.start
+  if age >= 300 and not r.b_set then
+    r.b_set = true
+    remote.call("utl", "set_request", r.wb.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+  elseif age >= 900 and not r.released and r.train.valid then
+    r.released = true
+    r.train.manual_mode = false
+    r.train.get_schedule().go_to_station(1)
+  elseif r.released then
+    for _, d in pairs(remote.call("utl", "get_deliveries")) do
+      if d.to == "UTL-WA" or d.to == "UTL-WB" then
+        r.done = true
+        check("R27 wartezeit: die ältere anfrage bekommt den zug", d.to == "UTL-WA", "erste lieferung an " .. tostring(d.to))
+        return
+      end
+    end
+    if age > 9000 then
+      r.done = true
+      check("R27 wartezeit: die ältere anfrage bekommt den zug", false, "keine lieferung")
+    end
+  end
 end
 
 --- Höchstwerte der Kombinatoren aus build_network_test mitschreiben (R26 Netzverbund).
@@ -1485,8 +1558,5 @@ function train_test_step()
     check("R26 züge: zug des netzes gezählt", (v["virtual|utl-trains-total|normal"] or 0) >= 1, serpent.line(v))
     check("R26 netzverbund: zug aus R hilft in A aus", (st.max_borrowed or 0) >= 1 and (st.max_lent or 0) >= 1,
       "A borrowed " .. tostring(st.max_borrowed) .. ", R lent " .. tostring(st.max_lent))
-  end
-  if st.done then
-    for _, r in ipairs(results) do log("[SELFTEST] " .. r) end
   end
 end

@@ -12,6 +12,7 @@ local Index = require("scripts.dispatcher.index")
 local Reach = require("scripts.dispatcher.reach")
 local Fuel = require("scripts.trains.fuel")
 local Fields = require("scripts.stations.fields")
+local Warn = require("scripts.dispatcher.no-train-alerts")
 
 local Select = {}
 
@@ -84,16 +85,22 @@ local function collect_requests()
         if cfg.roles.storage and need > 0 and need < minimum then minimum = need end
         if need >= minimum then
           list[#list + 1] = { station = station, key = key, need = need, minimum = minimum,
-            priority = cfg.request_priority, storage = cfg.roles.storage }
+            priority = cfg.request_priority, storage = cfg.roles.storage,
+            -- seit wann offen (dieselbe Uhr wie die Warnung „kein Zug“; beim Beliefern zurückgesetzt)
+            since = Warn.waiting_since(unit, key) }
         end
       end
     end
   end
   dispatch.cursor = unit
-  -- höhere Priorität zuerst; bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer)
+  -- höhere Priorität zuerst; bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer),
+  -- dann die älteste Anfrage (sonst gewinnt bei knappen Zügen immer derselbe – Reihenfolge von pairs)
   table.sort(list, function(a, b)
     if a.priority ~= b.priority then return a.priority > b.priority end
-    return (not a.storage) and (b.storage == true)
+    if (a.storage == true) ~= (b.storage == true) then return not a.storage end
+    if a.since ~= b.since then return a.since < b.since end
+    if a.station.unit ~= b.station.unit then return a.station.unit < b.station.unit end
+    return a.key < b.key
   end)
   return list
 end
