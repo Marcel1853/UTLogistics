@@ -1,6 +1,7 @@
 --- Szenario „UTL-Teams“: vier Teams auf 2 × 2 City Blocks (siehe teams.lua). Zum Prüfen, ob
 --- UTL die Teams sauber trennt – auch allein: mit /utl-team wechselt man das Team.
 local Teams = require("__UTLogistics__/scenarios/UTL-Teams/teams")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local function place(player, force_name)
   local surface = game.surfaces[Teams.SURFACE]
@@ -31,6 +32,8 @@ local function setup()
   end
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   if not storage.starts then script.on_nth_tick(1, setup) end

@@ -2,6 +2,7 @@
 local Events = require("scripts.core.events")
 local Registry = require("scripts.stations.registry")
 local Depot = require("scripts.trains.depot")
+local DepotRoute = require("scripts.trains.depot-route")
 local Deliveries = require("scripts.deliveries.deliveries")
 local Dispatch = require("scripts.dispatcher.dispatch")
 local Pending = require("scripts.trains.pending")
@@ -65,7 +66,10 @@ local function on_state(event)
       -- Lieferung fertig, Zug leer und betankt: direkt der nächste Auftrag statt ins Depot
       if Deliveries.on_depart(delivery) then
         local requester = Registry.get(delivery.requester)
-        Dispatch.chain(train, delivery.network or "default", requester and requester.stop, delivery.depot)
+        -- kein Anschlussauftrag: zu einem Depot mit Platz lenken („max. Züge“ am Depot)
+        if not Dispatch.chain(train, delivery.network or "default", requester and requester.stop, delivery.depot) then
+          DepotRoute.send_home(train)
+        end
       end
     else
       Depot.remove(id)
@@ -77,7 +81,11 @@ local function on_state(event)
         local depot_unit = home and home.stop.valid and storage.stations.by_stop[home.stop.unit_number]
         local depot = depot_unit and Registry.get(depot_unit)
         local network = depot and depot.config.network or "default"
-        if Dispatch.chain(train, network, stop, home and home.depot) then storage.trains.service[id] = nil end
+        if Dispatch.chain(train, network, stop, home and home.depot) then
+          storage.trains.service[id] = nil
+        else
+          DepotRoute.send_home(train) -- nur, wenn der nächste Halt das Depot ist
+        end
       end
     end
   end

@@ -7,9 +7,11 @@ local Goods = {}
 
 local COLUMNS = 10
 
---- Nur im Modus „Station“, sonst nil.
+--- Nur für Stationen, die anbieten oder anfordern können (Station, Cleanup mit „Inhalt wieder
+--- anbieten“), sonst nil.
 function Goods.build(parent, station)
-  if station.config.mode ~= "station" then return nil end
+  local roles = station.config.roles
+  if station.config.mode ~= "station" and not roles.provider then return nil end
   local refs = {}
   parent.add({ type = "label", style = "utl_header_label", caption = { "utl-gui.goods" } })
   refs.grid = Widgets.slot_grid(parent, COLUMNS)

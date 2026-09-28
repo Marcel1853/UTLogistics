@@ -355,7 +355,10 @@ function Build.run()
       if role.kind == "depot" then
         remote.call("utl", "configure_station", unit, { mode = "depot" })
       elseif role.kind == "fuel" then
+        -- je ein Greifarm an der vorderen und der hinteren Lok: beide schauen nach vorn und
+        -- verbrauchen Kohle
         chest_at(stop, { "coal" }, 3)
+        chest_at(stop, { "coal" }, 17)
         remote.call("utl", "configure_station", unit, { mode = "fuel" })
       elseif role.kind == "cleanup" then
         chest_at(stop, nil)

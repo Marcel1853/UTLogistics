@@ -2,25 +2,66 @@
 
 *English version: [README.md](https://github.com/Marcel1853/UTLogistics/blob/main/README.md).*
 
+> **📖 Wiki mit Bildern:** [github.com/Marcel1853/UTLogistics/wiki](https://github.com/Marcel1853/UTLogistics/wiki) – jede Funktion Schritt für Schritt erklärt,
+> auf Deutsch und Englisch, mit Screenshots. Diese Seite ist die Kurzfassung.
+
 Automatischer Zugverkehr für Factorio 2.1: **Anbieter, Abnehmer, Depots, Tankstellen,
 Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 
 - Benötigt: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age ist optional.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
   Schienenverkehr“ und „Schaltungsnetze“). Ausbaustufen: **„UTL: Ladesteuerung“** (Wagenfilter und
-  Auftrags-Ausgabe) und **„UTL: Netzverbund I–III“** (ein Netz mit 1, 2 oder 3 Partnernetzen verbinden). Mit der
+  Auftrags-Ausgabe) und **„UTL: Netzverbund I–III“** (ein Netz mit 1, 2 oder 3 Partnernetzen verbinden) und **„UTL: Lager“**
+  (Lager-Stationen). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
-> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (106 Prüfungen) und einen
+> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (126 Prüfungen) und einen
 > headless-Lasttest mit 384 Zügen auf 12 × 12 City Blocks; Updates werden geprüft, indem ein
 > Spielstand der Vorversion geladen wird. Die wichtigsten Funktionen zeigen die Szenarien. Im
-> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Nachladen** (0.0.7,
-> Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
+> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Lager** und **Cleanup gibt
+> zurück** (0.0.8), **Nachladen** (0.0.7, Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
 > etwas schiefgeht: bitte in der [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion)
 > melden, am besten mit Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem
 > gewachsenen Spielstand vorher sichern.
 
 ---
+
+## Wie UTL entsteht
+
+Ich hatte schon mehrmals angefangen, einen eigenen Zug-Dispatcher zu bauen – hingekriegt habe ich
+es nie. Dann war der YouTuber **fiftyshadesofgames** ein bisschen frustriert von den anderen
+Zug-Dispatchern, und ich dachte mir: Ach komm, ich probiere es nochmal 😄. Also habe ich komplett
+neu angefangen, diesmal mit Claude Code – und mit vielen Tests hat es endlich
+geklappt.
+
+UTL entsteht mit Hilfe von KI (Claude von Anthropic): der Code und die meisten Texte – diese
+README, das Wiki und die Hilfe im Spiel. Ich (Marcel) lege fest, was UTL können soll, mache jedes
+Szenario und meine eigenen Spielstände auf und teste selbst, bevor etwas veröffentlicht wird –
+damit so wenig wie möglich kaputtgehen kann.
+
+- **Automatische Tests** (von der KI headless ausgeführt): Selbsttest mit 126 Prüfungen, alle
+  Szenen aus Tipps & Tricks, der Lasttest mit 384 Zügen und ein Update-Test mit einem Spielstand der
+  Vorversion.
+- **Wie oft bisher** (gezählt aus den Entwicklungsprotokollen, 18. bis 27. September 2026): der
+  Selbsttest lief rund 270-mal, der Test der Tipps & Tricks rund 85-mal, der Lasttest rund 90-mal,
+  dazu über 300 weitere headless-Läufe von Factorio (Szenarien, Update-Tests, Prüfungen).
+- **Eigene Tests** im Spiel: Ich starte die Szenarien und meine Spielstände immer wieder, prüfe die
+  Fenster und das, was die Tests der KI sagen – bisher habe ich über 60 Fehler und Befunde
+  zurückgemeldet, mit rund 35 Screenshots. Wie oft ich das Spiel selbst gestartet habe, weiß ich
+  leider nicht – mitgeschrieben habe ich es nicht. Manches ist weniger getestet als anderes – das steht
+  oben beim Stand der Tests.
+- **Die Test-Werkzeuge** gehören zum Quelltext: [`tools/`](https://github.com/Marcel1853/UTLogistics/tree/main/tools)
+  auf GitHub (Selbsttest, Lasttest, Test der Tipps & Tricks, Screenshots).
+- **Mein PC** ist alles andere als ein Spielerechner: AMD Ryzen 3 2200G (4 Kerne), 14 GB nutzbarer
+  Arbeitsspeicher, keine Grafikkarte (nur die Grafik im Prozessor), Linux Mint. Was hier flüssig
+  läuft, sollte auf den meisten Rechnern laufen.
+
+UTL lebt von den Ideen und Fehlerberichten anderer Spieler – je mehr kommen, desto besser wird es.
+Einfach in die [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion) schreiben.
+
+Nebenbei ist beim Bau von UTL ein **Factorio-Modding-Skill** für Claude entstanden: geprüftes Wissen
+und Test-Werkzeuge, mit denen die KI Factorio-Mods besser schreibt. Ich arbeite noch daran
+und möchte ihn später veröffentlichen.
 
 ## Schnellstart
 
@@ -63,6 +104,7 @@ Gut für bestehende Bahnhöfe: Combinator danebenstellen, Ausgang mit der Haltes
 | **Depot** | Hier warten freie Züge. |
 | **Tankstelle** | Hier tanken Züge (Greifarme füllen die Loks). |
 | **Cleanup** | Hier werden Züge mit Restladung geleert. |
+| **Lager** | Nimmt an und gibt ab, zwischen Mindest- und Höchstbestand je Ware (siehe unten). |
 
 Depot, Tankstelle und Cleanup schließen sich gegenseitig und Anbieter/Abnehmer aus.
 
@@ -99,174 +141,87 @@ Mit dem grauen ⟲-Knopf setzt du einen Wert auf den Standard zurück.
 
 ## Netzwerke
 
-Jede Station hat **einen Netzwerknamen** (Feld „Netzwerk“ in ihrem Fenster). Leer bedeutet
-`default`. Zwei Stationen arbeiten nur zusammen, wenn der Name **genau gleich** ist. Es gibt
-keine Nummern und keine Bitmaske wie bei LTN.
+Jede Station hat **einen Netzwerknamen** (Feld „Netzwerk“ im Fenster, leer = `default`). Stationen,
+Depots, Tankstellen und Cleanups arbeiten nur mit **genau demselben Namen** zusammen – so trägt eine
+Karte mehrere getrennte Systeme, jedes mit eigenem Depot, eigener Tankstelle und eigenem Cleanup. Wer
+nur ein großes Netz will, lässt das Feld überall leer. Ein Tippfehler oder ein Großbuchstabe ist ein
+anderes Netz.
 
-Das gilt für **alle Rollen**:
+**Netze verbinden** (Forschung „UTL: Netzverbund I–III“, 1–3 Partner): Verbundene Netze helfen sich
+mit Zügen, Depots, Tankstellen und Cleanups. Ein Verbund ist ein **Stern** – ein Zentrum, Partner
+helfen dem Zentrum und bekommen Hilfe, aber **nicht untereinander**; ein Netz gehört zu höchstens
+einem Stern, Verbindungen gelten je Oberfläche. Einstellen im Stationsfenster („Verbunden mit“) oder
+im UTL-Manager, Reiter „Netzwerke“. Beispiel: ein Depot im eigenen Netz `Reserve`, verbunden mit
+`Erze` und `Platten`, bedient beide, während Erz- und Platten-Stationen einander weiter nicht kennen.
 
-| Rolle | Wirkung des Netzwerks |
-|---|---|
-| Anbieter | wird nur Abnehmern mit demselben Namen angeboten |
-| Abnehmer | wird nur von Anbietern mit demselben Namen beliefert |
-| Depot | gibt seine Züge nur an dieses Netzwerk |
-| Tankstelle | ein Zug tankt nur in seinem eigenen Netzwerk |
-| Cleanup | ein Zug wird nur in seinem eigenen Netzwerk geleert |
-
-Beispiel: zwei getrennte Systeme auf einer Karte.
-
-| Station | Netzwerk |
-|---|---|
-| Erzabbau, Erzverhüttung, Depot „Erz-Depot“ | `Erze` |
-| Plattenlager, Plattenverbraucher, Depot „Platten-Depot“ | `Platten` |
-
-Erz-Züge nehmen dann nie einen Platten-Auftrag an. Jedes System braucht **eigenes Depot, eigene
-Tankstelle und eigenes Cleanup** – es sei denn, du verbindest die Netze (siehe unten). Wer nur ein
-großes Netz will, lässt das Feld überall leer.
-
-### Netze verbinden
-
-*Braucht Forschung: „UTL: Netzverbund I“, II und III erlauben 1, 2 und 3 Partner je Netz.*
-
-**Wie viele Netze du anlegst, ist nicht begrenzt** – benenne so viele, wie du willst. Die Forschung
-begrenzt nur, wie viele Netze du **miteinander verbinden** kannst.
-
-Verbundene Netze **helfen sich gegenseitig**: Züge, Depots, Tankstellen und Cleanups des einen
-bedienen auch den anderen. Ein Verbund ist ein **Stern**:
-
-- Ein Netz ist das **Zentrum**, die damit verbundenen Netze sind seine **Partner**.
-- Zentrum und Partner helfen sich in **beide Richtungen**.
-- **Partner helfen sich nicht untereinander.** Sie teilen sich nur das Zentrum.
-- Ein Netz gehört zu **höchstens einem Stern**: Ein Partner kann keine eigenen Partner bekommen und
-  nicht zusätzlich mit einem zweiten Zentrum verbunden werden. So bleibt es übersichtlich – keine
-  Ketten, über die versehentlich die halbe Karte zu einem Netz wird.
-- Verbindungen gelten **je Oberfläche**. Netze auf Nauvis und auf Vulcanus werden getrennt verbunden,
-  auch wenn sie gleich heißen; jeder Planet kann eigene Sterne haben.
-
-Beispiel: ein Eisen-Netz als Zentrum mit drei Partnern (braucht „Netzverbund III“).
-
-| Netz | Rolle | hilft / bekommt Hilfe von |
-|---|---|---|
-| `Eisen` | Zentrum | `Kupfer`, `Kohle`, `Stein` |
-| `Kupfer` | Partner | nur `Eisen` |
-| `Kohle` | Partner | nur `Eisen` |
-| `Stein` | Partner | nur `Eisen` |
-
-Ein freier Zug aus dem Eisen-Depot nimmt Kupfer-, Kohle- und Stein-Aufträge an, ein Kupfer-Zug darf
-einen Eisen-Auftrag übernehmen – aber ein Kupfer-Zug nimmt nie einen Kohle-Auftrag. `Kupfer`, `Kohle`
-und `Stein` lassen sich mit keinem weiteren Netz verbinden, solange sie zu `Eisen` gehören.
-
-So geht auch ein **Reserve-Depot** ganz einfach: ein Depot in ein eigenes Netz `Reserve` stellen und
-`Erze` und `Platten` damit verbinden. Seine Züge bedienen beide, während Erz- und Platten-Stationen
-einander weiterhin nicht kennen.
-
-**Wo man es einstellt** – beide Wege machen dasselbe; eine Verbindung gilt immer für das ganze Netz
-auf dieser Oberfläche, nicht nur für eine Station:
-
-- **Stationsfenster:** der Kasten „Verbunden mit“ unter dem Heimatnetz. Ein Netz aus der Liste wählen
-  oder mit „Neu“ ein neues anlegen; jeder Partner steht als Knopf darunter, ein Klick löst die
-  Verbindung. Ist das Netz selbst Partner, zeigt der Knopf sein Zentrum, und ein Klick tritt aus dem
-  Stern aus.
-- **UTL-Manager, Reiter „Netzwerke“:** links ein Netz wählen; über der Stationsliste fügst du Partner
-  genauso hinzu oder löst sie.
-
-Der Zähler zeigt, wie viele Partner belegt und erlaubt sind, z. B. `Verbunden mit (2 / 3)`. Ist die
-Grenze erreicht, nennt der Tooltip die Forschung, die mehr erlaubt.
-
-Im UTL-Manager steht das Netzwerk in eckigen Klammern hinter dem Stationsnamen, sobald es nicht
-`default` ist, Verbindungen als `[Eisen ↔ Kupfer, Kohle]` beim Zentrum und `[Kupfer → Eisen]` beim
-Partner. Der Reiter **Netzwerke** zeigt alle Netze je Oberfläche mit freien Zügen, laufenden
-Lieferungen und den Stationen des Sterns.
-
-**Typische Fehler**
-
-- Depot im falschen Netzwerk → Warnung „kein freier Zug im Netzwerk …“, obwohl Züge dastehen.
-- Tankstelle im falschen Netzwerk → knappe Züge fahren nicht los (siehe *Tanken*).
-- Ein Tippfehler oder ein großer Buchstabe ist ein anderes Netzwerk: `Erze` und `erze` gehören
-  nicht zusammen.
+Mehr, mit Beispielen und allen Meldungen: [Wiki – Netzwerke](https://github.com/Marcel1853/UTLogistics/wiki/Netzwerke).
 
 ## Gemischte Anbieter
 
 *Braucht die Forschung „UTL: Ladesteuerung“.*
 
-Ein Anbieter darf mehrere Waren in **einer** Kiste haben. UTL sorgt dafür, dass ein Zug nur das
-mitnimmt, was sein Auftrag verlangt – auf zwei Wegen, die zusammenspielen:
+Ein Anbieter darf mehrere Waren in **einer** Kiste haben:
 
-**1. Wagenfilter (ohne Kabel).** Während einer Lieferung stellt UTL die Slots der Güterwagen auf
-die Waren des Auftrags und sperrt den Rest. Ein gewöhnlicher Greifarm an einer gemischten Kiste
-lädt dann nur das Bestellte, alles andere passt schlicht nicht hinein. Abschaltbar je Station
-(„Nur den Auftrag laden“ im Reiter *Werte*) oder für die ganze Karte (Map-Einstellungen). Wagen,
-an denen **du** selbst Filter gesetzt hast, fasst UTL nie an.
+- **Wagenfilter (ohne Kabel):** Während einer Lieferung stellt UTL die Wagen-Slots auf die Waren des
+  Auftrags; ein gewöhnlicher Greifarm an einer gemischten Kiste lädt dann nur das Bestellte. Je Station
+  oder für die ganze Karte abschaltbar; Wagen mit eigenen Filtern fasst UTL nicht an.
+- **Auftrags-Ausgabe:** ein kleiner Ausgang neben jeder Haltestelle mit den laufenden Aufträgen als
+  Signale – hier zu ladende Waren positiv, ankommende negativ; solange ein Lieferzug dasteht auch
+  Zug-Nummer, Länge, Loks, Wagen, **„Zug lädt hier“** und **„Zug entlädt hier“**. Für Filter-Greifarme,
+  Anzeigen und Pumpen (Flüssigkeiten haben keine Slot-Filter). Nicht an den Eingang der Station kabeln.
 
-**2. Der Auftrag als Schaltsignal.** Neben jeder Haltestelle steht eine kleine
-**Auftrags-Ausgabe**. Dort liegen die laufenden Aufträge als Signale an: Waren, die hier geladen
-werden sollen, **positiv**; Waren, die hier ankommen, **negativ**. Solange ein Lieferzug am
-Bahnsteig steht, kommen vier Signale dazu: **Zug-Nummer**, **Zuglänge** (Teile), **Loks** und
-**Wagen im Zug**. Damit schaltest du
-Filter-Greifarme, Anzeigen – und Pumpen: Für Flüssigkeiten gibt es keine Slot-Filter, so öffnest
-du bei einem Anbieter mit mehreren Tanks die richtige Pumpe. Überschüssige Flüssigkeit ablassen
-bleibt deine Sache.
-
-Die Ausgabe setzt und entfernt UTL zusammen mit der Station; sie ist nicht baubar und nicht
-abbaubar. Kabele sie nicht an den Eingang der Station – der Auftrag liefe sonst als Bestand
-zurück.
+Mehr, mit Beispielen: [Wiki – Gemischte Anbieter und Auftrags-Ausgabe](https://github.com/Marcel1853/UTLogistics/wiki/Gemischte-Anbieter-und-Auftrags-Ausgabe).
 
 ## Wie die Züge fahren
 
-- UTL **überschreibt deinen Fahrplan nicht.** Anbieter und Abnehmer werden als
-  **temporäre Halte** eingefügt und verschwinden nach der Abfahrt von selbst.
-  **Zuggruppen und Interrupts** bleiben erhalten.
-- Vor jede Haltestelle setzt UTL einen Schienen-Wegpunkt. So fährt der Zug genau die richtige
-  Haltestelle an, auch wenn mehrere gleich heißen.
-- Beim Anbieter wartet der Zug, bis die bestellte Menge geladen ist, beim Abnehmer, bis er leer
-  ist.
-- UTL wählt: den Anbieter mit höchster Priorität und passender Menge, dann einen freien Zug,
-  der möglichst viel auf einmal mitnimmt (wenige Fahrten) und nah ist. Die Erreichbarkeit
-  wird per Pfadsuche geprüft.
-- Reservierungen verhindern, dass mehrere Züge für denselben Bedarf losfahren.
-- **Mehrere Waren in einem Zug:** Hat der Anbieter weitere Waren, die derselbe Abnehmer braucht,
-  werden sie mitgeladen, solange Platz ist.
-- **Flüssigkeiten:** Züge mit Flüssigkeitswagen liefern Flüssigkeiten (je Lieferung eine Sorte).
-- **Direkt der nächste Auftrag:** Nach dem Entladen (und nach Tank-/Cleanup-Stationen) übernimmt
-  ein Zug sofort eine passende Lieferung in seiner Nähe, statt leer ins Depot zu fahren.
-  Abschaltbar in den Map-Einstellungen.
-- Das **Zuglimit** der Haltestelle (Vanilla) wird beachtet – zusätzlich zu „max. Züge“.
+- UTL **überschreibt deinen Fahrplan nicht**: Anbieter und Abnehmer kommen als **temporäre Halte**
+  hinein und verschwinden nach der Abfahrt. **Zuggruppen und Interrupts** bleiben erhalten.
+- Ein Schienen-Wegpunkt vor jeder Haltestelle sorgt dafür, dass der Zug genau diese anfährt, auch
+  wenn mehrere gleich heißen.
+- Beim Anbieter wartet der Zug, bis die bestellte Menge geladen ist, beim Abnehmer, bis er leer ist.
+- Auswahl: Anbieter mit höchster Priorität und Menge, dann ein freier, naher Zug, der möglichst viel
+  auf einmal mitnimmt; die Erreichbarkeit prüft die Pfadsuche. Reservierungen verhindern doppelte
+  Fahrten.
+- **Mehrere Waren je Zug**, **Flüssigkeiten** (je Lieferung eine Sorte) und **direkt der nächste
+  Auftrag** nach dem Entladen oder nach Tank-/Cleanup-Stationen (Map-Einstellung).
+- Das **Zuglimit** der Haltestelle (Vanilla) gilt zusätzlich zu „max. Züge“.
 
 ## Tanken
 
-Liegt **eine** Lok eines Zugs unter **40 %** (Map-Einstellung „Tanken unter (%)“), fährt der
-Zug zur nächsten passenden **Tankstelle** – vor dem nächsten Auftrag, direkt nach dem Entladen
-oder aus dem Depot. Er wartet, bis alle Loks voll sind (höchstens 30 s), und fährt dann weiter.
-Ist gerade keine Tankstelle frei, bekommt ein knapper Zug keinen Auftrag, sondern wartet im
-Depot; UTL versucht es alle 10 Sekunden erneut. Gibt es im Netzwerk **gar keine** UTL-Tankstelle
-(z. B. weil du selbst per Interrupt oder von Hand tankst), fahren knappe Züge ganz normal.
-
-Kleine und große Züge trennen: bei der Tankstelle für kleine Züge z. B. **max. Zuglänge 2**,
-bei der für große **min. Zuglänge 3**. Die Tankstellen dürfen gleich heißen.
+Liegt **eine** Lok unter **40 %** (Map-Einstellung „Tanken unter (%)“), fährt der Zug zur nächsten
+passenden **Tankstelle** – vor dem nächsten Auftrag, nach dem Entladen oder aus dem Depot – und
+wartet, bis alle Loks voll sind oder sich 30 s nichts tut. Ist keine frei, wartet ein knapper Zug im
+Depot; ein Netz **ganz ohne** UTL-Tankstelle tankt auf deine Art (Interrupt, von Hand). Min./max.
+Zuglänge an Tankstellen trennt kleine und große Züge.
 
 ## Cleanup (Restladung)
 
-Ein Zug mit Restladung fährt zur nächsten passenden **Cleanup-Station** und danach weiter
-(nächster Auftrag oder zurück ins Depot). Das passiert, wenn
+Züge mit Restladung (mit Ladung zurück im Depot, abgebrochene Lieferung, beim Abnehmer nicht leer
+geworden) fahren zur nächsten passenden **Cleanup-Station**. Was sie annimmt, stellst du im Fenster
+ein: **Alle Items** / **Alle Flüssigkeiten** (Standard) oder einzelne Waren; reicht eine nicht, fährt
+der Zug mehrere an. Flüssigkeiten: mit Pumpen in einen Lagertank, je Flüssigkeit ein Cleanup.
 
-- ein Zug mit Ladung ins Depot kommt,
-- eine Lieferung abgebrochen wurde (z. B. Station abgerissen),
-- ein Zug beim Abnehmer nicht ganz leer wurde.
+**Cleanup gibt zurück.** Mit **„Inhalt wieder anbieten“** bietet ein Cleanup seinen Kisteninhalt an
+wie ein Anbieter – **nur als Reserve**, **wie ein normaler Anbieter** oder **zuerst leeren**. Reste
+kommen 5 Minuten lang nicht zum selben Abnehmer zurück. Map-Einstellung: „Cleanup darf Inhalt wieder
+anbieten“.
 
-**Was eine Cleanup-Station annimmt**, stellst du im Fenster ein (Reiter „Werte“, Abschnitt
-„Cleanup“), nicht über den Namen der Haltestelle:
+Mehr: [Wiki – Tanken, Cleanup und Depots](https://github.com/Marcel1853/UTLogistics/wiki/Tanken-Cleanup-und-Depots).
 
-- Schalter **Alle Items** und **Alle Flüssigkeiten** (Standard: beide an),
-- oder einzelne Items und Flüssigkeiten in den Slots.
+## Lager (für Fortgeschrittene)
 
-UTL plant daraus eine Route: Einzeln eingetragene Waren kommen vor „Alle …“; reicht eine
-Station nicht (z. B. Kohle und Wasser im Zug), fährt der Zug mehrere Cleanups nacheinander an.
-An jeder Station wartet er, bis die Waren dieser Station weg sind (höchstens 30 s ohne Bewegung,
-falls die Kiste voll ist). Flüssigkeiten leerst du mit Pumpen am Wagen; „Alle Flüssigkeiten“
-nur mit Abfluss, sonst mischen sie sich im Rohr.
+*Braucht die Forschung „UTL: Lager“.*
 
-Gibt es für eine Ware kein passendes, freies Cleanup, bleibt der Zug im Depot, es kommt die
-Warnung „kein passendes Cleanup für [Ware]“, und UTL versucht es alle 10 s erneut.
+Ein **Lager** nimmt an **und** gibt ab – ein Puffer nahe bei den Verbrauchern. Je Ware (bis zu acht)
+ein **Mindest-** und ein **Höchstbestand**: unter Mindest fordert es bis Höchst an, über Mindest bietet
+es den Rest an **wie ein normaler Anbieter**. Zwei Lager schieben sich Ware nie hin und her. Mit
+**„Restladung annehmen“** (an) dürfen Züge hier auch Reste abladen. Map-Einstellung: „Lager-Stationen
+erlauben“.
+
+**Greifarme in beide Richtungen** (Vanilla, eine Gleisseite): Entlade-Greifarm → Kiste →
+Umlade-Greifarm → Kiste → Lade-Greifarm. Die Auftrags-Ausgabe an Entlade- und Lade-Greifarme
+verdrahten: Laden **[utl-loading] > 0**, Entladen **[utl-loading] = 0**. Das Szenario „UTL-Lager“
+zeigt es.
 
 ## Depots und Zuglänge
 
@@ -283,97 +238,27 @@ er stehen und ist trotzdem verfügbar.
 
 ## Übersicht: UTL-Manager
 
-Öffnen mit dem **Lok-Knopf in der Shortcut-Leiste** oder **Strg + Umschalt + U** (oder **Strg + Alt + U** – unter Linux fängt IBus Strg + Umschalt + U manchmal ab).
+Öffnen mit dem **Lok-Knopf** in der Shortcut-Leiste oder **Strg + Umschalt + U** (oder
+**Strg + Alt + U**). Reiter: **Depots**, **Stationen**, **Netzwerke**, **Inventar** (Klick auf eine Ware
+zeigt Details), **Verlauf** (letzte 100 Lieferungen), **Alarme** (letzte 100), **Einstellungen**. Suche
+nach Stationsnamen, Klick auf eine Station zeigt sie auf der Karte, Klick auf einen Zug verfolgt ihn.
+Mit Space Age wählt eine Auswahl den Planeten.
 
-**Mehrere Planeten (nur mit Space Age):** Eine Auswahl neben
-der Lupe legt fest, was angezeigt wird – *Automatisch* (der Planet, auf dem du bist oder den du dir
-ansiehst, Standard – leer, solange dort keine UTL-Station steht), *Alle Planeten* oder ein bestimmter Planet (auch Planeten anderer Mods).
-Gleichnamige Depots auf verschiedenen Planeten bleiben getrennt, das Inventar zählt nur den
-gewählten Planeten. Ohne Space Age ist die Auswahl ausgeblendet.
+**Warnungen** kommen als normale Factorio-Warnungen in drei Gruppen – kein passender Zug (nach
+5 Minuten), Restladung/Fehlmenge, Zugprobleme – jede je Spieler abschaltbar.
 
-- **Depots:** alle Depots mit freien/gesamten Zügen; pro Zug Zusammensetzung (z. B. `<LCCL>`),
-  Zustand („Lädt bei …“, „Fährt tanken“ …) und Ladung.
-- **Stationen:** Rolle, Angebot (grün) / Bedarf (rot), Unterwegs (blau = kommt, gelb = wird
-  abgeholt), Anzahl Züge.
-- **Netzwerke:** alle Netzwerke der Karte mit Stationszahl, freien Zügen und laufenden
-  Lieferungen; rechts oben die Partner des gewählten Netzes (hinzufügen und lösen), darunter die
-  Stationen des Sterns mit Rolle und Netz.
-- **Inventar:** alles, was im Netz angeboten, angefordert und unterwegs ist. Klick auf eine
-  Ware zeigt Stationen und Züge.
-- **Verlauf:** die letzten 100 Lieferungen mit Laufzeit; abgebrochene stehen rot mit Grund.
-- **Alarme:** die letzten 100 Warnungen zum Nachlesen (gleiche zusammengefasst, „×3“);
-  „Zeigen“ springt zur Stelle. Enthält auch Warnungen, die du als Factorio-Alarm ausgeschaltet hast.
-- Lupe = Suche nach Stationsnamen. Klick auf einen Stationsnamen zeigt die Station auf der
-  Karte, Klick auf einen Zug verfolgt ihn.
-
-Auch im Stationsfenster siehst du unter „Aktuell“ und „Unterwegs“, was gerade passiert.
-
-## Warnungen
-
-UTL meldet Probleme als normale Factorio-Warnungen (rechts unten; anklicken zeigt die Stelle):
-
-| Gruppe | Wann |
-|---|---|
-| Kein passender Zug | Anfragen warten seit **5 Minuten** (Map-Einstellung) auf einen Zug. Fehlen freie Züge, gibt es **eine Sammelwarnung je Netzwerk** („37 Anfragen warten …“); passt kein freier Zug (Länge/Laderaum), warnt die einzelne Station. Solange ein Zug mit der Ware unterwegs ist, gilt die Anfrage als bedient. |
-| Restladung und Fehlmenge | Zug mit Restladung im Depot, beim Abnehmer nicht leer geworden, beim Anbieter weniger geladen als bestellt. |
-| Zugprobleme | Lieferzug findet keinen Weg, kein freies Depot gefunden, Tanken fehlgeschlagen, Lieferung abgebrochen. |
-
-Jede Gruppe lässt sich pro Spieler abschalten: **Einstellungen → Mod-Einstellungen → Spieler**.
-Dieselbe Warnung kommt höchstens alle 10 Sekunden.
-
-## Registerkarte „Züge“
-
-Schienen, Hochbahn, Signale, Haltestellen, Loks, Wagen und Zug-Combinators – auch aus anderen
-Mods – bekommen eine eigene Registerkarte im Crafting-Menü. Abschaltbar in den
-Start-Einstellungen.
+Mehr: [Wiki – UTL-Manager und Warnungen](https://github.com/Marcel1853/UTLogistics/wiki/UTL-Manager-und-Warnungen).
 
 ## Map-Einstellungen
 
-| Einstellung | Standard | Wirkung |
-|---|---|---|
-| Takt (Ticks) | 10 | Alle wie viele Ticks UTL arbeitet. Höher = weniger CPU. |
-| Stationen pro Takt | 20 | So viele Stationen werden pro Takt gelesen, alle kommen reihum dran. |
-| Neue Lieferungen pro Durchlauf | 2 | Höchstens so viele Züge pro Dispatcher-Durchlauf (alle 3 Takte, also bis zu 4 pro Sekunde). |
-| Nur den Auftrag laden | an | Wagenfilter während einer Lieferung. Je Station abschaltbar. |
-| Auftrags-Ausgabe an der Haltestelle | an | Der kleine Ausgang neben jeder Haltestelle. Aus: Er verschwindet. |
-| UTL-Funktionen brauchen Forschung | an | Ladesteuerung und Netzverbund erst nach der Forschung. Aus: alles sofort frei. Alte Spielstände mit erforschtem UTL bekommen die neuen Forschungen automatisch. |
-| Tanken unter (%) | 40 | Tankgrenze, 0 = aus. |
-| Warnung „kein Zug“ nach (Minuten) | 5 | So lange darf eine Anfrage unbedient sein, bevor gewarnt wird. 0 = sofort. |
-| Standard-Angebots-/Bedarfs-Schwelle | 1000 | Startwerte für neue Stationen. |
-| Inaktivität beim Laden (s) | 30 | Sekunden ohne Änderung an der Ladung beim Anbieter, 0 = keine Bedingung. Wie sie wirkt, legt „Fracht und/oder Inaktivität“ fest. |
-| Inaktivität beim Entladen (s) | 30 | Dasselbe beim Abnehmer. |
-| Fracht und/oder Inaktivität | oder | „und“: erst fahren, wenn voll bzw. leer und so lange nichts mehr passiert ist. „oder“: auch fahren, wenn so lange nichts passiert ist – mit dem, was drin ist. |
-| Team-Leiter abgeben nach … Tagen offline | 3 | Ein Leiter, der so lange nicht online war, verliert die Rechte. 0 = nie. |
-| Debug-Protokoll | aus | Zusätzliche Meldungen in `factorio-current.log`. |
+Die wichtigsten: **Direkt der nächste Auftrag** (an), **Nur den Auftrag laden** (an),
+**Auftrags-Ausgabe** (an), **UTL-Funktionen brauchen Forschung** (an), **Tanken unter** (40 %),
+**Inaktivität beim Laden / Entladen** (je 30 s, mit der Fracht per **oder** bzw. **und** verknüpft),
+**Nachladen** (aus), **Cleanup darf Inhalt wieder anbieten** (an), **Lager-Stationen erlauben** (an).
+Die Lade-Werte gehen auch im **UTL-Manager, Reiter „Einstellungen“** – mit Teams je Team; Admins
+nutzen **`/utl-admin`**.
 
-Die drei **Lade-Werte** (Inaktivität beim Laden, Inaktivität beim Entladen, Fracht und/oder
-Inaktivität) lassen sich auch im **UTL-Manager, Reiter „Einstellungen“** ändern – ohne das Spiel zu
-verlassen. Darunter sehen **Admins** auch alle übrigen Kartenwerte („Karte / Server“); andere
-Spieler sehen diesen Teil nicht.
-- **Ohne Teams** (alle Spieler in einem Team) zeigt der Reiter die drei Werte für alle; ändern darf
-  sie nur ein Admin. Ein dort geänderter Wert gilt statt des Werts aus den Mod-Einstellungen (der
-  Reiter zeigt beide); ändert man ihn danach im Einstellungsmenü, gewinnt wieder das Menü.
-- **Mit Teams** (Spieler auf mehreren Forces oder in einer eigenen Force) hat jedes Team eigene
-  Werte. Wer als Erster ins Team kommt, ist **Team-Leiter**; Leiter (und Admins) dürfen die Werte
-  ändern, weitere Leiter bestimmen und Rechte wieder wegnehmen – einer bleibt immer. Verlässt der
-  letzte Leiter das Team, übernimmt das dienstälteste Mitglied. Ein Leiter, der **3 Tage** nicht
-  online war (Karten-Einstellung „Team-Leiter abgeben nach … Tagen offline“, Spielzeit, solange der
-  Server läuft, 0 = nie), verliert die Rechte, und das dienstälteste aktive Mitglied übernimmt. Ohne
-  eigenen Wert gilt der Kartenwert.
-
-**Admins:** Der Befehl **`/utl-admin`** öffnet ein Fenster, in dem man jedes Team wählen und seine
-Leiter und Werte ändern kann – falls ein Team mal hängt.
-
-**Inaktivität beim Laden und Entladen** – Sekunden ohne Änderung an der Ladung, wie die
-Wartebedingung im Spiel – wirkt auf eine von zwei Arten (Einstellung „Fracht und/oder Inaktivität“):
-- **Fracht oder Inaktivität** (Standard): Der Zug fährt auch, sobald sich so lange nichts getan hat – mit dem, was er hat; die
-  Lieferung wird auf das tatsächlich Geladene gekürzt, der Abnehmer bestellt den Rest neu. Hat er
-  gar nichts geladen, wird die Lieferung abgebrochen, und der Zug fährt zurück ins Depot. Beim
-  Abnehmer fährt er nach Ablauf weiter; was übrig ist, bringt er zum Cleanup.
-- **Fracht und Inaktivität:** Der Zug fährt erst, wenn er voll bzw. leer ist **und** sich so lange
-  nichts mehr getan hat.
-
-`0` = keine Inaktivitäts-Bedingung (warten, bis voll bzw. leer, wie vor 0.0.6).
+Alle Einstellungen: [Wiki – Einstellungen](https://github.com/Marcel1853/UTLogistics/wiki/Einstellungen).
 
 ## Leistung
 
@@ -382,122 +267,60 @@ Gemessen mit dem Lasttest-Szenario, headless (ohne Grafik, also ohne FPS):
 | Netz | Messung | UTL pro Tick (Schnitt) | ganzes Spiel pro Tick (Schnitt) | Ticks unter 60 UPS |
 |---|---|---|---|---|
 | 9 × 9, 180 Züge, 340 Bahnhöfe | 40 min, ~1300 Lieferungen | 0,045 ms | – | 0 |
-| 12 × 12, 384 Züge (davon 24 Flüssigkeit), 496 Bahnhöfe | 10 min | 0,067 ms | 3,6 ms | 36 von 36 000 |
+| 12 × 12, 384 Züge (davon 24 Flüssigkeit), 496 Bahnhöfe mit 8 Lagern, 3 verbundene Netze, Nachladen | 10 min | 0,072 ms | 2,9 ms | 5 von 36 000 |
 
-UTL selbst hat Spitzen bis etwa 15 ms, wenn es Züge losschickt (das Losschicken löst die
+UTL selbst hat Spitzen bis etwa 13 ms, wenn es Züge losschickt (das Losschicken löst die
 Pfadsuche des Spiels aus). Den größten Teil der Zeit brauchen die Züge des Spiels selbst
 (Bewegung und Pfadsuche).
 
-**Wichtig:** Die Karte ist sonst **fast leer** – keine Fabrik, keine Bergbau-Bohrer, keine
-Fließbänder, keine Beißer, nur Gleise, Bahnhöfe, Greifarme an Unendlich-Kisten, Masten und
-Radare. In einem echten Spielstand kostet die Fabrik zusätzlich UPS und FPS; die Zahlen zeigen
-also, was UTL und die Züge selbst brauchen, nicht die UPS einer ganzen Megabase.
+**Wichtig:** Die Karte ist sonst **fast leer** (keine Fabrik, keine Bänder, keine Beißer) – die Zahlen
+zeigen, was UTL und die Züge brauchen, nicht die UPS einer ganzen Megabase.
 
 ## Szenarien zum Ausprobieren
 
-**Neues Spiel → Szenarien → UTL-Beispiele (gemischter Anbieter)**: ein kleines Übungsnetz auf
-Marcels Rundkurs mit Ausbuchtungen. Ein Anbieter hat Eisenplatten, Kupferplatten und Zahnräder in
-drei Kisten mit drei Greifarmen, von denen die Auftrags-Ausgabe immer nur den freigibt, dessen
-Ware gerade bestellt ist. Eine Werkstatt braucht Eisen **und** Kupfer und bekommt beides in
-**einer** Fahrt. Beim Flüssigkeits-Anbieter stehen zwei Tanks, Öl und Wasser haben eigene Abnehmer, und die
-Pumpen schaltet die **Auftrags-Ausgabe**. Dazu zwei Depots hintereinander, Tankstelle und Cleanup.
-Zwei Züge, keine Messung – zum Anschauen.
+**Neues Spiel → Szenarien** (alles erforscht, Cheat-Modus an, Anzeigefelder mit Erklärungen):
 
-**Neues Spiel → Szenarien → UTL-Netzverbund (2 × 2 City Blocks)**: vier Netze auf 2 × 2 City
-Blocks, jedes in seinem Teil der Karte. `Eisen` (Mitte) ist das Zentrum eines Sterns mit Depot
-(4 Züge), Tankstelle und Cleanup. Seine Partner: `Kupfer` hat **keine eigenen Züge** – die
-Eisen-Züge fahren seine Aufträge – und `Kohle` hat ein eigenes Depot mit 2 Zügen, die auch Eisen
-helfen, aber **nie** Kupfer, denn Partner helfen sich nicht untereinander. `Stein` ist mit niemandem
-verbunden und fährt nur mit seinen eigenen Zügen. Im UTL-Manager, Reiter **Netzwerke**, eine
-Verbindung lösen oder `Stein` dazunehmen und im **Verlauf** zusehen, wer wohin fährt.
+- **UTL-Beispiele (gemischter Anbieter)** – gemischter Anbieter mit Auftrags-Ausgabe, zwei Waren in
+  einer Fahrt, Öl und Wasser über geschaltete Pumpen.
+- **UTL-Netzverbund** – vier Netze, ein Stern mit einem Partner ohne eigene Züge.
+- **UTL-Teams** – vier Teams mit gleichen Stations- und Netznamen; `/utl-team rot` wechselt.
+- **UTL-Nachladen (zum Anschauen)** – mit und ohne Nachladen, Runde für Runde, mit Erklärfenster.
+- **UTL-Lager (zum Anschauen)** – neu in 0.0.8: Lager, ein Cleanup, der zurückgibt, und vier kleine
+  Beispiel-Strecken, mit Erklärfenster.
+- **UTL-Planeten-Test (Space Age)** – dasselbe Netz auf Nauvis, Vulcanus und Gleba.
+- **UTL-Lasttest (384 Züge)** – 12 × 12 City Blocks zum Messen, mit Lagern, Cleanups, die
+  zurückgeben, verbundenen Netzen, Nachladen und festen Zuglängen; startet in wenigen Sekunden.
 
-**Neues Spiel → Szenarien → UTL-Teams (vier Teams)**: vier Teams – Standard, Rot, Blau und Grün –
-mit je einem eigenen 2 × 2-Raster aus City Blocks. Die vier Raster stehen getrennt nebeneinander,
-kein Gleis führt hinüber. Alle vier benutzen mit Absicht **dieselben Stationsnamen** (Depot,
-Anbieter, Abnehmer, Tankstelle, Cleanup) und denselben Netznamen `Eisen` – Fahrpläne kennen nur
-Namen, kein Team, deshalb ist das die Lage, in der Züge zum falschen Team fahren könnten. Mit
-`/utl-team rot` wechselt man das Team, auch allein. Im UTL-Manager sieht jedes Team nur sich
-selbst.
-
-**Neues Spiel → Szenarien → UTL-Nachladen (zum Anschauen)**: zeigt, was das Nachladen bringt.
-Ein Zug fährt los, um 1000 Eisen zu holen – unterwegs steigt der Bedarf auf 3000. Mit Nachladen
-kommt die zusätzliche Menge auf die Ladeliste desselben Zugs, ohne braucht der Rest eine zweite
-Fahrt. Die Runden wechseln sich ab. Ein Fenster erklärt jeden Schritt, eine Kamera folgt dem Zug,
-über dem Zug steht seine Ladeliste und über dem Abnehmer sein Bedarf; ein Zähler zeigt, wie viele
-Fahrten mit und ohne Nachladen nötig waren.
-
-In allen Szenarien und in den Tipps-&-Tricks-Szenen stehen **Anzeigefelder** mit kurzen
-Erklärungen neben den Bahnhöfen (in deiner Spielsprache).
-
-Die Szenarien sind Übungs- und Prüfkarten, keine Spielinhalte. Werden es zu viele, fliegen ältere
-wieder heraus – gebraucht wird immer nur, was eine Funktion zeigt oder prüft.
-
-## Lasttest-Szenario
-
-**Neues Spiel → Szenarien → UTL-Lasttest (384 Züge)**: ein fertiges City-Block-Gitter (12 × 12,
-4 Gleise je Korridor, Kreuzungen mit Kettensignalen). 5 Depots mit je 72 Zügen in reinen
-Depot-Blöcken, dazu „Depot Flüssig“ mit 24 Flüssigkeitszügen; 496 Bahnhöfe mit Platz für je
-3 Züge, Anbieter und Abnehmer gemischt, Rohöl und Petroleumgas mit Pumpen und Tanks,
-16 Tankstellen und 6 Cleanups gleichmäßig verteilt; jede vierte Station ist eine normale
-Haltestelle mit **UTL-Stations-Combinator**.
-
-**Beim ersten Start dauert es einen Moment:** Das Szenario baut gut 48 000 Gleisstücke, 3 840
-Signale, 880 Haltestellen und 384 Züge per Script. Je nach Rechner stockt das Spiel einige
-Sekunden bis etwa eine Minute – das ist normal und passiert nur einmal. **Keine weiteren Mods
-nötig**: Unendlich-Kisten, Unendlich-Rohre und Strom-Quellen gehören zum Grundspiel.
-
-**Tipps für das eigene Netz:** Bahnhöfe auf Nebengleise legen, Warteplätze davor und „max. Züge“
-passend setzen, vor jedem Abzweig ein Kettensignal, hinter jeder Einmündung Platz für einen
-ganzen Zug, Depots gebündelt in einem Abstellbahnhof.
+Einzelheiten und Bilder: [Wiki – Szenarien und Tipps](https://github.com/Marcel1853/UTLogistics/wiki/Szenarien-und-Tipps).
 
 ## Tipps & Tricks im Spiel
 
-Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics**: fünfzehn Einträge,
-die die Bedienung erklären, jeder mit einer laufenden Beispielszene (teils mit geöffnetem
-UTL-Fenster, Manager und Umschalt-Klick zum Kopieren). Darunter: eine UTL-Haltestelle mit Anbieter, Abnehmer und Depot;
-dieselbe Strecke mit normalen Haltestellen und UTL-Stations-Combinatoren (Kabel sichtbar); und
-ein Zug, der zuerst zur Tankstelle fährt und dann liefert; ein Zug mit Restladung, der erst an
-der Cleanup-Station geleert wird; **zwei getrennte Netzwerke übereinander** mit Kamerafahrt; zwei Netze im Stationsfenster
-verbinden (aus der Liste wählen, mit „Neu“ anlegen); der Manager Reiter für Reiter, sein Reiter
-Netzwerke mit einer neuen Verbindung und der Reiter Inventar, in dem ein Klick auf eine Ware
-Stationen und Züge zeigt. Dazu Erklärungen zu Rollen, Anforderungen, Werten und Netzwerk,
-Netze verbinden (Stern, Forschung „Netzverbund“), Depots, Einstellungen kopieren/Blaupausen und Manager.
+Im Menü **Tipps & Tricks** gibt es eine eigene Kategorie **Unified Train Logistics** mit siebzehn
+Einträgen, jeder mit laufender Beispielszene – von der ersten Lieferung über Netzwerke, Cleanup gibt
+zurück und Lager bis zum Manager.
+
+Nach einem Update schreibt UTL einmal eine kurze Zeile mit dem Wichtigsten in den Chat; der Link
+darin öffnet die Tipps-&-Tricks-Seite **„Neu in UTL“**. Je Spieler abschaltbar: *Update-Hinweise im
+Chat*.
 
 ## Häufige Fragen
 
-- **Es fährt nur ein Zug.** Wahrscheinlich reicht einer: Der Zielbestand ist ein Bestand, keine
-  Bestellung (siehe oben). Oder es gibt keine weiteren freien Züge – `/utl-status` zeigt
-  „Züge im Depot“.
-- **Ein Zug im Depot wird nicht benutzt.** Hat die Haltestelle die Rolle Depot? Ist der Zug
-  leer und in Automatik? Passt seine Länge zu Anbieter und Abnehmer?
-- **Ein Zug fährt nicht tanken.** Gibt es eine Tankstelle im selben Netzwerk, deren Zuglänge
-  passt und die erreichbar ist?
-- **Der Befehl `/utl-status`** zeigt Stationen, freie Züge und laufende Lieferungen.
+Fragen und Fehlersuche Schritt für Schritt: [Wiki – Häufige Fragen und Fehlersuche](https://github.com/Marcel1853/UTLogistics/wiki/Häufige-Fragen-und-Fehlersuche).
 
 ## Teams und Oberflächen
 
-Beides ist enthalten, beides trennt UTL sauber:
-
-- **Teams (Forces):** Jedes Team arbeitet für sich. Züge, Depots, Tankstellen und Cleanups nehmen
-  nur Stationen des eigenen Teams, Netzverbindungen gelten je Team, und der Manager zeigt nur das
-  eigene Team. Zwei Teams dürfen dieselben Netz- und Stationsnamen benutzen, ohne sich zu stören.
-  Ausprobieren: Szenario „UTL-Teams“.
-- **Oberflächen (Space Age):** Jede Oberfläche arbeitet für sich. Zusammengebracht wird nur, was
-  auf **derselben** Oberfläche steht – Nauvis und Vulcanus brauchen also jeweils eigene Depots und
-  eigene Züge. Lieferungen **zwischen** Oberflächen wird es nicht geben: Züge können den Planeten
-  nicht wechseln.
+**Teams (Forces)** und **Oberflächen** trennt UTL sauber: Züge, Depots, Tankstellen und Cleanups
+arbeiten nur im eigenen Team und auf der eigenen Oberfläche, Netzverbindungen gelten je Team, der
+Manager zeigt nur dein Team. Zwei Teams dürfen dieselben Namen benutzen. Züge können den Planeten
+nicht wechseln – jede Oberfläche braucht eigene Depots und Züge. Ausprobieren: Szenario „UTL-Teams“.
 
 ## Nachladen (abschaltbar, Standard aus)
 
-Wächst der Bedarf eines Abnehmers, während ein Zug für ihn noch zum Anbieter fährt oder dort lädt,
-kommt die Menge auf die **laufende Ladeliste** statt in eine zweite Fahrt. Bedingung: derselbe
-Anbieter hat die Ware noch frei, und im Zug ist Platz. Items dürfen dazukommen, bei Flüssigkeiten
-nur dieselbe Sorte.
-
-Das spart Züge, hält den Zug aber länger am Anbieter – deshalb ist es abschaltbar und **von Haus
-aus aus**. Einschalten in den Karteneinstellungen oder im Manager unter „Einstellungen“:
-*Nachladen, während der Zug lädt*. Wer es auslässt, merkt keinen Unterschied zu vorher.
-Zum Anschauen: Szenario „UTL-Nachladen“.
+Wächst der Bedarf eines Abnehmers, während sein Zug noch zum Anbieter fährt oder dort lädt, kommt
+die Menge auf die **laufende Ladeliste** statt in eine zweite Fahrt (derselbe Anbieter, Platz im Zug,
+bei Flüssigkeiten nur dieselbe Sorte). Der Zug steht dafür länger am Anbieter, deshalb ist es **von
+Haus aus aus** – Map-Einstellung oder Manager „Einstellungen“: *Nachladen, während der Zug lädt*.
+Szenario „UTL-Nachladen“ zeigt es.
 
 ## Noch nicht enthalten
 
@@ -506,10 +329,6 @@ Anbieter ab).
 
 ## Für Mod-Autoren
 
-Remote-Schnittstelle `utl`: `station_count`, `get_station(unit)`,
-`configure_station(unit, changes)`, `set_request(unit, slot, signal, count)`,
-`copy_settings(from, to)`, `tag_blueprint(stack, mapping, surface)`, `idle_train_count`, `delivery_count`, `get_deliveries`, `get_alerts`,
-`link_networks(surface, center, partner)`, `unlink_networks(surface, a, b)`,
-`get_network_star(surface, name)`, `set_team_config(force, key, value)`,
-`get_team_config(force, key)` (Schlüssel `load_timeout`, `unload_timeout`, `timeout_mode`;
-Team-Werte zählen nur, wenn es Teams gibt), `set_map_config(setting, value)`.
+Remote-Schnittstelle `utl` (Stationsdaten, Lieferungen, Warnungen, Stationen und Anforderungen
+einstellen, Netzverbindungen, Team- und Kartenwerte, per Script erstellte Blaupausen taggen):
+[Wiki – Für Mod-Autoren](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren).

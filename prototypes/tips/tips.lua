@@ -22,6 +22,8 @@ end
 data:extend({
   { type = "tips-and-tricks-item-category", name = "utl", order = "f-[trains]-z[utl]" },
   item("utl-overview", "a", "basic", { is_title = true, indent = 0 }),
+  -- „Neu in UTL“: das Wichtigste der aktuellen Version, verlinkt aus dem Update-Hinweis im Chat
+  item("utl-news", "a1", nil),
   item("utl-train-stop", "b", "stop_window", { tag = "[item=utl-train-stop]" }),
   item("utl-combinator", "c", "combinator", { tag = "[item=utl-station-combinator]" }),
   item("utl-roles", "d", "roles"),
@@ -32,6 +34,8 @@ data:extend({
   item("utl-depots", "g", "depots"),
   item("utl-fuel", "h", "fuel", { tag = "[item=coal]" }),
   item("utl-cleanup", "i", "cleanup"),
+  item("utl-cleanup-return", "i2", "cleanup_return", { indent = 2 }),
+  item("utl-storage", "i3", "storage", { tag = "[item=steel-chest]" }),
   item("utl-copy", "j", "copy", { tag = "[item=blueprint]" }),
   item("utl-manager", "k", "manager", { tag = "[img=utility/search]" }),
   item("utl-manager-networks", "k2", "manager_networks", { indent = 2 }),

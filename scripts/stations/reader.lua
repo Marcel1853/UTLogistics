@@ -5,6 +5,7 @@
 local Util = require("scripts.lib.util")
 local Input = require("scripts.stations.input")
 local Registry = require("scripts.stations.registry")
+local StorageReader = require("scripts.stations.storage-reader")
 
 local Reader = {}
 
@@ -23,7 +24,8 @@ local function collect(signals, cfg)
       if key then net[key] = (net[key] or 0) + s.count end
     end
   end
-  local requests = cfg.request_map
+  -- Lager rechnet mit Grenzen statt mit Anforderungs-Slots (storage-reader.lua)
+  local requests = cfg.mode ~= "storage" and cfg.request_map
   if requests then
     for key, count in pairs(requests) do net[key] = (net[key] or 0) - count end
   end
@@ -88,7 +90,12 @@ function Reader.read(station)
   if not station.entity.valid then return end
   local cfg = station.config
   collect(Input.read(station), cfg)
-  if not unchanged(station, cfg) then rebuild(station, cfg) end
+  if cfg.mode == "storage" then
+    StorageReader.apply(station, net, cfg)
+  else
+    if station.provide_rank then station.provide_rank = nil end -- war vorher ein Lager
+    if not unchanged(station, cfg) then rebuild(station, cfg) end
+  end
   station.last_read = game.tick
 end
 

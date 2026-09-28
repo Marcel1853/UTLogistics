@@ -16,7 +16,9 @@
 --- Benutzung:
 ---   Explain.create(player, { name = "…", title = {…}, intro = {…}, button = { action = "…", tooltip = {…} } })
 ---   Explain.update(player, "…", { headline = {…}, button = {…}, steps = { {…}, … }, current = 2,
----     follow = entity, big = {…}, note = {…} })
+---     legend = false, follow = entity, big = {…}, note = {…} })
+---   `legend = true`: Die Schritte sind keine Abfolge, sondern eine Legende – nur der aktuelle wird
+---   hervorgehoben, nichts gilt als „erledigt“ (z. B. „was gerade zu sehen ist“).
 ---   in on_gui_click: local action = Explain.on_click(event)  → eigener Knopf gedrückt, sonst nil
 ---
 --- Alle Texte sind LocalisedStrings (jeder Spieler sieht seine Sprache). Eingeklappt wird je Fenster
@@ -100,8 +102,8 @@ function Explain.create(player, spec)
 end
 
 --- Inhalt auffrischen. Nur übergebene Felder ändern sich.
---- `state` = { headline?, button?, steps? = { LocalisedString … }, current?, follow? (LuaEntity),
----   big?, note? }
+--- `state` = { headline?, button?, steps? = { LocalisedString … }, current?, legend?,
+---   follow? (LuaEntity), big?, note? }
 function Explain.update(player, name, state)
   local frame = frame_of(player, name)
   if not (frame and frame.box.visible) then return end
@@ -118,7 +120,8 @@ function Explain.update(player, name, state)
     local current = state.current or 0
     for i, text in ipairs(state.steps) do
       local label = flow["s" .. i]
-      local is_current, is_done = i == current, i < current
+      local is_current = i == current
+      local is_done = not state.legend and i < current
       -- Zeichen, die sicher im Spielfont stehen: „»“ und das Häkchen als Bild
       label.caption = { "", is_current and "» " or (is_done and "[img=utility/check_mark] " or "     "), text }
       label.style.font = is_current and "default-bold" or "default"

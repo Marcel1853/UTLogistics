@@ -9,6 +9,7 @@ local Main = require("scripts.gui.station.panel-main")
 local Values = require("scripts.gui.station.panel-values")
 local RequestsSection = require("scripts.gui.station.section-requests")
 local CleanupSection = require("scripts.gui.station.section-cleanup")
+local StorageSection = require("scripts.gui.station.section-storage")
 local Networks = require("scripts.stations.networks")
 local Nets = require("scripts.gui.station.section-networks")
 local Unlocks = require("scripts.core.unlocks")
@@ -142,6 +143,10 @@ Events.on(defines.events.on_gui_elem_changed, function(event)
   if action == "req_slot" then
     RequestsSection.on_elem_changed(gui.requests, station.config, tags.slot, event.element.elem_value)
     changed(event, station, false)
+  elseif action == "storage_signal" then
+    local value = event.element.elem_value
+    StorageSection.set_signal(station.config, tags.slot, type(value) == "table" and value or nil)
+    changed(event, station, true)
   elseif action == "cleanup_item" or action == "cleanup_fluid" then
     local value = event.element.elem_value
     CleanupSection.set(station.config, action, tags.slot, type(value) == "string" and value or nil)
@@ -157,6 +162,12 @@ Events.on(defines.events.on_gui_checked_state_changed, function(event)
     changed(event, station, true)
   elseif tags.utl_action == "toggle" then
     if Values.toggle(station.config, tags.key, event.element.state) then changed(event, station, false) end
+  elseif tags.utl_action == "storage_leftover" then
+    StorageSection.set_leftover(station.config, event.element.state)
+    changed(event, station, true)
+  elseif tags.utl_action == "cleanup_offer" then
+    CleanupSection.set_offer(station.config, event.element.state)
+    changed(event, station, true)
   end
 end)
 
@@ -172,6 +183,8 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
       Networks.invalidate()
       changed(event, station, true)
     end
+  elseif action == "cleanup_offer_tier" then
+    if CleanupSection.set_tier(station.config, element.selected_index) then changed(event, station, false) end
   elseif action == "network_add_pick" then
     local index = element.selected_index
     if index > 0 then
@@ -191,6 +204,9 @@ Events.on(defines.events.on_gui_text_changed, function(event)
     if Values.apply(cfg, tags.key, event.element.text) then changed(event, station, false) end
   elseif action == "req_stacks" or action == "req_items" then
     RequestsSection.sync(gui.requests, cfg, action)
+  elseif action == "storage_min" or action == "storage_max" then
+    -- kein Neuaufbau: sonst verlöre das Feld beim Tippen den Fokus
+    if StorageSection.set_number(cfg, action, tags.slot, event.element.text) then changed(event, station, false) end
   end
 end)
 

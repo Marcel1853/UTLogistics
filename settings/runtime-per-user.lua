@@ -21,4 +21,12 @@ data:extend({
     default_value = true,
     order = "a-c",
   },
+  -- Nach einem Update eine kurze Zeile im Chat, was neu ist (mit Link auf Tipps & Tricks)
+  {
+    type = "bool-setting",
+    name = "utl-news",
+    setting_type = "runtime-per-user",
+    default_value = true,
+    order = "b-a",
+  },
 })

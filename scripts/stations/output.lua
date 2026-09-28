@@ -117,6 +117,10 @@ function Output.write(station)
     put_signal("utl-train-length", train.length)
     put_signal("utl-train-locos", train.locos)
     put_signal("utl-train-wagons", train.wagons)
+    -- für eigene Schaltungen (z. B. Lade- und Entlade-Greifarme an einem Lager): wird hier gerade
+    -- geladen oder entladen?
+    put_signal("utl-loading", train.mode == "load" and 1 or 0)
+    put_signal("utl-unloading", train.mode == "unload" and 1 or 0)
   end
 end
 

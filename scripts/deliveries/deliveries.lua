@@ -191,7 +191,8 @@ local function stop_unit_of(unit)
 end
 
 --- Zug an einer Station vermerken (für die Auftrags-Ausgabe) bzw. wieder löschen.
-local function train_at(unit, train)
+--- `mode` = "load" | "unload": wird dort geladen oder entladen (Signale utl-loading/utl-unloading).
+local function train_at(unit, train, mode)
   local at = storage.deliveries.at_station
   if train and train.valid then
     local wagons = #train.cargo_wagons + #train.fluid_wagons
@@ -200,6 +201,7 @@ local function train_at(unit, train)
       length = #train.carriages,
       locos = #train.locomotives.front_movers + #train.locomotives.back_movers,
       wagons = wagons,
+      mode = mode,
     }
   else
     at[unit] = nil
@@ -213,10 +215,10 @@ function Deliveries.on_arrive(delivery, stop)
   if delivery.state == "to_provider" and unit == stop_unit_of(delivery.provider) then
     delivery.state = "loading"
     Filters.repair(delivery) -- Slots, die beim Losschicken noch belegt waren
-    train_at(delivery.provider, delivery.train)
+    train_at(delivery.provider, delivery.train, "load")
   elseif delivery.state == "to_requester" and unit == stop_unit_of(delivery.requester) then
     delivery.state = "unloading"
-    train_at(delivery.requester, delivery.train)
+    train_at(delivery.requester, delivery.train, "unload")
   end
 end
 
@@ -272,6 +274,13 @@ function Deliveries.on_depart(delivery)
       Depot.send_service(train, delivery.network or "default")
     end
     if train.valid and Depot.has_cargo(train) then
+      -- Rückweg-Sperre: diese Waren liefert ein Cleanup dem Abnehmer vorerst nicht zurück
+      local block = storage.dispatch.return_block[delivery.requester] or {}
+      for _, stack in pairs(train.get_contents()) do
+        block[Util.signal_key({ type = "item", name = stack.name, quality = stack.quality })] = game.tick
+      end
+      for name in pairs(train.get_fluid_contents()) do block[Util.signal_key({ type = "fluid", name = name })] = game.tick end
+      storage.dispatch.return_block[delivery.requester] = block
       local requester = Registry.get(delivery.requester)
       local stop = requester and requester.stop
       Alerts.raise("cargo", "cargo", stop and stop.valid and stop or train.front_stock,

@@ -2,6 +2,8 @@
 --- Netzes „Eisen“ (siehe netzverbund.lua). Gebaut wird im ersten Tick – Szenario-Scripte laufen
 --- vor den Mods, deren Speicher wird beim Start der Mod geleert.
 local Verbund = require("__UTLogistics__/scenarios/UTL-Netzverbund/netzverbund")
+local Panel = require("__UTLogistics__/scenarios/UTL-Netzverbund/panel")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local function place(player)
   local surface = game.surfaces[Verbund.SURFACE]
@@ -9,6 +11,7 @@ local function place(player)
   player.teleport(surface.find_non_colliding_position("character", storage.start, 20, 1) or storage.start, surface)
   player.cheat_mode = true -- zum Ausprobieren: alles verfügbar, sofort bauen
   player.print({ "utl-netzverbund.welcome" })
+  Panel.create(player)
 end
 
 local function setup()
@@ -21,6 +24,8 @@ local function setup()
   for _, player in pairs(game.players) do place(player) end
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   if not storage.start then script.on_nth_tick(1, setup) end
@@ -29,3 +34,7 @@ script.on_event(defines.events.on_player_created, function(event)
   local player = game.get_player(event.player_index)
   if player then place(player) end
 end)
+
+-- Erklärfenster: einmal pro Sekunde auffrischen, Knopf springt zur nächsten Fahrt
+script.on_nth_tick(60, function() Panel.tick() end)
+script.on_event(defines.events.on_gui_click, Panel.on_click)

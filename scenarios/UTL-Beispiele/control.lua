@@ -3,6 +3,8 @@
 --- Start der Mod geleert.
 local Build = require("__UTLogistics__/scenarios/UTL-Beispiele/build")
 local place_signs = require("__UTLogistics__/scenarios/UTL-Beispiele/signs")
+local Panel = require("__UTLogistics__/scenarios/UTL-Beispiele/panel")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local function place(player)
   local surface = game.surfaces["utl-beispiele"]
@@ -10,6 +12,7 @@ local function place(player)
   player.teleport(surface.find_non_colliding_position("character", storage.start, 20, 1) or storage.start, surface)
   player.cheat_mode = true -- zum Ausprobieren: alles verfügbar, sofort bauen
   player.print({ "utl-beispiele.welcome" })
+  Panel.create(player)
 end
 
 --- Zweiter Schritt: Pumpen an die Auftrags-Ausgaben hängen (siehe Build.wire).
@@ -37,6 +40,8 @@ local function setup()
   for _, player in pairs(game.players) do place(player) end
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function() script.on_nth_tick(1, setup) end)
 script.on_load(function()
   -- Nach dem Laden sind die Takt-Anmeldungen weg: das Offene wieder anmelden.
@@ -50,3 +55,7 @@ script.on_event(defines.events.on_player_created, function(event)
   local player = game.get_player(event.player_index)
   if player then place(player) end
 end)
+
+-- Erklärfenster: einmal pro Sekunde auffrischen, Knopf wechselt den verfolgten Zug
+script.on_nth_tick(60, Panel.tick)
+script.on_event(defines.events.on_gui_click, Panel.on_click)

@@ -58,6 +58,17 @@ local function try_request(request)
   return false
 end
 
+--- Reihenfolge der Kandidaten wie bei der normalen Auswahl (select.lua): Bedarfs-Priorität, Rang
+--- des Anbieters (Cleanup „zuerst leeren“ / „nur Reserve“, Lager-Restladung), Angebots-Priorität,
+--- volle Ladung, zuletzt kurzer Weg vom Zug zum Anbieter.
+local function better(a, b)
+  if a.request.priority ~= b.request.priority then return a.request.priority > b.request.priority end
+  if a.provider.rank ~= b.provider.rank then return a.provider.rank > b.provider.rank end
+  if a.provider.priority ~= b.provider.priority then return a.provider.priority > b.provider.priority end
+  if a.amount ~= b.amount then return a.amount > b.amount end
+  return a.distance < b.distance
+end
+
 --- Direkt der nächste Auftrag (Wunsch Marcel): Ein Zug, der gerade entladen hat oder vom
 --- Cleanup/Tanken kommt, übernimmt sofort eine passende Lieferung – bevorzugt mit einem Anbieter
 --- in seiner Nähe – statt erst ins Depot zu fahren. `from_stop` = Haltestelle, die er gerade
@@ -90,12 +101,8 @@ function Dispatch.chain(train, network, from_stop, depot_name)
           local amount = math.min(provider.amount, capacity)
           if amount >= request.minimum or amount == capacity then
             local distance = dist2(record.position, provider.station.stop.position)
-            -- Priorität zuerst, dann volle Ladung, dann kurzer Weg zum Anbieter
-            local better = not best
-              or request.priority > best.request.priority
-              or (request.priority == best.request.priority and (amount > best.amount
-                or (amount == best.amount and distance < best.distance)))
-            if better then best = { request = request, provider = provider, amount = amount, distance = distance } end
+            local candidate = { request = request, provider = provider, amount = amount, distance = distance }
+            if not best or better(candidate, best) then best = candidate end
           end
         end
       end

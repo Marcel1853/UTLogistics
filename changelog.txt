@@ -1,4 +1,25 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.8
+Date: 2026-09-28
+  Features:
+    - Storage (for advanced players, research "UTL: Storage"): a new station role that takes in and gives out. Per good a minimum and a maximum stock: below the minimum it requests up to the maximum, whatever is above the minimum it offers like a normal provider – with the same amount the nearer station delivers. Two storages never shove goods back and forth. "Accept leftover cargo" (on by default) lets trains drop leftovers there, too. Map setting "Allow storage stations" (on).
+    - Job output: new signals "train loads here" and "train unloads here" while a delivery train stands at the stop – for example to switch loading and unloading inserters at a storage.
+    - Cleanup gives back: a cleanup station can offer its contents to the network again ("Offer contents again", off by default per station), only as a fallback, like any provider, or empty first. Leftovers are not brought back to the requester they came from for 5 minutes. Map setting "Cleanup may offer its contents again" (on).
+    - New scenario "UTL storage (to watch)": storage with loading and unloading inserters switched by the job output, and a cleanup that gives back on a ring with two trains, plus four small example lines (two storages, a storage taking leftovers, cleanup levels side by side, a storage with two goods); a window explains each part and a camera follows the train involved.
+    - Tips & tricks: new entries "Cleanup gives back" and "Storage (advanced)", each with a scene.
+    - Update notes: after an update, every player gets one short chat line with the most important news and a link that opens the new tips & tricks page "New in UTL". Can be switched off per player ("Update notes in chat").
+    - Scenarios "UTL examples" and "UTL network links" got the explanation window: it follows a train and explains what it is doing.
+  Changes:
+    - "Max. trains" now also counts at fuel stations, cleanups and depots, so these work without a vanilla train limit. A train returning to the depot without a next job is sent to a depot stop of its name that still has room. A vanilla train limit still applies as before – use either one or both.
+    - Fuel station: the train waits until all locomotives are full or nothing has changed for 30 s (before: at most 30 s in total).
+    - Scenario "UTL load test": the track network is now part of the map, so the start only places stations and trains (a few seconds instead of up to a minute). New: 8 storage stations and 9 cleanups spread evenly like the fuel stations, item cleanups that offer their contents again, three networks (West and Ost linked with Mitte) and topping up, requesters that stay full for a while (SR latch drain) and requesters that only take trains of one fixed length (2 to 5 parts, with just as many wagon bays). Map tags mark the special stations. Signals: a chain signal into every junction and at every siding merge, normal ones out, and corridor blocks long enough for a locomotive with 4 wagons.
+    - Scenarios: after a mod update, new research is researched right away in running scenario saves, and every player is in cheat mode.
+  Bugfixes:
+    - Next job right away now respects the provide priority and the provider rank (cleanup "Empty first" / "Only as a fallback", leftovers in a storage). Before, a chained job only compared amount and distance.
+    - Scenario "UTL examples": the fuel station now refuels the rear locomotive, too (both locomotives face forward and use fuel).
+    - Scenarios built from city blocks: trains in depots with a station combinator no longer raise a "no depot" warning right after the start.
+    - Scenario "UTL planet test": no more enemies on Vulcanus and Gleba – no-enemies mode, existing enemies and demolisher territories removed, also in chunks generated later.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.7
 Date: 2026-09-26
   Features:

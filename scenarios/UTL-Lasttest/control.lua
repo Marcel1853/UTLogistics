@@ -1,9 +1,12 @@
---- Szenario „UTL-Lasttest“: City-Block-Gitter 12 × 12, 240 Züge, rund 580 Bahnhöfe, Tankstellen
---- und Cleanup über die Karte verteilt – zum Anschauen, wie sich UTL im großen Maßstab verhält.
+--- Szenario „UTL-Lasttest“: City-Block-Gitter 12 × 12, 384 Züge, 496 Bahnhöfe, Tankstellen,
+--- Cleanup und Lager über die Karte verteilt – zum Anschauen, wie sich UTL im großen Maßstab verhält.
+--- Das Gleisnetz liegt schon in der Karte (blueprint.zip, tools/lasttest-map.sh), gesetzt werden nur
+--- Haltestellen, Geräte und Züge – das lädt deutlich schneller.
 --- Gebaut wird im ersten Tick: Factorio startet das Szenario-Script *vor* den Mods und leert
 --- deren Speicher bei ihrem Start – eine Einrichtung in on_init ginge verloren.
 local Lasttest = require("lasttest")
 local Signs = require("__UTLogistics__/scripts/lib/signs")
+local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 -- Erklärfelder: je Art das Beispiel, das dem Start am nächsten liegt (Text: utl-sign.<key>).
 local SIGNS = {
@@ -58,6 +61,8 @@ local function setup()
   for _, player in pairs(game.players) do place(player) end
 end
 
+-- Mod-Update: neue Forschungen gleich mit erforschen, alle Spieler im Cheat-Modus
+script.on_configuration_changed(Sandbox.refresh)
 script.on_init(function()
   script.on_nth_tick(1, setup)
 end)

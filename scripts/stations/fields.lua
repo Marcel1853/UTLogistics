@@ -91,7 +91,26 @@ function Fields.fill(cfg)
   cfg.cleanup = cfg.cleanup or { all_items = true, all_fluids = true, items = {}, fluids = {} }
   cfg.cleanup.items = cfg.cleanup.items or {}   -- [slot] = Item-Name
   cfg.cleanup.fluids = cfg.cleanup.fluids or {} -- [slot] = Flüssigkeits-Name
+  -- Inhalt wieder anbieten: false | "reserve" | "normal" | "first" (Rang als Anbieter)
+  if cfg.cleanup.offer == nil then cfg.cleanup.offer = false end
+  cfg.cleanup.offer_tier = cfg.cleanup.offer_tier or "reserve" -- gemerkt, auch wenn aus
+  -- Lager: je Ware Mindest- und Höchstbestand; Restladung annehmen wie ein Cleanup
+  cfg.storage = cfg.storage or {}
+  cfg.storage.limits = cfg.storage.limits or {} -- [slot] = { signal = SignalID, min = n, max = n }
+  if cfg.storage.accept_leftover == nil then cfg.storage.accept_leftover = true end
 end
+
+Fields.storage_slots = 8
+
+--- Rang als Anbieter: 2 = zuerst leeren, 1 = normal (jeder gewöhnliche Anbieter), 0 = Reserve.
+--- Wird vor der Anbieter-Priorität verglichen.
+local OFFER_RANK = { first = 2, normal = 1, reserve = 0 }
+function Fields.provider_rank(cfg)
+  if cfg.mode == "cleanup" then return OFFER_RANK[cfg.cleanup and cfg.cleanup.offer] or 0 end
+  if cfg.mode == "storage" then return 0 end -- je Ware genauer: station.provide_rank (reader.lua)
+  return 1
+end
+Fields.RANK_RESERVE, Fields.RANK_NORMAL = 0, 1
 
 Fields.cleanup_item_slots = 10
 Fields.cleanup_fluid_slots = 5

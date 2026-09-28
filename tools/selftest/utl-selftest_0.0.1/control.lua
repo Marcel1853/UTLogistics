@@ -10,6 +10,7 @@ local st = {}
 ---@field config table
 ---@field provide table<string, integer>
 ---@field request table<string, integer>
+---@field provide_rank table<string, integer>
 
 --- UTL-Station abfragen (Remote-API); typisiert, damit der Linter die Felder kennt.
 ---@param unit integer?
@@ -248,15 +249,17 @@ end
 -- Runde 20: eigenes Gleis bei x = 151 mit Depot „UTL-QD“ (Limit 2) und Cleanup „UTL-QC“
 -- (Limit 1), dazu zwei Züge. Beide bekommen von Hand Ladung: UTL muss das bemerken und sie
 -- nacheinander zum Cleanup schicken, nie beide gleichzeitig (Vormerkung der Wegpunkt-Fahrten).
-function build_cleanup_limit_test()
+-- Runde 25 (gleichzeitig, Gleis x = 181, Netz „M“): dasselbe mit UTLs „max. Züge“ statt Zuglimit
+-- (Depot 2, Cleanup 1, kein Vanilla-Limit) – so gilt „max. Züge“ auch an Cleanup und Depot.
+function build_cleanup_limit_test(x, prefix, use_max)
   local s, force = game.surfaces["nauvis"], game.forces["player"]
-  local t = {} for x = 144, 160 do for y = -90, 90 do t[#t + 1] = { name = "concrete", position = { x, y } } end end
+  local t = {} for tx = x - 7, x + 9 do for y = -90, 90 do t[#t + 1] = { name = "concrete", position = { tx, y } } end end
   s.set_tiles(t)
-  for _, ent in pairs(s.find_entities_filtered{ area = {{144,-90},{160,90}} }) do
+  for _, ent in pairs(s.find_entities_filtered{ area = {{x - 7,-90},{x + 9,90}} }) do
     if ent.type ~= "character" then ent.destroy() end
   end
   for y = -80, 80, 2 do
-    s.create_entity{ name = "straight-rail", position = { 151, y }, direction = defines.direction.north, force = force }
+    s.create_entity{ name = "straight-rail", position = { x, y }, direction = defines.direction.north, force = force }
   end
   local function stop(name, pos)
     local e = s.create_entity{ name = "utl-train-stop", position = pos, direction = defines.direction.north,
@@ -264,29 +267,35 @@ function build_cleanup_limit_test()
     e.backer_name = name
     return e
   end
-  st.qd = stop("UTL-QD", { 153, -20 })   -- Depot
-  st.qc = stop("UTL-QC", { 153, -60 })   -- Cleanup, in Fahrtrichtung dahinter
-  remote.call("utl", "configure_station", st.qd.unit_number, { mode = "depot", network = "Q" })
-  remote.call("utl", "configure_station", st.qc.unit_number, { mode = "cleanup", network = "Q" })
-  st.qd.trains_limit = 2
-  st.qc.trains_limit = 1
+  local qd = stop(prefix .. "D", { x + 2, -20 })   -- Depot
+  local qc = stop(prefix .. "C", { x + 2, -60 })   -- Cleanup, in Fahrtrichtung dahinter
+  local net = prefix == "UTL-Q" and "Q" or "M"
+  if use_max then
+    remote.call("utl", "configure_station", qd.unit_number, { mode = "depot", network = net, max_trains = 2 })
+    remote.call("utl", "configure_station", qc.unit_number, { mode = "cleanup", network = net, max_trains = 1 })
+  else
+    remote.call("utl", "configure_station", qd.unit_number, { mode = "depot", network = net })
+    remote.call("utl", "configure_station", qc.unit_number, { mode = "cleanup", network = net })
+    qd.trains_limit = 2
+    qc.trains_limit = 1
+  end
   local wagons = {}
   for i = 1, 2 do
     -- Lok an beiden Enden, sonst kann der Zug nicht wenden (Depot liegt hinter ihm)
     local y = 20 + (i - 1) * 35 -- beide südlich, fahren nacheinander nach Norden
-    local loco = s.create_entity{ name = "locomotive", position = { 151, y }, direction = defines.direction.north, force = force }
-    local wagon = s.create_entity{ name = "cargo-wagon", position = { 151, y + 7 }, direction = defines.direction.north, force = force }
-    local back = s.create_entity{ name = "locomotive", position = { 151, y + 14 }, direction = defines.direction.south, force = force }
+    local loco = s.create_entity{ name = "locomotive", position = { x, y }, direction = defines.direction.north, force = force }
+    local wagon = s.create_entity{ name = "cargo-wagon", position = { x, y + 7 }, direction = defines.direction.north, force = force }
+    local back = s.create_entity{ name = "locomotive", position = { x, y + 14 }, direction = defines.direction.south, force = force }
     loco.insert{ name = "coal", count = 120 }
     back.insert{ name = "coal", count = 120 }
     local sch = loco.train.get_schedule()
-    sch.add_record{ station = "UTL-QD", wait_conditions = {{ type = "inactivity", ticks = 120 }} }
+    sch.add_record{ station = prefix .. "D", wait_conditions = {{ type = "inactivity", ticks = 120 }} }
     sch.go_to_station(1)
     loco.train.manual_mode = false
     wagon.get_inventory(CARGO).insert{ name = "copper-plate", count = 100 }
     wagons[i] = wagon
   end
-  st.r20 = { wagons = wagons, max = 0, deadline = 149000 }
+  return { wagons = wagons, max = 0, deadline = 149000, qd = qd, qc = qc }
 end
 
 -- Runde 10: eigenes Gleis bei x = 91 mit Flüssigkeitszug (Netzwerk „fluid“).
@@ -808,30 +817,46 @@ function train_test_step()
       st.done = true
     elseif tick >= st.wait_until then
       check("R19 zug beliefert kein fremdes team", true)
-      build_cleanup_limit_test()
+      st.r20 = build_cleanup_limit_test(151, "UTL-Q", false)
+      st.qc = st.r20.qc
+      st.r25 = build_cleanup_limit_test(181, "UTL-M", true)
       st.round = 20
     end
   elseif st.round == 20 then
     -- Zuglimit am Cleanup: UTL fährt per Wegpunkt, deshalb muss es die unterwegs befindlichen
     -- Züge selbst mitzählen. Nie mehr als „Limit“ dort stehend + unterwegs.
-    local r = st.r20
-    local here = st.qc.trains_count + remote.call("utl", "pending_trains", st.qc.unit_number)
-    if here > r.max then r.max = here end
-    -- Das Cleanup leert der Test selbst (im Spiel machen das Greifarme)
-    for _, wagon in ipairs(r.wagons) do
-      if wagon.valid and wagon.train.station == st.qc then wagon.get_inventory(CARGO).clear() end
+    -- R20 (Zuglimit) und R25 („max. Züge“) laufen gleichzeitig auf eigenen Gleisen
+    local function watch(r)
+      local here = r.qc.trains_count + remote.call("utl", "pending_trains", r.qc.unit_number)
+      if here > r.max then r.max = here end
+      local depot = r.qd.trains_count + remote.call("utl", "pending_trains", r.qd.unit_number)
+      if depot > (r.depot_max or 0) then r.depot_max = depot end
+      -- Das Cleanup leert der Test selbst (im Spiel machen das Greifarme)
+      for _, wagon in ipairs(r.wagons) do
+        if wagon.valid and wagon.train.station == r.qc then wagon.get_inventory(CARGO).clear() end
+      end
+      r.empty = 0
+      for _, wagon in ipairs(r.wagons) do
+        if wagon.valid and wagon.get_inventory(CARGO).is_empty() then r.empty = r.empty + 1 end
+      end
+      -- Genug geprüft, sobald ein Zug von selbst geleert wurde: dass UTL die Fahrt überhaupt
+      -- vergibt (sonst wäre das Limit trivial eingehalten) und dass nie zwei gleichzeitig dürfen.
+      return (r.empty >= 1 and r.max >= 1) or tick >= r.deadline
     end
-    local empty = 0
-    for _, wagon in ipairs(r.wagons) do
-      if wagon.valid and wagon.get_inventory(CARGO).is_empty() then empty = empty + 1 end
-    end
-    -- Genug geprüft, sobald ein Zug von selbst geleert wurde: dass UTL die Fahrt überhaupt
-    -- vergibt (sonst wäre das Limit trivial eingehalten) und dass nie zwei gleichzeitig dürfen.
-    if (empty >= 1 and r.max >= 1) or tick >= r.deadline then
+    local r, r25 = st.r20, st.r25
+    local done20, done25 = watch(r), watch(r25)
+    if done20 and done25 then
+      local empty = r.empty
       check("R20 zuglimit am cleanup eingehalten (stehend + unterwegs)", r.max <= 1,
         "höchstens " .. r.max .. " gleichzeitig")
       check("R20 von Hand beladener Zug wird selbst zum Cleanup geschickt", empty >= 1 and r.max >= 1,
         empty .. " von 2 geleert, max " .. r.max)
+      check("R25 max. züge am cleanup eingehalten (ohne zuglimit)", r25.max <= 1 and r25.qc.trains_limit >= 4294967295,
+        "höchstens " .. r25.max .. " gleichzeitig, zuglimit " .. r25.qc.trains_limit)
+      check("R25 cleanup mit max. züge wird angefahren", r25.empty >= 1 and r25.max >= 1,
+        r25.empty .. " von 2 geleert, max " .. r25.max)
+      check("R25 max. züge am depot eingehalten (ohne zuglimit)", (r25.depot_max or 0) <= 2,
+        "höchstens " .. tostring(r25.depot_max) .. " gleichzeitig")
       -- Runde 21: Nachladen. Ohne Zeitlimit wartet der Zug am Anbieter, solange die Ladeliste
       -- nicht voll ist – so lässt sich in Ruhe prüfen, ob der neue Bedarf dort landet.
       remote.call("utl", "set_map_config", "utl-load-timeout", 0)
@@ -1048,11 +1073,329 @@ function train_test_step()
         check("R21 mit abgeschaltetem nachladen bleibt die ladeliste gleich",
           menge == r.first and r.first < 4000,
           tostring(r.first) .. " -> " .. tostring(menge) .. " (Zug fasst 4000)")
+        -- Runde 22: Cleanup gibt zurück. Erst alles zur Ruhe bringen, dann kurze Zeitlimits:
+        -- eine Fahrt ohne Ladung bricht nach 5 s von selbst ab, so lässt sich Anbieter-Wahl um
+        -- Anbieter-Wahl prüfen.
+        remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
+        remote.call("utl", "set_request", st.ra.unit_number, 2, nil)
+        remote.call("utl", "set_map_config", "utl-load-timeout", 5)
+        remote.call("utl", "set_map_config", "utl-unload-timeout", 5)
+        st.r22 = { phase = "drain", deadline = tick + 7200 }
+        st.round = 22
+      end
+    end
+  elseif st.round == 22 then
+    -- Das Reserve-Gleis ist ein Sackgleis ohne Wendeschleife: Haltestellen nur in Fahrtrichtung
+    -- anfahren und keine Fahrt am Anbieter abbrechen lassen (sonst findet der Zug nicht mehr
+    -- „richtig herum“ ins Depot, no_path). Der Test bringt deshalb jede Fahrt selbst zu Ende.
+    -- Aufbau: Depot RD (nordwärts, y -9) · Cleanup RC als Anbieter (südwärts, y 28, vor dem
+    -- Abnehmer) · Abnehmer RA (südwärts, y 40) · Cleanup RC2 für die Restladung (südwärts, y 50).
+    local r = st.r22
+    local list = remote.call("utl", "get_deliveries") --[[@as table]]
+    local d = nil
+    for _, entry in pairs(list) do
+      if entry.requester == st.ra.unit_number then d = entry end
+    end
+    local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
+    local function request(name, count)
+      remote.call("utl", "set_request", st.ra.unit_number, 1, name and { type = "item", name = name } or nil, count)
+    end
+    local function fail(name, info)
+      check(name, false, info)
+      st.done = true
+    end
+    --- Fahrt zu Ende bringen: am Anbieter das Bestellte einladen, am Abnehmer leeren.
+    local function feed(entry)
+      if not inv then return end
+      r.fed = r.fed or {}
+      if entry.state == "loading" and not r.fed[entry.id] then
+        r.fed[entry.id] = true
+        for key, amount in pairs(entry.manifest) do
+          local _, name = string.match(key, "^(%a+)|([^|]+)")
+          if name then inv.insert{ name = name, count = amount } end
+        end
+      elseif entry.state == "unloading" then
+        inv.clear()
+      end
+    end
+    local at_depot = st.ntrain.valid and st.ntrain.station == st.nd
+    if r.phase == "drain" then
+      for _, entry in pairs(list) do feed(entry) end
+      if #list == 0 and at_depot then
+        if inv then inv.clear() end
+        local s22, f22 = game.surfaces["nauvis"], game.forces["player"]
+        local function stop22(name, y)
+          local e = s22.create_entity{ name = "utl-train-stop", position = { 119, y }, direction = defines.direction.south,
+            force = f22, raise_built = true }
+          e.backer_name = name
+          return e
+        end
+        st.rc = stop22("UTL-RC", 28)
+        st.rc2 = stop22("UTL-RC2", 50)
+        -- ein Konstant-Kombinator spielt den Kisteninhalt des Cleanups RC
+        st.rc_cc = s22.create_entity{ name = "constant-combinator", position = { 116, 28 }, force = f22 }
+        -- Kupfer statt Eisen: Eisen blieb in R18 an RA als Rest übrig und ist für Cleanups dorthin
+        -- noch gesperrt (Rückweg-Sperre, 5 min) – das würde den Rang-Test verfälschen
+        st.rc_cc.get_control_behavior().get_section(1).set_slot(1,
+          { value = { type = "item", name = "copper-plate", quality = "normal" }, min = 3000 })
+        st.rc_cc.get_wire_connector(W.circuit_green, true).connect_to(st.rc.get_wire_connector(W.circuit_green, true))
+        remote.call("utl", "configure_station", st.rc.unit_number, { mode = "cleanup", network = "R" })
+        remote.call("utl", "configure_station", st.rc2.unit_number, { mode = "cleanup", network = "R" })
+        r.phase, r.deadline = "off", tick + 180
+      elseif tick >= r.deadline then
+        fail("R22 vorbereitung: zug ist frei im depot", serpent.line(list))
+      end
+    elseif r.phase == "off" and tick >= r.deadline then
+      local rc = station_info(st.rc.unit_number)
+      check("R22 cleanup ohne häkchen bietet nichts an", rc ~= nil and next(rc.provide) == nil,
+        serpent.line(rc and rc.provide))
+      remote.call("utl", "configure_station", st.rc.unit_number, { cleanup = { offer = "reserve" } })
+      r.phase, r.deadline = "reserve", tick + 180
+    elseif r.phase == "reserve" and tick >= r.deadline then
+      local rc = station_info(st.rc.unit_number)
+      check("R22 cleanup mit häkchen bietet seinen inhalt an",
+        rc ~= nil and (rc.provide["item|copper-plate|normal"] or 0) == 3000, serpent.line(rc and rc.provide))
+      check("R22 häkchen setzen behält die übrigen cleanup-einstellungen",
+        rc ~= nil and rc.config.cleanup.all_items == true, serpent.line(rc and rc.config.cleanup))
+      request("copper-plate", 500)
+      r.phase, r.deadline = "reserve-pick", tick + 3600
+    elseif r.phase == "reserve-pick" then
+      if d and not r.picked then
+        r.picked = true
+        check("R22 reserve: normaler anbieter geht vor", d.from == "UTL-PA", tostring(d.from))
+        request(nil)
+      end
+      for _, entry in pairs(list) do feed(entry) end
+      if r.picked and #list == 0 and at_depot then
+        remote.call("utl", "configure_station", st.rc.unit_number, { cleanup = { offer = "first" } })
+        request("copper-plate", 500)
+        r.phase, r.deadline = "first-pick", tick + 3600
+      elseif tick >= r.deadline then
+        fail("R22 reserve: fahrt vom normalen anbieter", "picked=" .. tostring(r.picked) .. " " .. serpent.line(list))
+      end
+    elseif r.phase == "first-pick" then
+      if d then
+        check("R22 zuerst leeren: cleanup geht vor", d.from == "UTL-RC", tostring(d.from))
+        r.id = d.id
+        r.phase, r.deadline = "leftover", tick + 7200
+      elseif tick >= r.deadline then
+        fail("R22 zuerst leeren: lieferung kam zustande", "frei=" .. remote.call("utl", "idle_train_count")
+          .. " " .. serpent.line(list))
+      end
+    elseif r.phase == "leftover" then
+      -- Am Cleanup RC 500 Kupfer laden; der Abnehmer nimmt nur 300 ab: 200 bleiben als Rest im
+      -- Zug → Rückweg-Sperre für Kupfer an diesem Abnehmer. (Fremde Ware lässt sich nicht als Rest
+      -- unterschieben: die Wagenfilter lassen nur das Bestellte in den Wagen.)
+      local own = nil
+      for _, entry in pairs(list) do if entry.id == r.id then own = entry end end
+      if own and own.state == "loading" and not r.loaded and inv then
+        inv.insert{ name = "copper-plate", count = 500 }
+        r.loaded = true
+      elseif own and own.state == "unloading" and not r.unloaded and inv then
+        inv.remove{ name = "copper-plate", count = 300 }
+        request(nil)
+        r.unloaded = true
+      end
+      -- Rest am Cleanup RC2 (hinter dem Abnehmer) – dort leert der Test den Wagen
+      if st.ntrain.valid and st.ntrain.station then
+        r.visits = r.visits or {}
+        r.visits[st.ntrain.station.backer_name] = true
+      end
+      if r.unloaded and st.ntrain.valid and st.ntrain.station == st.rc2 and inv then
+        r.cleaned = true
+        inv.clear()
+      end
+      if r.cleaned and not own and #list == 0 and at_depot and inv and inv.is_empty() then
+        -- Kupfer hat jetzt nur noch der Cleanup RC: dem normalen Anbieter PA das Kupfer nehmen
+        local umkreis = { { st.pa.position.x, st.pa.position.y - 3 }, { st.pa.position.x + 5, st.pa.position.y + 3 } }
+        local pa_cc = game.surfaces["nauvis"].find_entities_filtered({ name = "constant-combinator", area = umkreis })[1]
+        if pa_cc then pa_cc.get_control_behavior().get_section(1).clear_slot(2) end
+        request("copper-plate", 300)
+        r.phase, r.deadline = "block", tick + 1500
+      elseif tick >= r.deadline then
+        fail("R22 rest: zug bringt die restladung zum cleanup", serpent.line(list) .. " station="
+          .. tostring(st.ntrain.valid and st.ntrain.station and st.ntrain.station.backer_name)
+          .. " besucht=" .. serpent.line(r.visits) .. " ladung=" .. serpent.line(inv and inv.get_contents())
+          .. " geladen=" .. tostring(r.loaded) .. " entladen=" .. tostring(r.unloaded))
+      end
+    elseif r.phase == "block" then
+      if d then
+        fail("R22 rückweg-sperre: cleanup bringt den rest nicht gleich zurück", "lieferung von " .. tostring(d.from))
+      elseif tick >= r.deadline then
+        -- aussagekräftig nur, wenn der Zug die ganze Zeit frei war
+        check("R22 rückweg-sperre: cleanup bringt den rest nicht gleich zurück",
+          remote.call("utl", "idle_train_count") >= 1, "frei=" .. remote.call("utl", "idle_train_count"))
+        request(nil)
+        -- Runde 23: Auftrags-Ausgabe meldet Laden und Entladen (Signale utl-loading/utl-unloading)
+        remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 500)
+        st.r23 = { phase = "output", deadline = tick + 7200 }
+        st.round = 23
+      end
+    end
+  elseif st.round == 23 then
+    local r = st.r23
+    if r.phase == "output" then
+      local function output_of(stop)
+        local found = stop.surface.find_entities_filtered{ name = "utl-station-output",
+          area = { { stop.position.x - 3, stop.position.y - 3 }, { stop.position.x + 3, stop.position.y + 3 } } }[1]
+        local out = {}
+        local section = found and found.get_control_behavior().get_section(1)
+        for _, filter in pairs(section and section.filters or {}) do
+          if filter.value then out[filter.value.name] = filter.min end
+        end
+        return out
+      end
+      local d = nil
+      for _, entry in pairs(remote.call("utl", "get_deliveries") --[[@as table]]) do
+        if entry.requester == st.ra.unit_number then d = entry end
+      end
+      local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
+      if d and d.state == "loading" and not r.seen_load then
+        local out = output_of(st.pa)
+        r.seen_load = true
+        check("R23 auftrags-ausgabe am anbieter: zug lädt", out["utl-loading"] == 1 and out["utl-unloading"] == nil,
+          serpent.line(out))
+        if inv then inv.insert{ name = "iron-plate", count = 500 } end
+      elseif d and d.state == "unloading" and not r.seen_unload then
+        local out = output_of(st.ra)
+        r.seen_unload = true
+        check("R23 auftrags-ausgabe am abnehmer: zug entlädt", out["utl-unloading"] == 1 and out["utl-loading"] == nil,
+          serpent.line(out))
+        remote.call("utl", "set_request", st.ra.unit_number, 1, nil)
+        if inv then inv.clear() end
+      end
+      if r.seen_load and r.seen_unload then
+        -- Runde 24: Lager
+        st.r24 = { phase = "setup" }
+        st.round = 24
+      elseif tick >= r.deadline then
+        check("R23 auftrags-ausgabe: lade- und entladesignal gesehen", false,
+          "laden " .. tostring(r.seen_load) .. ", entladen " .. tostring(r.seen_unload) .. ", " .. serpent.line(d))
+        st.done = true
+      end
+    end
+  elseif st.round == 24 then
+    local r = st.r24
+    local KEY = "item|iron-plate|normal"
+    local function limits(stop, stock_iron, stock_copper)
+      -- Bestand über einen Konstant-Kombinator (grün an die Haltestelle)
+      local section = stop.cc.get_control_behavior().get_section(1)
+      section.set_slot(1, { value = { type = "item", name = "iron-plate", quality = "normal" }, min = stock_iron })
+      if stock_copper and stock_copper > 0 then
+        section.set_slot(2, { value = { type = "item", name = "copper-plate", quality = "normal" }, min = stock_copper })
+      else
+        section.clear_slot(2)
+      end
+    end
+    local list = remote.call("utl", "get_deliveries") --[[@as table]]
+    local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
+    if r.phase == "setup" then
+      -- Lager S1 (südwärts, y 70) und S2 (y 76). Die Regeln erst im Netz „Z“ prüfen, in dem kein Zug
+      -- fährt – sonst startet UTL schon hier (richtig) Lieferungen. Bestand per Konstant-Kombinator.
+      local s24, f24 = game.surfaces["nauvis"], game.forces["player"]
+      local function storage_stop(name, y)
+        local e = s24.create_entity{ name = "utl-train-stop", position = { 119, y }, direction = defines.direction.south,
+          force = f24, raise_built = true }
+        e.backer_name = name
+        local cc = s24.create_entity{ name = "constant-combinator", position = { 116, y }, force = f24 }
+        cc.get_wire_connector(W.circuit_green, true).connect_to(e.get_wire_connector(W.circuit_green, true))
+        remote.call("utl", "configure_station", e.unit_number, { mode = "storage", network = "Z",
+          storage = { limits = { { signal = { type = "item", name = "iron-plate" }, min = 1000, max = 3000 } } } })
+        return { stop = e, cc = cc, unit = e.unit_number }
+      end
+      st.s1 = storage_stop("UTL-S1", 70)
+      st.s2 = storage_stop("UTL-S2", 76)
+      limits(st.s1, 500)
+      limits(st.s2, 2000)
+      r.phase, r.deadline = "below", tick + 180
+    elseif r.phase == "below" and tick >= r.deadline then
+      local s1 = station_info(st.s1.unit)
+      check("R24 lager unter mindest fordert bis höchst an", s1 ~= nil and s1.request[KEY] == 2500 and s1.provide[KEY] == nil,
+        serpent.line(s1 and { s1.request, s1.provide }))
+      limits(st.s1, 2000, 1500)
+      r.phase, r.deadline = "between", tick + 180
+    elseif r.phase == "between" and tick >= r.deadline then
+      local s1 = station_info(st.s1.unit)
+      check("R24 lager in der ruhezone fordert nichts an", s1 ~= nil and s1.request[KEY] == nil, serpent.line(s1 and s1.request))
+      check("R24 lager bietet über mindest gleichrangig an",
+        s1 ~= nil and s1.provide[KEY] == 1000 and s1.provide_rank[KEY] == 1, serpent.line(s1 and { s1.provide, s1.provide_rank }))
+      check("R24 restladung ohne grenzen nur als reserve",
+        s1 ~= nil and s1.provide_rank["item|copper-plate|normal"] == 0, serpent.line(s1 and s1.provide_rank))
+      check("R24 lager bietet ware ohne grenzen ganz an (restladung)",
+        s1 ~= nil and s1.provide["item|copper-plate|normal"] == 1500, serpent.line(s1 and s1.provide))
+      limits(st.s1, 4000)
+      r.phase, r.deadline = "above", tick + 180
+    elseif r.phase == "above" and tick >= r.deadline then
+      local s1 = station_info(st.s1.unit)
+      check("R24 lager über höchst bietet wie ein normaler anbieter an",
+        s1 ~= nil and s1.provide[KEY] == 3000 and s1.provide_rank[KEY] == 1, serpent.line(s1 and { s1.provide, s1.provide_rank }))
+      -- Zwei Lager in der Ruhezone, jetzt im Zugnetz R: nichts darf passieren
+      limits(st.s1, 2000)
+      limits(st.s2, 2000)
+      remote.call("utl", "configure_station", st.s1.unit, { network = "R" })
+      remote.call("utl", "configure_station", st.s2.unit, { network = "R" })
+      r.phase, r.deadline = "calm", tick + 1200
+    elseif r.phase == "calm" then
+      for _, d in pairs(list) do
+        if d.requester == st.s1.unit or d.requester == st.s2.unit then
+          r.calm_broken = (d.from or "?") .. " -> " .. (d.to or "?")
+        end
+      end
+      if tick >= r.deadline then
+        check("R24 zwei lager in der ruhezone schieben nichts hin und her", r.calm_broken == nil, tostring(r.calm_broken))
+        -- Lager S2 unter Mindest, Eisen hat sonst nur S1 (dem Anbieter PA das Eisen nehmen)
+        local umkreis = { { st.pa.position.x, st.pa.position.y - 3 }, { st.pa.position.x + 5, st.pa.position.y + 3 } }
+        local pa_cc = game.surfaces["nauvis"].find_entities_filtered({ name = "constant-combinator", area = umkreis })[1]
+        if pa_cc then pa_cc.get_control_behavior().get_section(1).clear_slot(1) end
+        limits(st.s2, 500)
+        -- zweite Ware: Stahl hat nur S1 (Grenze 0/…, bietet alles an), S2 braucht Stahl (Mindest 100) –
+        -- die Ladeliste muss beides enthalten (für Lager gilt nicht die allgemeine Bedarfs-Schwelle)
+        st.s1.cc.get_control_behavior().get_section(1).set_slot(3,
+          { value = { type = "item", name = "steel-plate", quality = "normal" }, min = 1500 })
+        remote.call("utl", "configure_station", st.s1.unit, { storage = { limits = {
+          { signal = { type = "item", name = "iron-plate" }, min = 1000, max = 3000 },
+          { signal = { type = "item", name = "steel-plate" }, min = 0, max = 3000 } } } })
+        remote.call("utl", "configure_station", st.s2.unit, { storage = { limits = {
+          { signal = { type = "item", name = "iron-plate" }, min = 1000, max = 3000 },
+          { signal = { type = "item", name = "steel-plate" }, min = 100, max = 300 } } } })
+        r.phase, r.deadline = "move", tick + 3600
+      end
+    elseif r.phase == "move" then
+      local d = nil
+      for _, entry in pairs(list) do if entry.requester == st.s2.unit then d = entry end end
+      if d and not r.checked then
+        r.checked = true
+        check("R24 zu viel wandert zu zu wenig: lager S1 beliefert lager S2",
+          d.from == "UTL-S1" and d.manifest[KEY] == 1000, tostring(d.from) .. " " .. serpent.line(d.manifest))
+        check("R24 lager bekommt zwei waren in einer fahrt",
+          (d.manifest["item|steel-plate|normal"] or 0) == 300, serpent.line(d.manifest))
+        r.id = d.id
+      end
+      -- Fahrt zu Ende bringen (Sackgleis: S1 und S2 liegen in Fahrtrichtung hinter dem Depot)
+      for _, entry in pairs(list) do
+        if entry.id == r.id and inv then
+          if entry.state == "loading" and not r.loaded then
+            r.loaded = true
+            for key, count in pairs(entry.manifest) do
+              local name = key:match("^item|([^|]+)|")
+              if name and count > 0 then inv.insert{ name = name, count = count } end
+            end
+          elseif entry.state == "unloading" then
+            inv.clear()
+            limits(st.s2, 2000) -- „angekommen“: S2 ist wieder in der Ruhezone
+          end
+        end
+      end
+      if r.checked and #list == 0 then
+        st.done = true
+      elseif tick >= r.deadline then
+        check("R24 zu viel wandert zu zu wenig: lager S1 beliefert lager S2", false,
+          "checked=" .. tostring(r.checked) .. " " .. serpent.line(list))
         st.done = true
       end
     end
   end
-  if not st.done and tick >= 149900 then
+  if not st.done and tick >= 199900 then
     check("zugtest vollständig", false, "runde " .. st.round .. " " .. serpent.line(st.seen) .. " idle=" .. remote.call("utl","idle_train_count") .. " state=" .. st.train.state
       .. " deliveries=" .. serpent.line(remote.call("utl","get_deliveries"))
       .. (st.ntrain and st.ntrain.valid and (" ntrain=" .. st.ntrain.state .. " " .. tostring(st.ntrain.station and st.ntrain.station.backer_name)) or ""))

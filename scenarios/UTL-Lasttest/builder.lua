@@ -9,47 +9,16 @@
 --- Abzweig-/Einmündungsstücke (Factorio 2.x) wurden per Suche im Spiel ermittelt (docs/PLAN.md).
 --- Angaben relativ zu einem geraden Gleisstück (ungerade Koordinaten).
 local CityBlock = require("__UTLogistics__/scenarios/UTL-Lasttest/cityblock")
+local Places = require("__UTLogistics__/scenarios/UTL-Lasttest/places")
+local Equipment = require("__UTLogistics__/scenarios/UTL-Lasttest/equipment")
+local Blocks = require("__UTLogistics__/scenarios/UTL-Lasttest/blocks")
 
 local Builder = {}
 
--- Richtungen: f = Fahrtrichtung, r = rechts davon, dir = Richtung (16er), rail = Richtung gerader Gleise
-local O = {
-  N = { f = { 0, -1 }, r = { 1, 0 }, dir = 0, rail = 0, left = "W", back = "S" },
-  E = { f = { 1, 0 }, r = { 0, 1 }, dir = 4, rail = 4, left = "N", back = "W" },
-  S = { f = { 0, 1 }, r = { -1, 0 }, dir = 8, rail = 0, left = "E", back = "N" },
-  W = { f = { -1, 0 }, r = { 0, -1 }, dir = 12, rail = 4, left = "S", back = "E" },
-}
+local Track = require("__UTLogistics__/scenarios/UTL-Lasttest/track-pieces")
+local O, RIGHT, E_TO_SE, SE_TO_E, DIAGONAL_SE, DIVERGE, MERGE = Track.O, Track.RIGHT, Track.E_TO_SE, Track.SE_TO_E, Track.DIAGONAL_SE, Track.DIVERGE, Track.MERGE
 
--- { Name, Richtung, dx, dy } – die ersten 4 Stücke; *_END = Lage des folgenden geraden Stücks
--- 90°-Rechtskurve (nur N→E für die Einfahrt und E→S für die Ausfahrt des Abstellbahnhofs)
-local RIGHT = {
-  N = { { "curved-rail-a", 2, 0, -3 }, { "curved-rail-b", 2, 2, -8 }, { "curved-rail-b", 12, 6, -12 }, { "curved-rail-a", 12, 11, -14 } },
-  E = { { "curved-rail-a", 6, 3, 0 }, { "curved-rail-b", 6, 8, 2 }, { "curved-rail-b", 0, 12, 6 }, { "curved-rail-a", 0, 14, 11 } },
-}
--- Schräge Weichenstraße: waagerecht (Osten) → schräg (Südost) und Abzweig schräg → Osten.
-local E_TO_SE = { { "curved-rail-a", 6, 3, 0 }, { "curved-rail-b", 6, 8, 2 } }       -- danach Schräge bei (11, 5)
-local SE_TO_E = { { "curved-rail-b", 14, 3, 3 }, { "curved-rail-a", 14, 8, 5 } }     -- danach Gerade bei (11, 5)
-local DIAGONAL_SE = 6 -- Richtung schräger gerader Gleise (Schritt 2, 2)
-
-local DIVERGE = {
-  N = { { "curved-rail-a", 2, 0, -3 }, { "half-diagonal-rail", 2, 2, -8 }, { "half-diagonal-rail", 2, 4, -12 }, { "curved-rail-a", 10, 6, -17 } },
-  E = { { "curved-rail-a", 6, 3, 0 }, { "half-diagonal-rail", 6, 8, 2 }, { "half-diagonal-rail", 6, 12, 4 }, { "curved-rail-a", 14, 17, 6 } },
-  S = { { "curved-rail-a", 10, 0, 3 }, { "half-diagonal-rail", 2, -2, 8 }, { "half-diagonal-rail", 2, -4, 12 }, { "curved-rail-a", 2, -6, 17 } },
-  W = { { "curved-rail-a", 14, -3, 0 }, { "half-diagonal-rail", 6, -8, -2 }, { "half-diagonal-rail", 6, -12, -4 }, { "curved-rail-a", 6, -17, -6 } },
-}
-local MERGE = {
-  N = { { "curved-rail-a", 8, 0, 3 }, { "half-diagonal-rail", 0, 2, 8 }, { "half-diagonal-rail", 0, 4, 12 }, { "curved-rail-a", 0, 6, 17 } },
-  E = { { "curved-rail-a", 12, -3, 0 }, { "half-diagonal-rail", 4, -8, 2 }, { "half-diagonal-rail", 4, -12, 4 }, { "curved-rail-a", 4, -17, 6 } },
-  S = { { "curved-rail-a", 0, 0, -3 }, { "half-diagonal-rail", 0, -2, -8 }, { "half-diagonal-rail", 0, -4, -12 }, { "curved-rail-a", 8, -6, -17 } },
-  W = { { "curved-rail-a", 4, 3, 0 }, { "half-diagonal-rail", 4, 8, -2 }, { "half-diagonal-rail", 4, 12, -4 }, { "curved-rail-a", 12, 17, -6 } },
-}
-
---- Richtung (16er) eines Einheitsvektors. Per Vergleich, nicht per Text: Lua rechnet mit
---- Kommazahlen, -0 würde als „-0“ geschrieben.
-local function direction_of(v)
-  if v[2] < 0 then return 0 elseif v[1] > 0 then return 4 elseif v[2] > 0 then return 8 end
-  return 12
-end
+local direction_of = Equipment.direction_of
 
 local SPAN = 160     -- Abzweig bis Einmündung: Bahnsteig + 2 Warteplätze (Züge bis 5 Teile)
 local GAP = 6        -- Platz für das Kettensignal vor dem Abzweig
@@ -59,12 +28,19 @@ local YARD_LENGTH = 48 -- Länge eines Depotgleises (Züge bis 5 Teile)
 
 local stats = { rails = 0, failed = 0, signals = 0, signals_failed = 0, equipment = 0, wires_failed = 0, blocks = 0 }
 local surface, force
+-- Was gebaut wird: `tracks` = Gleise und Signale, `stations` = Haltestellen, Geräte, Züge, Masten.
+-- Das Szenario UTL-Lasttest hat das Gleisnetz schon in der Karte und baut nur noch die Stationen.
+local tracks, stations = true, true
+-- Zuglimit (Vanilla) an Depots, Tankstellen und Cleanups setzen? Der Lasttest regelt das über
+-- UTLs „max. Züge“ (cfg.vanilla_limits = false), die übrigen Szenarien behalten das Zuglimit.
+local vanilla_limits = true
 
 local function add(p, v, k) return { p[1] + v[1] * k, p[2] + v[2] * k } end
 local function xy(position) return { position.x, position.y } end
 local function dot(a, b) return a[1] * b[1] + a[2] * b[2] end
 
 local function rail(name, dir, pos)
+  if not tracks then return nil end
   local e = surface.create_entity({ name = name, position = pos, direction = dir % 16, force = force })
   if e then stats.rails = stats.rails + 1 else stats.failed = stats.failed + 1 end
   return e
@@ -82,6 +58,7 @@ end
 --- Signal rechts vom Gleis für Fahrtrichtung `o`, gesucht entlang des Gleises.
 --- `chain` = Kettensignal (vor Abzweigen: Zug fährt nur los, wenn sein Weg dahinter frei ist).
 local function signal(o, pos, count_failure, chain, only_back, only_forward)
+  if not tracks then return true end
   local dir = (O[o].dir + 8) % 16
   local name = chain and "rail-chain-signal" or "rail-signal"
   local offsets = only_back and { 0, -1, -2, -3, -4 } or only_forward and { 0, 1, 2, 3, 4 }
@@ -98,98 +75,6 @@ local function signal(o, pos, count_failure, chain, only_back, only_forward)
   return false
 end
 
-local function entity(name, pos, extra)
-  local spec = extra or {}
-  spec.name, spec.position, spec.force = name, pos, force
-  local e = surface.create_entity(spec)
-  if e then stats.equipment = stats.equipment + 1 end
-  return e
-end
-
---- Pumpe, Tank und Unendlich-Rohr an einem Flüssigkeitswagen (Mitte `center` auf der Gleisachse).
---- Laden: Rohr (Nachschub) → Tank → Pumpe → Wagen; Entladen: Wagen → Pumpe → Tank → Rohr (leert).
---- Der Tank-Anschluss zur Gleisseite liegt ein Feld neben seiner Mitte (im Spiel ermittelt).
-local function near_offset(r)
-  if r[2] == 1 then return { 1, 0 } elseif r[2] == -1 then return { -1, 0 } elseif r[1] == 1 then return { 0, 1 } end
-  return { 0, -1 }
-end
-
-local function fluid_equip(center, a, r, loads, fluid)
-  local at = add(center, a, -0.5)
-  local off = near_offset(r)
-  local tank_pos = add(add(at, r, 4.5), off, 1)
-  entity("pump", add(at, r, 2), { direction = direction_of(loads and { -r[1], -r[2] } or r) })
-  local tank = entity("storage-tank", tank_pos)
-  local pipe = entity("infinity-pipe", add(add(tank_pos, r, 2), off, 1))
-  if pipe then
-    pipe.set_infinity_pipe_filter({ name = fluid, percentage = loads and 1 or 0, mode = loads and "at-least" or "exactly" })
-  end
-  return tank
-end
-
---- Greifarme, Unendlich-Kisten und Strom an einer Haltestelle.
---- `kind`: provider (Kiste → Wagen), requester/cleanup (Wagen → Kiste, die alles vernichtet),
---- fuel (Kohle → Lok). Kisten von Anbietern und Abnehmern werden mit der Station verdrahtet.
-local function equip(stop, o, kind, item, signal_target)
-  local f, r = O[o].f, O[o].r
-  local a = { -f[1], -f[2] } -- vom Zugkopf nach hinten
-  local base = add(xy(stop.position), r, -2)
-  local fluid = item and prototypes.fluid[item] ~= nil
-  local slots = kind == "fuel" and { 0 } or fluid and { 1, 2 } or { 1, 2, 3, 4 }
-  local positions = kind == "fuel" and { -1.5, 0.5 } or { -2.5, -0.5, 1.5 }
-  local chests = {}
-  for _, k in ipairs(slots) do
-    local center = add(base, a, 3 + 7 * k)
-    entity("medium-electric-pole", add(add(center, r, 3.5), a, -3.5))
-    if fluid then
-      chests[#chests + 1] = fluid_equip(center, a, r, kind == "provider", item)
-    end
-    for _, t in ipairs(fluid and {} or positions) do
-      local at = add(center, a, t)
-      -- Richtung eines Greifarms = Seite, von der er greift (Bulk-Greifarme erlauben keine
-      -- frei gesetzten Greif-/Ablagepositionen). Laden: von der Kiste (rechts), Entladen: vom Wagen.
-      local loads = kind == "provider" or kind == "fuel"
-      local grab = loads and r or { -r[1], -r[2] }
-      local inserter = entity("bulk-inserter", add(at, r, 1.5), { direction = direction_of(grab) })
-      local chest = entity("infinity-chest", add(at, r, 2.5))
-      if inserter and chest then
-        if loads then
-          chest.infinity_container_filters = { { index = 1, name = kind == "fuel" and "coal" or item,
-            count = kind == "fuel" and 50 or 2000, mode = "at-least" } }
-        else
-          chest.remove_unfiltered_items = true -- vernichtet alles, was hineinkommt
-        end
-        chests[#chests + 1] = chest
-      end
-    end
-  end
-  local last = add(base, a, 3 + 7 * slots[#slots])
-  entity("medium-electric-pole", add(add(last, r, 3.5), a, 3.5))
-  local first = add(base, a, 3 + 7 * slots[1])
-  local eei = entity("electric-energy-interface", add(add(first, r, 5), a, -4))
-  if eei then
-    eei.power_production = 200000
-    eei.electric_buffer_size = 2000000
-  end
-  -- Anbieter und Abnehmer: Kisten in einer Kette verdrahten, die erste mit der Haltestelle bzw. dem
-  -- Combinator-Eingang (Beispiel für Spieler: so liest die Station ihren Bestand).
-  if (kind == "provider" or kind == "requester") and #chests > 0 then
-    local G = defines.wire_connector_id.circuit_green
-    for i = 2, #chests do
-      if not chests[i - 1].get_wire_connector(G, true).connect_to(chests[i].get_wire_connector(G, true)) then
-        stats.wires_failed = stats.wires_failed + 1
-      end
-    end
-    -- an die Haltestelle (UTL-Haltestelle) bzw. an den Eingang des Combinators
-    local target = signal_target or stop.get_wire_connector(G, true)
-    if not chests[1].get_wire_connector(G, true).connect_to(target) then
-      stats.wires_failed = stats.wires_failed + 1
-      stats.wire_fail_at = (stats.wire_fail_at or "") .. " " .. stop.backer_name .. " (Abstand "
-        .. math.floor(((chests[1].position.x - target.owner.position.x) ^ 2 + (chests[1].position.y - target.owner.position.y) ^ 2) ^ 0.5 * 10) / 10 .. ")"
-    end
-  end
-end
-
 --- Nebengleis mit Haltestelle, Abzweig bei `pa` (Hauptgleis) in Fahrtrichtung `o`.
 local function siding(o, pa, spec)
   local f, r = O[o].f, O[o].r
@@ -198,19 +83,35 @@ local function siding(o, pa, spec)
   pieces(MERGE[o], pb)
   local from = add(add(pa, f, 20), r, 6)
   straight(o, from, SPAN - 40)
-  signal(o, add(add(pa, f, 22.5), r, 7.5))            -- Einfahrt Nebengleis
-  signal(o, add(add(pb, f, -21.5), r, 7.5))           -- Ausfahrt vor der Einmündung
+  -- Signale wie in Marcels Blaupause docs/blaupausen/kreisel_signale.txt: Abzweig und Einmündung
+  -- liegen kurz vor bzw. hinter einem Kreisel. Vor der Einmündung (Hauptgleis und Ausfahrt) und
+  -- zwischen Einmündung und Kreisel Kettensignale, damit kein Zug in der Einmündung stehen bleibt
+  -- und das Hauptgleis zustellt; hinter dem Abzweig ein Blocksignal, damit ein wartender Zug auf dem
+  -- Hauptgleis den Abzweig frei lässt.
   signal(o, add(add(pa, f, -(GAP / 2 + 0.5)), r, 1.5), true, true) -- Kettensignal vor dem Abzweig
-  signal(o, add(add(pa, f, SPAN / 2 + 0.5), r, 1.5)) -- Hauptgleis zwischen Abzweig und Einmündung
+  signal(o, add(add(pa, f, 9.5), r, 1.5))                          -- Hauptgleis hinter dem Abzweig
+  signal(o, add(add(pa, f, 18.5), r, 7.5))                         -- Einfahrt Nebengleis
+  signal(o, add(add(pa, f, SPAN / 2 + 0.5), r, 1.5))               -- Hauptgleis zwischen Abzweig und Einmündung
+  signal(o, add(add(pb, f, -9.5), r, 1.5), true, true)             -- Hauptgleis vor der Einmündung
+  signal(o, add(add(pb, f, -21.5), r, 7.5), true, true)            -- Ausfahrt vor der Einmündung
+  signal(o, add(add(pb, f, 1.5), r, 1.5), true, true)              -- zwischen Einmündung und Kreisel
   -- zwei Warteplätze hinter dem Bahnsteig (je eine Zuglänge), damit bis zu 3 Züge anstehen können
   signal(o, add(add(pb, f, -61.5), r, 7.5))
   signal(o, add(add(pb, f, -99.5), r, 7.5))
+  if not stations then return nil end
   -- Bauart: UTL-Haltestelle oder normale Haltestelle + UTL-Stations-Combinator daneben
   local stop = surface.create_entity({ name = spec.combinator and "train-stop" or "utl-train-stop",
     position = add(add(pb, f, -26), r, 8), direction = O[o].dir, force = force, raise_built = true })
   stop.backer_name = spec.combinator and spec.kind ~= "depot" and ("[item=utl-station-combinator] " .. spec.name)
     or spec.name
-  stop.trains_limit = spec.kind == "depot" and 1 or 3 -- Bahnsteig + 2 Warteplätze
+  -- Zuglimit (Vanilla) nur an Depots (ein Zug je Gleis), Tankstellen und Cleanups (Bahnsteig + 2
+  -- Warteplätze) und nur, wenn gewünscht. Anbieter, Abnehmer und Lager regelt immer UTLs
+  -- „max. Züge“ – der Lasttest prüft den Mod, nicht Vanilla (Wunsch Marcel).
+  if vanilla_limits and spec.kind == "depot" then
+    stop.trains_limit = 1
+  elseif vanilla_limits and (spec.kind == "fuel" or spec.kind == "cleanup") then
+    stop.trains_limit = 3
+  end
   spec.stop = stop
   local signal_target
   if spec.combinator then
@@ -219,111 +120,26 @@ local function siding(o, pa, spec)
     local fluid = spec.item and prototypes.fluid[spec.item] ~= nil
     local along = (spec.kind == "provider" or fluid) and -2 or 2
     local combinator = surface.create_entity({ name = "utl-station-combinator",
-      position = add(xy(stop.position), f, along), direction = O[o].dir, force = force, raise_built = true })
+      position = add(xy(stop.position), f, along), direction = O[o].dir, force = force })
     spec.combinator_entity = combinator
     if combinator then
       stats.combinators = (stats.combinators or 0) + 1
       -- Ausgang → Haltestelle (so weiß UTL, welche Haltestelle zum Combinator gehört)
       combinator.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
         .connect_to(stop.get_wire_connector(defines.wire_connector_id.circuit_green, true))
+      -- erst jetzt melden: UTL ordnet den Combinator beim Bau über dieses Kabel der Haltestelle zu
+      script.raise_script_built({ entity = combinator })
       signal_target = combinator.get_wire_connector(defines.wire_connector_id.combinator_input_green, true)
     end
   end
-  if spec.kind ~= "depot" then equip(stop, o, spec.kind, spec.item, signal_target) end
+  if spec.kind ~= "depot" then
+    spec.bay = Equipment.equip({ surface = surface, force = force, stats = stats }, stop, f, r, spec, signal_target)
+  end
   -- Zugposition: Lok 3 Felder hinter der Haltestelle, Wagen je 7 Felder weiter
   local head = add(add(xy(stop.position), r, -2), f, -3)
   return { head = head, back = { -f[1], -f[2] }, dir = O[o].dir }
 end
 
-local function train(front, cars, depot_name, wagon)
-  local loco = surface.create_entity({ name = "locomotive", position = front.head, direction = front.dir, force = force })
-  if not loco then return nil end
-  for i = 1, cars do
-    surface.create_entity({ name = wagon or "cargo-wagon", position = add(front.head, front.back, 7 * i),
-      direction = front.dir, force = force })
-  end
-  loco.insert({ name = "coal", count = 150 })
-  local schedule = loco.train.get_schedule()
-  schedule.add_record({ station = depot_name, wait_conditions = { { type = "inactivity", ticks = 300 } } })
-  schedule.go_to_station(1)
-  return loco.train
-end
-
---- Reihenfolge der Stationen: je Depot 40 Plätze, dazwischen Tankstellen, Anbieter/Abnehmer
---- gemischt und Cleanup (wie in einer echten Fabrik gruppiert).
---- Anbieter und Abnehmer (Tankstellen und Cleanup verteilt assign() eigens über die Karte).
-local function layout(cfg)
-  local stations = {}
-  for _, item in ipairs(cfg.items) do
-    for k = 1, cfg.providers_per_item do stations[#stations + 1] = { kind = "provider", item = item, name = "Anbieter " .. item .. " " .. k } end
-    for k = 1, cfg.requesters_per_item do stations[#stations + 1] = { kind = "requester", item = item, name = "Abnehmer " .. item .. " " .. k } end
-  end
-  for _, fluid in ipairs(cfg.fluids or {}) do
-    for k = 1, cfg.providers_per_fluid do stations[#stations + 1] = { kind = "provider", item = fluid, name = "Anbieter " .. fluid .. " " .. k } end
-    for k = 1, cfg.requesters_per_fluid do stations[#stations + 1] = { kind = "requester", item = fluid, name = "Abnehmer " .. fluid .. " " .. k } end
-  end
-  return stations
-end
-
---- `count` Plätze gleichmäßig über die Karte: ein Raster aus Zielpunkten, je Punkt der nächste
---- freie Platz (`used` merkt belegte Plätze).
-local function spread(places, count, used, span)
-  local picked = {}
-  if count <= 0 then return picked end
-  local k = math.ceil(math.sqrt(count))
-  local rows = math.ceil(count / k)
-  for i = 0, count - 1 do
-    local tx = (i % k + 0.5) / k * span
-    local ty = (math.floor(i / k) + 0.5) / rows * span
-    local best, best_d
-    for j, place in ipairs(places) do
-      if not used[j] then
-        local dx, dy = place.pa[1] - tx, place.pa[2] - ty
-        local d = dx * dx + dy * dy
-        if not best_d or d < best_d then best, best_d = j, d end
-      end
-    end
-    if best then
-      used[best] = true
-      picked[#picked + 1] = best
-    end
-  end
-  return picked
-end
-
---- Jedem Platz eine Station zuordnen: Tankstellen und Cleanup im Raster verteilt, Anbieter und
---- Abnehmer mit festem Sprung über die restlichen Plätze gestreut (nicht zeilenweise, sonst
---- lägen alle Anbieter im Norden); übrige Plätze werden Abnehmer (Wunsch Marcel).
-local function assign(cfg, places, span)
-  local specs, used = {}, {}
-  for _, j in ipairs(spread(places, cfg.fuel, used, span)) do specs[j] = { kind = "fuel", name = "Tankstelle" } end
-  -- Cleanup: die ersten je Flüssigkeit eins mit Pumpen (nur diese Flüssigkeit), die übrigen für alle Items
-  for n, j in ipairs(spread(places, cfg.cleanup, used, span)) do
-    local fluid = (cfg.fluids or {})[n]
-    specs[j] = fluid and { kind = "cleanup", item = fluid, name = "Cleanup " .. fluid } or { kind = "cleanup", name = "Cleanup" }
-  end
-  local free = {}
-  for j = 1, #places do if not used[j] then free[#free + 1] = j end end
-  local list = layout(cfg)
-  local counters = {}
-  local extra = 0
-  while #list < #free do
-    extra = extra + 1
-    local item = cfg.items[((extra - 1) % #cfg.items) + 1]
-    counters[item] = (counters[item] or cfg.requesters_per_item) + 1
-    list[#list + 1] = { kind = "requester", item = item, name = "Abnehmer " .. item .. " " .. counters[item] }
-  end
-  local total = #free
-  local function gcd(x, y) while y ~= 0 do x, y = y, x % y end return x end
-  local step = math.max(1, math.floor(total * 0.618))
-  while total > 1 and gcd(step, total) ~= 1 do step = step + 1 end
-  for i = 0, total - 1 do specs[free[(i * step) % total + 1]] = list[i + 1] end
-  return specs
-end
-
---- Abstellbahnhof im Inneren des Blocks mit Ecke (X, Y): Einfahrt vom Nord-Außengleis des
---- West-Korridors (Rechtskurve nach Osten), schräge Weichenstraße auf YARD_TRACKS parallele
---- Depotgleise, schräge Sammelstraße, Ausfahrt ins Süd-Außengleis des Ost-Korridors.
 --- Liefert die Depot-Haltestellen (mit Zugposition).
 local function yard(X, Y, spec_of)
   local row = Y + 101             -- Zufahrt (waagerecht)
@@ -335,6 +151,7 @@ local function yard(X, Y, spec_of)
     { { X + 62, ya - 24 }, { X + 63, ya + 10 } },
     { { X + 257, row_exit - 4 }, { X + 258, row_exit + 24 } },
   }) do
+    if not tracks then break end
     for _, sig in pairs(surface.find_entities_filtered({ area = area, type = { "rail-signal", "rail-chain-signal" } })) do sig.destroy() end
   end
   -- Einfahrt
@@ -342,7 +159,7 @@ local function yard(X, Y, spec_of)
   pieces(RIGHT.N, { X + 61, ya })
   local xd = X + 77
   straight("E", { X + 75, row }, 2)
-  signal("E", { X + 75.5, row + 1.5 })
+  signal("E", { X + 75.5, row + 1.5 }, true, true)                  -- vor der Weichenstraße
   pieces(E_TO_SE, { xd, row })
   local d0 = { xd + 11, row + 5 }
   for j = 0, 3 * (K - 1) do rail("straight-rail", DIAGONAL_SE, add(d0, { 1, 1 }, 2 * j)) end
@@ -353,8 +170,17 @@ local function yard(X, Y, spec_of)
   pieces(SE_TO_E, clast)
   local x_exit = clast[1] + 11
   straight("E", { x_exit, row_exit }, X + 245 - x_exit)
-  signal("E", { X + 243.5, row_exit + 1.5 })                        -- vor der Einmündung in den Korridor
+  signal("E", { X + 243.5, row_exit + 1.5 }, true, true)            -- vor der Einmündung in den Korridor
   pieces(RIGHT.E, { X + 245, row_exit })
+  -- Signal des Korridors vor der Einmündung der Ausfahrt: Kettensignal
+  if tracks then
+    local at = { X + BLOCK + 33.5, Y + 159.5 }
+    for _, sig in pairs(surface.find_entities_filtered({ type = "rail-signal",
+      area = { { at[1] - 0.6, at[2] - 0.6 }, { at[1] + 0.6, at[2] + 0.6 } } })) do
+      sig.destroy()
+      signal("S", at, true, true)
+    end
+  end
   -- Depotgleise
   local stops = {}
   for k = 0, K - 1 do
@@ -365,23 +191,26 @@ local function yard(X, Y, spec_of)
     straight("E", { xs, yk }, YARD_LENGTH)
     pieces(E_TO_SE, { xe, yk })
     signal("E", { xs + 1.5, yk + 1.5 })                             -- Einfahrt Depotgleis
-    signal("E", { xe - 0.5, yk + 1.5 })                             -- Ausfahrt Depotgleis
-    local spec = spec_of(k)
-    local stop = surface.create_entity({ name = spec.combinator and "train-stop" or "utl-train-stop",
-      position = { xe - 3, yk + 2 }, direction = O.E.dir, force = force, raise_built = true })
-    stop.backer_name = spec.name
-    stop.trains_limit = 1
-    spec.stop = stop
-    if spec.combinator then
-      spec.combinator_entity = surface.create_entity({ name = "utl-station-combinator",
-        position = { xe - 5, yk + 2 }, direction = O.E.dir, force = force, raise_built = true })
-      if spec.combinator_entity then
-        stats.combinators = (stats.combinators or 0) + 1
-        spec.combinator_entity.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
-          .connect_to(stop.get_wire_connector(defines.wire_connector_id.circuit_green, true))
+    signal("E", { xe - 0.5, yk + 1.5 }, true, true)                 -- Ausfahrt Depotgleis (vor der Sammelstraße)
+    if stations then
+      local spec = spec_of(k)
+      local stop = surface.create_entity({ name = spec.combinator and "train-stop" or "utl-train-stop",
+        position = { xe - 3, yk + 2 }, direction = O.E.dir, force = force, raise_built = true })
+      stop.backer_name = spec.name
+      if vanilla_limits then stop.trains_limit = 1 end
+      spec.stop = stop
+      if spec.combinator then
+        spec.combinator_entity = surface.create_entity({ name = "utl-station-combinator",
+          position = { xe - 5, yk + 2 }, direction = O.E.dir, force = force })
+        if spec.combinator_entity then
+          stats.combinators = (stats.combinators or 0) + 1
+          spec.combinator_entity.get_wire_connector(defines.wire_connector_id.combinator_output_green, true)
+            .connect_to(stop.get_wire_connector(defines.wire_connector_id.circuit_green, true))
+          script.raise_script_built({ entity = spec.combinator_entity }) -- erst verkabelt melden
+        end
       end
+      stops[#stops + 1] = { spec = spec, front = { head = { xe - 6, yk }, back = { -1, 0 }, dir = O.E.dir } }
     end
-    stops[#stops + 1] = { spec = spec, front = { head = { xe - 6, yk }, back = { -1, 0 }, dir = O.E.dir } }
   end
   stats.yards = (stats.yards or 0) + 1
   return stops
@@ -394,6 +223,8 @@ local EXTRAS = { P = true, R = true } -- Masten/Radare erst nach den Bahnhöfen 
 --- Einen City Block mit Ecke (x0, y0) setzen. Überlappende Stücke des Nachbarblocks (gemeinsame
 --- Korridore) gibt es schon – create_entity schlägt dann einfach fehl.
 local function city_block(x0, y0, extras)
+  if not extras then stats.blocks = stats.blocks + 1 end
+  if (extras and not stations) or (not extras and not tracks) then return end
   for _, e in ipairs(CityBlock) do
     if (EXTRAS[e[1]] or false) == extras then
       local ok = surface.create_entity({ name = NAMES[e[1]], position = { x0 + e[2], y0 + e[3] }, direction = e[4], force = force })
@@ -408,44 +239,13 @@ local function city_block(x0, y0, extras)
       eei.electric_buffer_size = 20000000
     end
     surface.create_entity({ name = "medium-electric-pole", position = { x0 + 48.5, y0 + 86.5 }, force = force })
-  else
-    stats.blocks = stats.blocks + 1
   end
-end
-
---- Alle Bahnhofsplätze des Gitters (n × n Blöcke): je Korridorstück zwei (eine je Außenseite).
---- Senkrecht: Gleis x+35 nach Süden (Bahnhof westlich), x+61 nach Norden (östlich).
---- Waagerecht: Gleis y+35 nach Westen (nördlich), y+61 nach Osten (südlich).
-local function slots(n, skip, ox, oy)
-  local list = {}
-  ox, oy = ox or 0, oy or 0
-  local function add_slot(o, pa)
-    local key = o .. ":" .. pa[1] .. ":" .. pa[2]
-    if not skip[key] then list[#list + 1] = { o = o, pa = pa } end
-  end
-  for k = 0, n do
-    for l = 0, n - 1 do
-      local x, y0 = BLOCK * k + ox, BLOCK * l + oy
-      add_slot("S", { x + 35, y0 + 81 })
-      add_slot("N", { x + 61, y0 + 239 })
-      local y, x0 = BLOCK * k + oy, BLOCK * l + ox
-      add_slot("W", { x0 + 239, y + 35 })
-      add_slot("E", { x0 + 81, y + 61 })
-    end
-  end
-  -- zeilenweise sortieren: aufeinanderfolgende Stationen liegen beieinander
-  table.sort(list, function(a, b)
-    local ra, rb = math.floor(a.pa[2] / BLOCK), math.floor(b.pa[2] / BLOCK)
-    if ra ~= rb then return ra < rb end
-    if a.pa[1] ~= b.pa[1] then return a.pa[1] < b.pa[1] end
-    return a.pa[2] < b.pa[2]
-  end)
-  return list
 end
 
 --- Signale des City Blocks auf der Bahnhofsseite des Außengleises entfernen (dort liegen jetzt
 --- Abzweig und Einmündung; die Bahnhofs-Signale setzt siding()).
 local function clear_signals(o, pa)
+  if not tracks then return end
   local f, r = O[o].f, O[o].r
   local from = add(add(pa, f, -10), r, 1.5)
   local to = add(add(pa, f, SPAN + 6), r, 1.5)
@@ -456,11 +256,54 @@ local function clear_signals(o, pa)
   end
 end
 
+--- Kreisel-Seiten ohne Bahnhof (Kartenrand, Depot-Blöcke): wie an den übrigen Kreiseln das
+--- Ausfahrtsignal hinter die Einmündung des Kreisels setzen (sonst steht es davor) und das
+--- Einfahrt-Kettensignal vor den ersten Abzweig. `used` = Schlüssel der gebauten Nebengleise.
+local function plain_crossings(n, ox, oy, used)
+  local limit = BLOCK * n + 100
+  local function inside(p) return p[1] >= ox and p[2] >= oy and p[1] <= ox + limit and p[2] <= oy + limit end
+  local function fix(o, pa)
+    if used[o .. ":" .. pa[1] .. ":" .. pa[2]] then return end
+    local f, r = O[o].f, O[o].r
+    local old = add(add(pa, f, -7.5), r, 1.5)
+    if inside(old) then
+      for _, sig in pairs(surface.find_entities_filtered({ type = "rail-signal",
+        area = { { old[1] - 0.6, old[2] - 0.6 }, { old[1] + 0.6, old[2] + 0.6 } } })) do
+        sig.destroy()
+        signal(o, add(add(pa, f, -3.5), r, 1.5), false)
+      end
+    end
+    -- Einfahrt: das Kettensignal des Kreisels liegt hinter seinem ersten Abzweig → davor verschieben
+    local entry = add(add(pa, f, SPAN + 5.5), r, 1.5)
+    if inside(entry) then
+      for _, sig in pairs(surface.find_entities_filtered({ type = "rail-chain-signal",
+        area = { { entry[1] - 0.6, entry[2] - 0.6 }, { entry[1] + 0.6, entry[2] + 0.6 } } })) do
+        sig.destroy()
+        signal(o, add(add(pa, f, SPAN + 1.5), r, 1.5), false, true)
+      end
+    end
+  end
+  for k = 0, n do
+    for l = -1, n do
+      local x, y0 = BLOCK * k + ox, BLOCK * l + oy
+      fix("S", { x + 35, y0 + 81 })
+      fix("N", { x + 61, y0 + 239 })
+      local y, x0 = BLOCK * k + oy, BLOCK * l + ox
+      fix("W", { x0 + 239, y + 35 })
+      fix("E", { x0 + 81, y + 61 })
+    end
+  end
+end
+
 --- Alles bauen. Liefert Oberfläche, Stationen, Züge und Bereich.
 --- Optional (andere Szenarien): `cfg.surface` = Name der Oberfläche; `cfg.assign(places, span)`
 --- belegt die Bahnhofsplätze selbst (Liste von Specs je Platz, nil = Platz bleibt frei); ein Spec
 --- mit kind = "depot" und `cars` wird ein Depot auf dem Nebengleis mit einem Zug.
+--- `cfg.mode`: "track" = nur Gleise und Signale, "stations" = nur alles andere (das Gleisnetz liegt
+--- schon in der Karte, gebaut mit "track" aus demselben `cfg`), sonst alles.
 function Builder.build(cfg)
+  tracks, stations = cfg.mode ~= "stations", cfg.mode ~= "track"
+  vanilla_limits = cfg.vanilla_limits ~= false
   local name = cfg.surface or "utl-lasttest"
   surface = game.surfaces[name] or game.create_surface(name)
   surface.generate_with_lab_tiles = true
@@ -511,28 +354,36 @@ function Builder.build(cfg)
       end)
       for _, entry in ipairs(stops) do
         built.stations[#built.stations + 1] = entry.spec
-        local t = train(entry.front, depot.cars, depot.name, depot.wagon)
+        local t = Equipment.train({ surface = surface, force = force }, entry.front, depot.cars, depot.name, depot.wagon)
         if t then built.trains[#built.trains + 1] = t end
       end
     end
   end
 
   -- Stationen auf die Bahnhofsplätze (Reihenfolge der Plätze: zeilenweise)
-  local places = slots(n, skip, ox, oy)
-  local specs = cfg.assign and cfg.assign(places, BLOCK * n) or assign(cfg, places, BLOCK * n)
+  local places = Places.slots(n, skip, ox, oy)
+  local specs = cfg.assign and cfg.assign(places, BLOCK * n) or Places.assign(cfg, places, BLOCK * n)
+  local used = {}
   for i, place in ipairs(places) do
     local spec = specs[i]
     if spec then
+      used[place.o .. ":" .. place.pa[1] .. ":" .. place.pa[2]] = true
       force = game.forces[spec.force or ""] or base
-      spec.combinator = next_combinator()
+      -- Bahnhöfe, die annehmen und abgeben, schaltet die Auftrags-Ausgabe der UTL-Haltestelle
+      spec.combinator = next_combinator() and not (spec.kind == "storage" or spec.offer)
       clear_signals(place.o, place.pa)
       local front = siding(place.o, place.pa, spec)
       built.stations[#built.stations + 1] = spec
-      if spec.kind == "depot" and spec.cars then
-        local t = train(front, spec.cars, spec.name, spec.wagon)
+      if front and spec.kind == "depot" and spec.cars then
+        local t = Equipment.train({ surface = surface, force = force }, front, spec.cars, spec.name, spec.wagon)
         if t then built.trains[#built.trains + 1] = t end
       end
     end
+  end
+
+  if tracks then
+    plain_crossings(n, ox, oy, used)
+    stats.signals_merged = Blocks.fit(surface, { { ox - 40, oy - 40 }, { ox + size + 40, oy + size + 40 } }, { ox, oy })
   end
 
   for kx = 0, n - 1 do
@@ -545,8 +396,8 @@ function Builder.build(cfg)
   built.size = size
   built.blocks = n
   built.areas = { { { ox - 40, oy - 40 }, { ox + size + 40, oy + size + 40 } } }
-  local first = built.stations[1].stop.position
-  built.start = { x = first.x, y = first.y - 6 }
+  local first = built.stations[1] and built.stations[1].stop
+  built.start = first and { x = first.position.x, y = first.position.y - 6 }
   return built
 end
 
