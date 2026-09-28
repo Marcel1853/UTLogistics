@@ -94,6 +94,10 @@ function Reader.read(station)
     StorageReader.apply(station, net, cfg)
   else
     if station.provide_rank then station.provide_rank = nil end -- war vorher ein Lager
+    if station.stock then
+      station.stock = nil
+      storage.stations.dirty[station.unit] = true -- Lagerbestand im Netz-Kombinator austragen
+    end
     if not unchanged(station, cfg) then rebuild(station, cfg) end
   end
   station.last_read = game.tick

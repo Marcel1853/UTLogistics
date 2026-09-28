@@ -185,6 +185,17 @@ transfer inserter → chest → loading inserter. Wire the job output to the unl
 inserters: loading **[utl-loading] > 0**, unloading **[utl-loading] = 0**. Scenario “UTL storage”
 shows it.
 
+## Network combinator
+
+*Needs research: “UTL: Network combinator”. New in 0.0.9.*
+
+Outputs the state of a UTL network as circuit signals. In its window pick the network (optionally
+with its linked networks) and the mode: **stock** (what providers offer), **storage stock** (what is
+in storage stations), **shortage** (what requesters need and nobody offers) or **trains** (total,
+free, on the way, deliveries, low on fuel, without path, trains from linked networks helping out and own trains working elsewhere). What the signals do is up to your own
+wiring – a lamp, a display, or in Space Age the shortage to a cargo landing pad (“set requests”).
+UTL never controls platforms or pads itself.
+
 ## Depots and train length
 
 Free trains wait **empty** at stops with the **Depot** role – **every** depot stop needs the

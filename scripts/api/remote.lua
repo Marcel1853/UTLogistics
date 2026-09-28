@@ -15,6 +15,8 @@ local Blueprint = require("scripts.stations.blueprint")
 local Perf = require("scripts.core.perf")
 local Window = require("scripts.gui.station.window")
 local Manager = require("scripts.gui.manager.window")
+local Readouts = require("scripts.readout.readouts")
+local ReadoutOutput = require("scripts.readout.output")
 local util = require("util")
 
 local function copy(t)
@@ -24,6 +26,24 @@ end
 local interface = {
   station_count = function()
     return storage.stations.count
+  end,
+
+  --- Netz-Kombinator: Einstellungen und zuletzt ausgegebene Signale, nil wenn unbekannt.
+  --- { config = { network, mode, star, transit }, values = { [key] = Menge } }
+  get_readout = function(unit)
+    local entry = Readouts.get(unit)
+    if not entry then return nil end
+    return { config = copy(entry.config), values = copy(ReadoutOutput.compute(entry)) }
+  end,
+
+  --- Netz-Kombinator einstellen, z. B. { network = "Eisen", mode = "shortage", star = true }.
+  --- Liefert false, wenn es den Kombinator nicht gibt.
+  configure_readout = function(unit, changes)
+    local entry = Readouts.get(unit)
+    if not entry then return false end
+    Readouts.configure(entry, changes)
+    ReadoutOutput.write(entry)
+    return true
   end,
 
   --- Anzahl freier Züge im Depot und laufender Lieferungen.

@@ -47,6 +47,16 @@ local SIGNALS = {
   -- Auftrags-Ausgabe: 1, solange ein Zug hier lädt bzw. entlädt (z. B. um Lade- und Entlade-Greifarme zu schalten)
   { "utl-loading", arrow("cargo-wagon.png", "signal-input.png") },
   { "utl-unloading", arrow("cargo-wagon.png", "signal-output.png") },
+  -- Netz-Kombinator, Modus „Züge“
+  { "utl-trains-total", icon("locomotive.png", "signal_everything.png") },
+  { "utl-trains-free", own("depot-garage") }, -- Garage aus „Train Control Signals“ (MIT, siehe LICENSE-…)
+  { "utl-trains-busy", icon("locomotive.png", "signal-speed.png") },
+  { "utl-deliveries", icon("cargo-wagon.png", "signal-number-sign.png") },
+  { "utl-trains-low-fuel", own("fuel-pump") },  -- Zapfsäule aus „Train Control Signals“ (MIT)
+  { "utl-trains-no-path", icon("locomotive.png", "signal-deny.png") },
+  -- Netzverbund: fremde Züge helfen hier aus / eigene Züge helfen anderswo aus
+  { "utl-trains-borrowed", arrow("locomotive.png", "signal-input.png") },
+  { "utl-trains-lent", arrow("locomotive.png", "signal-output.png") },
 }
 
 local prototypes = {

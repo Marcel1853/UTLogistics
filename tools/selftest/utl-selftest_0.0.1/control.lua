@@ -75,6 +75,44 @@ script.on_nth_tick(10, function(e)
     end
     check("station_count == 2", remote.call("utl","station_count") == 2, tostring(remote.call("utl","station_count")))
     remote.call("utl","configure_station", st.comb.unit_number, {mode="station", provide=true, request=true})
+    -- R26 Netz-Kombinator: ein Lager (Stein 700, Mindest 200) und der Kombinator selbst
+    force.technologies["utl-storage"].researched = true
+    st.lstop = s.create_entity{name="utl-train-stop", position={3,9}, direction=defines.direction.north, force=force, raise_built=true}
+    st.lchest = s.create_entity{name="steel-chest", position={5,9}, force=force}
+    st.lchest.insert{name="stone", count=700}
+    st.lchest.get_wire_connector(W.circuit_red, true).connect_to(st.lstop.get_wire_connector(W.circuit_red, true))
+    remote.call("utl","configure_station", st.lstop.unit_number, {mode="storage",
+      storage={limits={{signal={type="item", name="stone"}, min=200, max=1000}}}})
+    st.readout = s.create_entity{name="utl-network-combinator", position={-8,1}, force=force, raise_built=true}
+    check("R26 netz-kombinator gebaut", st.readout ~= nil and remote.call("utl","get_readout", st.readout.unit_number) ~= nil)
+  elseif e.tick == 180 then
+    -- R26: Bestand, Lagerbestand und Fehlmenge im Netz „default“ (Stationen oben: Eisen 2000 und
+    -- Kupfer-Bedarf 1500 am Combinator, Kohle 500 an der UTL-Haltestelle, Lager Stein 700/Mindest 200)
+    local unit = st.readout.unit_number
+    local function values(changes)
+      remote.call("utl","configure_readout", unit, changes)
+      local r = remote.call("utl","get_readout", unit) --[[@as table]]
+      return r and r.values or {}
+    end
+    local v = values({ network = "default", mode = "stock" })
+    check("R26 bestand: angebot der anbieter", v["item|iron-plate|normal"] == 2000 and v["item|coal|normal"] == 500
+      and v["item|stone|normal"] == 500, serpent.line(v))
+    v = values({ mode = "storage" })
+    check("R26 lagerbestand: was im lager liegt", v["item|stone|normal"] == 700 and v["item|iron-plate|normal"] == nil,
+      serpent.line(v))
+    v = values({ mode = "shortage" })
+    check("R26 fehlmenge: bedarf ohne angebot", v["item|copper-plate|normal"] == 1500 and v["item|iron-plate|normal"] == nil,
+      serpent.line(v))
+    v = values({ network = "anderes-netz", mode = "stock" })
+    check("R26 anderes netz: nichts", next(v) == nil, serpent.line(v))
+    -- Die Werte liegen wirklich am Kombinator an (geschrieben beim Einstellen)
+    values({ network = "default", mode = "stock" })
+    local section = st.readout.get_control_behavior().get_section(1)
+    local written = 0
+    for _, filter in pairs(section and section.filters or {}) do
+      if filter.value and filter.value.name == "iron-plate" and filter.min == 2000 then written = written + 1 end
+    end
+    check("R26 signale am kombinator geschrieben", written == 1, serpent.line(section and section.filters))
   elseif e.tick == 190 then
     local u = station_info(st.ustop.unit_number)
     check("utl-halt: art stop", u and u.kind == "stop", u and u.kind)
@@ -105,7 +143,26 @@ script.on_nth_tick(10, function(e)
     check("stop entfernt -> nicht verbunden", info and info.stop_name == nil)
     st.comb.destroy()
   elseif e.tick == 240 then
-    check("station entfernt", remote.call("utl","station_count") == 0, tostring(remote.call("utl","station_count")))
+    -- nur das Lager aus R26 bleibt übrig
+    check("station entfernt", remote.call("utl","station_count") == 1, tostring(remote.call("utl","station_count")))
+    local r = remote.call("utl","get_readout", st.readout.unit_number) --[[@as table]]
+    local v = r and r.values or {}
+    check("R26 abgerissene stationen zählen nicht mehr", v["item|iron-plate|normal"] == nil and v["item|coal|normal"] == nil
+      and v["item|stone|normal"] == 500, serpent.line(v))
+    -- Blaupause mit Tag, Klonen
+    local ghost = s.create_entity{name="entity-ghost", inner_name="utl-network-combinator", position={-8,4}, force=force,
+      tags={utl_readout={network="bp-netz", mode="shortage", star=true}}}
+    local _, built = ghost.revive{raise_revive=true}
+    local b = built and remote.call("utl","get_readout", built.unit_number) --[[@as table]]
+    check("R26 blaupause: einstellungen übernommen", b and b.config.network == "bp-netz" and b.config.mode == "shortage"
+      and b.config.star == true, b and serpent.line(b.config))
+    local copy = built and built.clone{position={-8,6}, surface=s, force=force}
+    local c = copy and remote.call("utl","get_readout", copy.unit_number) --[[@as table]]
+    check("R26 klonen: einstellungen übernommen", c and c.config.network == "bp-netz" and c.config.mode == "shortage",
+      c and serpent.line(c.config))
+    if built then built.destroy() end
+    if copy then copy.destroy() end
+    st.lstop.destroy(); st.lchest.destroy()
   elseif e.tick == 250 then
     -- Blaupause: Geist mit Tags → beim Bauen werden die Einstellungen übernommen.
     local ghost = s.create_entity{name="entity-ghost", inner_name="utl-train-stop", position={3,-3},
@@ -146,7 +203,10 @@ script.on_nth_tick(10, function(e)
     check("combinator mit kabel am ausgang: verbunden", vi and vi.stop_name == st.vstop.backer_name, vi and tostring(vi.stop_name))
     st.vcomb.destroy(); st.vstop.destroy()
     build_train_test(s, force)
+    -- R26: ab jetzt Zugzahlen (liegen nach der ersten vollständigen Zählrunde vor; geprüft am Ende)
+    remote.call("utl","configure_readout", st.readout.unit_number, { network = "default", mode = "trains", star = false })
   elseif e.tick > 260 and not st.done then
+    watch_readouts()
     train_test_step()
   end
 end)
@@ -244,6 +304,21 @@ function build_network_test()
   sch.add_record{ station = "UTL-RD", wait_conditions = {{ type = "inactivity", ticks = 300 }} }
   sch.go_to_station(1)
   remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+  -- R26: Netz-Kombinatoren „Züge“ für A (bekommt Hilfe) und R (hilft aus); Höchstwerte werden mitgeschrieben
+  st.ro_a = s.create_entity{ name = "utl-network-combinator", position = { 127, -80 }, force = force, raise_built = true }
+  st.ro_r = s.create_entity{ name = "utl-network-combinator", position = { 127, -78 }, force = force, raise_built = true }
+  remote.call("utl", "configure_readout", st.ro_a.unit_number, { network = "A", mode = "trains" })
+  remote.call("utl", "configure_readout", st.ro_r.unit_number, { network = "R", mode = "trains" })
+  st.max_borrowed, st.max_lent = 0, 0
+end
+
+--- Höchstwerte der Kombinatoren aus build_network_test mitschreiben (R26 Netzverbund).
+function watch_readouts()
+  if not (st.ro_a and st.ro_a.valid and st.ro_r and st.ro_r.valid) then return end
+  local a = remote.call("utl", "get_readout", st.ro_a.unit_number) --[[@as table?]]
+  local r = remote.call("utl", "get_readout", st.ro_r.unit_number) --[[@as table?]]
+  st.max_borrowed = math.max(st.max_borrowed, a and a.values["virtual|utl-trains-borrowed|normal"] or 0)
+  st.max_lent = math.max(st.max_lent, r and r.values["virtual|utl-trains-lent|normal"] or 0)
 end
 
 -- Runde 20: eigenes Gleis bei x = 151 mit Depot „UTL-QD“ (Limit 2) und Cleanup „UTL-QC“
@@ -1400,6 +1475,16 @@ function train_test_step()
       .. " deliveries=" .. serpent.line(remote.call("utl","get_deliveries"))
       .. (st.ntrain and st.ntrain.valid and (" ntrain=" .. st.ntrain.state .. " " .. tostring(st.ntrain.station and st.ntrain.station.backer_name)) or ""))
     st.done = true
+  end
+  if st.done and not st.readout_trains_checked then
+    -- R26 Züge: der Zug des Zugtests hat sein Heimatdepot „UTL-D“ im Netz „default“
+    st.readout_trains_checked = true
+    local unit = st.readout and st.readout.valid and st.readout.unit_number
+    local r = unit and remote.call("utl","get_readout", unit) --[[@as table]]
+    local v = r and r.values or {}
+    check("R26 züge: zug des netzes gezählt", (v["virtual|utl-trains-total|normal"] or 0) >= 1, serpent.line(v))
+    check("R26 netzverbund: zug aus R hilft in A aus", (st.max_borrowed or 0) >= 1 and (st.max_lent or 0) >= 1,
+      "A borrowed " .. tostring(st.max_borrowed) .. ", R lent " .. tostring(st.max_lent))
   end
   if st.done then
     for _, r in ipairs(results) do log("[SELFTEST] " .. r) end

@@ -78,21 +78,21 @@ und möchte ihn später veröffentlichen.
 
 Tipp: Mit **Shift + Rechtsklick** auf eine fertige Station und **Shift + Linksklick** auf
 eine andere überträgst du alle UTL-Einstellungen (wie bei Vanilla-Maschinen; Haltestelle ↔
-Haltestelle, Combinator ↔ Combinator). **Blaupausen** sowie Strg + C / Strg + V nehmen die
+Haltestelle, Kombinator ↔ Kombinator). **Blaupausen** sowie Strg + C / Strg + V nehmen die
 Einstellungen ebenfalls mit.
 
 ---
 
 ## Zwei Bauarten, gleiche Funktion
 
-| | UTL-Haltestelle | UTL-Stations-Combinator |
+| | UTL-Haltestelle | UTL-Stations-Kombinator |
 |---|---|---|
 | Aufbau | ersetzt die normale Haltestelle (lässt sich direkt darüberbauen) | gehört zu einer normalen Haltestelle: **Ausgang per Kabel** (rot oder grün) mit der Haltestelle verbinden |
-| Kabel | Kisten an die **Haltestelle** | Kisten an den **Eingang**, Haltestelle an den **Ausgang** des Combinators |
+| Kabel | Kisten an die **Haltestelle** | Kisten an den **Eingang**, Haltestelle an den **Ausgang** des Kombinators |
 | Fenster | UTL-Panel links neben dem Haltestellenfenster, Reiter „Station“ und „Werte“ | eigenes Fenster |
 | Strom | nein | nein |
 
-Gut für bestehende Bahnhöfe: Combinator danebenstellen, Ausgang mit der Haltestelle verkabeln, Kisten an den Eingang – fertig.
+Gut für bestehende Bahnhöfe: Kombinator danebenstellen, Ausgang mit der Haltestelle verkabeln, Kisten an den Eingang – fertig.
 
 ## Rollen
 
@@ -222,6 +222,17 @@ erlauben“.
 Umlade-Greifarm → Kiste → Lade-Greifarm. Die Auftrags-Ausgabe an Entlade- und Lade-Greifarme
 verdrahten: Laden **[utl-loading] > 0**, Entladen **[utl-loading] = 0**. Das Szenario „UTL-Lager“
 zeigt es.
+
+## Netz-Kombinator
+
+*Braucht die Forschung „UTL: Netz-Kombinator“. Neu in 0.0.9.*
+
+Gibt den Zustand eines UTL-Netzes als Schaltungssignale aus. Im Fenster wählst du das Netz (auf
+Wunsch mit den verbundenen Netzen) und den Modus: **Bestand** (was Anbieter anbieten),
+**Lagerbestand** (was in Lagern liegt), **Fehlmenge** (was Abnehmer brauchen und niemand anbietet)
+oder **Züge** (gesamt, frei, unterwegs, Lieferungen, knapp an Treibstoff, ohne Weg, Züge aus verbundenen Netzen, die aushelfen, und eigene Züge, die anderswo fahren). Was die Signale
+bewirken, verdrahtest du selbst – eine Lampe, eine Anzeige oder in Space Age die Fehlmenge an eine
+Frachtlandeplattform („Anforderungen setzen“). UTL steuert Plattformen nie selbst.
 
 ## Depots und Zuglänge
 
