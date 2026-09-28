@@ -25,14 +25,56 @@ function List.build(parent, columns)
   local rows = scroll.add({ type = "flow", direction = "vertical" })
   rows.style.vertical_spacing = 0
   rows.style.padding = 4
+  -- Blättern (nur sichtbar bei mehr als MAX_ROWS Zeilen)
+  local pager = outer.add({ type = "flow", name = "utl_pager", direction = "horizontal", visible = false })
+  pager.style.horizontal_align = "center"
+  pager.style.horizontally_stretchable = true
+  pager.style.vertical_align = "center"
+  pager.add({ type = "sprite-button", style = "tool_button", sprite = "utility/left_arrow",
+    tooltip = { "utl-manager.page-previous" }, tags = { utl_mgr = "page", delta = -1 } })
+  pager.add({ type = "label", name = "page_label" })
+  pager.add({ type = "sprite-button", style = "tool_button", sprite = "utility/right_arrow",
+    tooltip = { "utl-manager.page-next" }, tags = { utl_mgr = "page", delta = 1 } })
   return rows
+end
+
+--- Zeilen-Container zu einem Blättern-Knopf (für den Klick-Handler).
+function List.rows_of_pager_button(button)
+  local outer = button.parent and button.parent.parent
+  if not outer then return nil end
+  for _, child in pairs(outer.children) do
+    if child.type == "scroll-pane" then return child.children[1] end
+  end
+  return nil
+end
+
+--- Seite wechseln (`delta` = -1 / 1); die Grenzen prüft List.sync.
+function List.turn(rows, delta)
+  local tags = rows.tags or {}
+  tags.page = math.max(1, (tags.page or 1) + delta)
+  rows.tags = tags
 end
 
 --- Zeilen befüllen. `fill(row, item)` baut die Zellen einer Zeile (horizontaler Flow).
 --- Überzählige Zeilen werden entfernt, fehlende angehängt.
 function List.sync(rows, items, fill)
   local children = rows.children
-  local count = math.min(#items, List.MAX_ROWS)
+  local per = List.MAX_ROWS
+  local pages = math.max(1, math.ceil(#items / per))
+  local tags = rows.tags or {}
+  local page = math.min(math.max(1, tags.page or 1), pages)
+  if tags.page ~= page then
+    tags.page = page
+    rows.tags = tags
+  end
+  local offset = (page - 1) * per
+  local count = math.min(per, #items - offset)
+  local outer = rows.parent and rows.parent.parent
+  local pager = outer and outer.utl_pager
+  if pager then
+    pager.visible = pages > 1
+    pager.page_label.caption = { "utl-manager.page", page, pages }
+  end
   for i = 1, count do
     local box = children[i]
     if not box then
@@ -44,7 +86,7 @@ function List.sync(rows, items, fill)
     local row = box.children[1]
     row.clear()
     row.style.horizontal_spacing = 8
-    fill(row, items[i])
+    fill(row, items[offset + i])
   end
   for i = #children, count + 1, -1 do children[i].destroy() end
 end

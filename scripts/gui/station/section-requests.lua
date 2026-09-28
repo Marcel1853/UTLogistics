@@ -27,13 +27,13 @@ function Section.build(parent, station)
   editor.add({ type = "label", caption = { "utl-gui.label-stacks" } })
   refs.stacks = editor.add({
     type = "textfield", style = "utl_entry_text", -- nicht numeric: Rechnen wie „2*4“ erlaubt
-    lose_focus_on_confirm = true, clear_and_focus_on_right_click = true,
+    lose_focus_on_confirm = true, clear_and_focus_on_right_click = true, tooltip = { "utl-gui.expression-tooltip" },
     tags = { utl_action = "req_stacks" },
   })
   editor.add({ type = "label", caption = { "utl-gui.label-items" } })
   refs.items = editor.add({
     type = "textfield", style = "utl_entry_text",
-    lose_focus_on_confirm = true, clear_and_focus_on_right_click = true,
+    lose_focus_on_confirm = true, clear_and_focus_on_right_click = true, tooltip = { "utl-gui.expression-tooltip" },
     tags = { utl_action = "req_items" },
   })
   refs.confirm = editor.add({
@@ -94,10 +94,10 @@ function Section.sync(refs, cfg, from)
   local size = key and Util.stack_size(key)
   if not size then return end
   if from == "req_stacks" then
-    local stacks = Util.parse_number(refs.stacks.text)
+    local stacks = Util.parse_number(refs.stacks.text, Util.variables(key))
     if stacks then refs.items.text = tostring(math.floor(stacks * size + 0.5)) end
   else
-    local items = Util.parse_number(refs.items.text)
+    local items = Util.parse_number(refs.items.text, Util.variables(key))
     if items then refs.stacks.text = tostring(math.floor(items / size * 10 + 0.5) / 10) end
   end
 end
@@ -122,7 +122,7 @@ function Section.confirm(refs, cfg)
   local slot = refs.edit_slot
   local request = slot and cfg.requests[slot]
   if not request then return false end
-  local count = math.floor(Util.parse_number(refs.items.text) or 0)
+  local count = math.floor(Util.parse_number(refs.items.text, Util.variables(Util.signal_key(request.signal))) or 0)
   if count > 0 then
     Requests.set(cfg, slot, request.signal, count)
   else

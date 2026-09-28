@@ -254,7 +254,7 @@ er stehen und ist trotzdem verfügbar.
 Öffnen mit dem **Lok-Knopf** in der Shortcut-Leiste oder **Strg + Umschalt + U** (oder
 **Strg + Alt + U**). Reiter: **Depots**, **Stationen**, **Netzwerke**, **Inventar** (Klick auf eine Ware
 zeigt Details), **Verlauf** (letzte 100 Lieferungen), **Statistik** (Durchsatz je Ware über 10 Minuten und die
-letzte Stunde, Auslastung je Zug), **Alarme** (letzte 100), **Einstellungen**. Suche
+letzte Stunde, Auslastung je Zug), **Alarme** (letzte 100), **Einstellungen**. Der Pin-Knopf hält das Fenster offen, lange Listen lassen sich blättern. Suche
 nach Stationsnamen, Klick auf eine Station zeigt sie auf der Karte, Klick auf einen Zug verfolgt ihn.
 Mit Space Age wählt eine Auswahl den Planeten.
 

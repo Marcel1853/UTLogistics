@@ -5,6 +5,8 @@ Date: 2026-09-28
     - Network combinator (research "UTL: Network combinator"): outputs the state of a UTL network as signals – stock, storage stock, shortage or trains (total, free, on the way, deliveries, low on fuel, without path, trains from linked networks helping out, own trains working elsewhere). Pick the network in its window, optionally with its linked networks. What the signals do is up to your wiring, e.g. the shortage to a cargo landing pad in Space Age. Settings survive blueprints, copy/paste and cloning.
     - Tips & tricks: new entry "Network combinator" with a scene.
     - UTL Manager: new tab "Statistics" – throughput per good (last 10 minutes, last hour, per minute) and utilization per train (time with a job since its first delivery). Recorded only when a delivery ends; a button resets it.
+    - Number fields: "s" stands for the stack size of the good when calculating, e.g. 10*s in the request editor or in the minimum/maximum of a storage (these now allow calculations, too).
+    - UTL Manager: pin button – a pinned manager stays open when you open another window or press E. Lists with more than 200 rows can be paged instead of being cut off.
   Changes:
     - Requests with the same priority are now served oldest first. Before, the order was random, so with few trains the same requester could lose again and again.
     - German texts now write "Kombinator" like the game itself (e.g. "UTL-Stations-Kombinator").

@@ -211,7 +211,7 @@ and remains available.
 Open with the **locomotive button** in the shortcut bar or **Ctrl + Shift + U** (or **Ctrl + Alt + U**).
 Tabs: **Depots**, **Stations**, **Networks**, **Inventory** (click a good for details), **History**
 (last 100 deliveries), **Statistics** (throughput per good over 10 minutes and the last hour,
-utilization per train), **Alerts** (last 100), **Settings**. Search by station name, click a station to
+utilization per train), **Alerts** (last 100), **Settings**. The pin button keeps the window open; long lists can be paged. Search by station name, click a station to
 see it on the map, click a train to follow it. With Space Age a drop-down picks the planet.
 
 **Alerts** come as regular Factorio alerts in three groups – no suitable train (after 5 minutes),

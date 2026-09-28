@@ -50,12 +50,20 @@ function Util.stack_size(key)
   return size or nil
 end
 
+--- Variablen für Rechenausdrücke zu einer Ware: s bzw. S = Stapelgröße (nur Items). nil ohne Ware.
+function Util.variables(key)
+  local size = key and Util.stack_size(key)
+  if not size then return nil end
+  return { s = size, S = size }
+end
+
 --- Zahl aus einem Eingabefeld: normale Zahl oder Rechenausdruck wie „100*2“, „8000/4“,
---- „(1+2)*3“ (über helpers.evaluate_expression). nil, wenn ungültig oder unvollständig.
-function Util.parse_number(text)
+--- „(1+2)*3“ (über helpers.evaluate_expression); mit `variables` auch „2*s“ (Stapelgröße, siehe
+--- Util.variables). nil, wenn ungültig oder unvollständig.
+function Util.parse_number(text, variables)
   local value = tonumber(text)
   if not value then
-    local ok, result = pcall(helpers.evaluate_expression, text)
+    local ok, result = pcall(helpers.evaluate_expression, text, variables)
     value = ok and result or nil
   end
   if value and value == value and value ~= math.huge and value ~= -math.huge then return value end

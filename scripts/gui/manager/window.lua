@@ -18,7 +18,7 @@ local Manager = {}
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 8 -- 8: Reiter „Statistik“
+local GUI_VERSION = 9 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern
 local ORDER = { "depots", "stations", "networks", "inventory", "history", "statistics", "alerts", "settings" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste;
 -- Einstellungen nie, sonst überschriebe der Takt das Feld beim Tippen).
@@ -101,6 +101,7 @@ function Manager.open(player)
   surface_pick.style.width = 230
   surface_pick.style.height = 24
   surface_pick.style.top_margin = -2
+  local pin = frame_button(bar, "flib_pin_white", { "utl-manager.pin" }, "pin")
   frame_button(bar, "utility/search", { "utl-manager.search" }, "toggle_search")
   frame_button(bar, "utility/refresh", { "utl-manager.refresh" }, "refresh")
   frame_button(bar, "utility/close", { "utl-manager.close" }, "close")
@@ -129,6 +130,8 @@ function Manager.open(player)
     surface_pick = surface_pick,
     search = "",
     refs = refs,
+    pin_button = pin,
+    pinned = false,
   }
   player.opened = frame
   player.set_shortcut_toggled(SHORTCUT, true)
@@ -141,6 +144,22 @@ end
 
 function Manager.is_window(element)
   return element and element.valid and element.name == NAME
+end
+
+--- Anheften: das Fenster bleibt offen, auch wenn der Spieler ein anderes öffnet oder E drückt
+--- (es ist dann nicht mehr player.opened). Wieder lösen macht es zum geöffneten Fenster.
+function Manager.toggle_pin(manager, player)
+  manager.pinned = not manager.pinned
+  local button = manager.pin_button
+  if button and button.valid then
+    button.style = manager.pinned and "flib_selected_frame_action_button" or "frame_action_button"
+    button.sprite = manager.pinned and "flib_pin_black" or "flib_pin_white"
+  end
+  if manager.pinned then
+    if player.opened == manager.frame then player.opened = nil end
+  else
+    player.opened = manager.frame
+  end
 end
 
 function Manager.toggle_search(manager)

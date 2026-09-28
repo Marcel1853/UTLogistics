@@ -1,4 +1,5 @@
 local W = defines.wire_connector_id
+local Builder = require("__UTLogistics__/scenarios/UTL-Lasttest/builder")
 local results = {}
 local function check(name, ok, info) results[#results+1] = (ok and "PASS " or "FAIL ") .. name .. (info and (" -- " .. info) or "") end
 local st = {}
@@ -84,6 +85,9 @@ script.on_nth_tick(10, function(e)
     remote.call("utl","configure_station", st.lstop.unit_number, {mode="storage",
       storage={limits={{signal={type="item", name="stone"}, min=200, max=1000}}}})
     st.readout = s.create_entity{name="utl-network-combinator", position={-8,1}, force=force, raise_built=true}
+    -- M4: Rechnen mit „s“ (Stapelgröße) – die Spiel-Funktion nimmt Variablen an
+    local ok_s, value_s = pcall(helpers.evaluate_expression, "2*s", { s = 50 })
+    check("rechnen: 2*s mit s = 50 ergibt 100", ok_s and value_s == 100, tostring(value_s))
     check("R26 netz-kombinator gebaut", st.readout ~= nil and remote.call("utl","get_readout", st.readout.unit_number) ~= nil)
   elseif e.tick == 180 then
     -- R26: Bestand, Lagerbestand und Fehlmenge im Netz „default“ (Stationen oben: Eisen 2000 und
@@ -219,10 +223,13 @@ script.on_nth_tick(10, function(e)
       check("R28 statistik: testzug mit lieferungen und auslastung", tr ~= nil and tr.deliveries >= 1 and tr.utilization > 0,
         serpent.line(tr))
       build_wait_test()
+      build_home_test()
     end
     watch_wait_test()
-    if st.r27.done or e.tick >= 199900 then
+    watch_home_test()
+    if (st.r27.done and st.r29.done) or e.tick >= 199900 then
       if not st.r27.done then check("R27 wartezeit: die ältere anfrage bekommt den zug", false, "zeit abgelaufen") end
+      if not st.r29.done then check("R29 depot-heimfahrt", false, "zeit abgelaufen, " .. st.r29.finished .. " fertig") end
       st.finished = true
       for _, r in ipairs(results) do log("[SELFTEST] " .. r) end
     end
@@ -391,6 +398,81 @@ function watch_wait_test()
       r.done = true
       check("R27 wartezeit: die ältere anfrage bekommt den zug", false, "keine lieferung")
     end
+  end
+end
+
+--- R29 Depot-Heimfahrt: kleines Netz (2 × 2 City Blocks) auf eigener Oberfläche, Abstellbahnhof
+--- mit 12 Depotgleisen „HD“ und 12 Zügen, ohne Vanilla-Zuglimit (nur „max. Züge“ = 1 je Gleis),
+--- ein Anbieter und ein Abnehmer. Nie dürfen zwei Züge zugleich an/auf dem Weg zu einem Depotgleis sein.
+function build_home_test()
+  -- ohne „direkt der nächste Auftrag“: jeder Zug fährt nach der Lieferung heim (das wird geprüft)
+  remote.call("utl", "set_map_config", "utl-chaining", false)
+  local built = Builder.build({ surface = "utl-selftest-home", grid = 2, vanilla_limits = false,
+    depots = { { name = "HD", cars = 1, blocks = { { 0, 0 } } } },
+    assign = function(places)
+      local specs = {}
+      specs[#places] = { kind = "provider", item = "iron-plate", name = "HP" }
+      specs[1] = { kind = "requester", item = "iron-plate", name = "HR" }
+      return specs
+    end })
+  local depots = {}
+  for _, spec in ipairs(built.stations) do
+    local unit = (spec.combinator_entity or spec.stop).unit_number
+    if spec.kind == "depot" then
+      remote.call("utl", "configure_station", unit, { mode = "depot", max_trains = 1 })
+      depots[#depots + 1] = spec.stop
+    elseif spec.kind == "provider" then
+      remote.call("utl", "configure_station", unit, { mode = "station", provide = true, request = false, max_trains = 3 })
+    elseif spec.kind == "requester" then
+      remote.call("utl", "configure_station", unit, { mode = "station", provide = false, request = true,
+        request_threshold = 500, max_trains = 3 })
+      remote.call("utl", "set_request", unit, 1, { type = "item", name = "iron-plate" }, 8000)
+    end
+  end
+  st.r29 = { start = game.tick, depots = depots, trains = built.trains, max = 0, seen = {}, finished = 0, homed = 0,
+    away = {} }
+end
+
+function watch_home_test()
+  local r = st.r29
+  if not r or r.done then return end
+  for _, stop in ipairs(r.depots) do
+    if stop.valid then
+      local n = stop.trains_count + remote.call("utl", "pending_trains", stop.unit_number)
+      if n > r.max then r.max = n end
+    end
+  end
+  local active = {}
+  for _, d in pairs(remote.call("utl", "get_deliveries")) do
+    if d.to == "HR" then
+      active[d.id] = true
+      r.seen[d.id] = true
+    end
+  end
+  for id in pairs(r.seen) do
+    if not active[id] then
+      r.seen[id] = nil
+      r.finished = r.finished + 1
+    end
+  end
+  -- Heimkehr: ein Zug, der unterwegs war und wieder an einem Depotgleis „HD“ steht
+  for _, train in pairs(r.trains) do
+    if train.valid then
+      local at_depot = train.state == defines.train_state.wait_station and train.station and train.station.backer_name == "HD"
+      if not at_depot then
+        r.away[train.id] = true
+      elseif r.away[train.id] then
+        r.away[train.id] = nil
+        r.homed = r.homed + 1
+      end
+    end
+  end
+  local age = game.tick - r.start
+  if (r.finished >= 4 and r.homed >= 4 and age > 3000) or age > 40000 then
+    r.done = true
+    check("R29 depot-heimfahrt: züge liefern und kommen heim", r.finished >= 4 and r.homed >= 4,
+      r.finished .. " fertig, " .. r.homed .. " heimgekehrt")
+    check("R29 depot-heimfahrt: nie zwei züge je depotgleis (ohne zuglimit)", r.max <= 1, "höchstens " .. r.max)
   end
 end
 
