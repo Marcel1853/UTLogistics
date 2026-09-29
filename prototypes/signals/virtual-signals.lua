@@ -38,6 +38,9 @@ local SIGNALS = {
   { "utl-depot-priority", icon("train-stop.png", "signal-star.png") },
   { "utl-network", icon("radar.png", "signal_N.png") },
   { "utl-station-output", icon("constant-combinator.png", "signal-lightning.png") },
+  -- Depot-Ausgabe: Garage mit Blitz
+  { "utl-depot-output", { { icon = "__UTLogistics__/graphics/icons/signals/depot-garage.png", icon_size = 64 },
+    { icon = ICONS .. "signal/signal-lightning.png", icon_size = 64, scale = 0.28, shift = { 8, 8 } } } },
   { "utl-train-id", own("train-id") },
   { "utl-train-length", own("train-length") },
   { "utl-train-locos", own("train-locos") },
@@ -47,12 +50,17 @@ local SIGNALS = {
   -- Auftrags-Ausgabe: 1, solange ein Zug hier lädt bzw. entlädt (z. B. um Lade- und Entlade-Greifarme zu schalten)
   { "utl-loading", arrow("cargo-wagon.png", "signal-input.png") },
   { "utl-unloading", arrow("cargo-wagon.png", "signal-output.png") },
+  -- Auftrags-Ausgabe: so viele Lieferzüge fahren gerade zu dieser Station
+  { "utl-trains-incoming", icon("locomotive.png", "signal-map-marker.png") },
   -- Netz-Kombinator, Modus „Züge“
   { "utl-trains-total", icon("locomotive.png", "signal_everything.png") },
   { "utl-trains-free", own("depot-garage") }, -- Garage aus „Train Control Signals“ (MIT, siehe LICENSE-…)
   { "utl-trains-busy", icon("locomotive.png", "signal-speed.png") },
   { "utl-deliveries", icon("cargo-wagon.png", "signal-number-sign.png") },
   { "utl-trains-low-fuel", own("fuel-pump") },  -- Zapfsäule aus „Train Control Signals“ (MIT)
+  -- unter dem Mindest-Treibstoff: Zapfsäule mit Verbotszeichen
+  { "utl-trains-no-fuel", { { icon = "__UTLogistics__/graphics/icons/signals/fuel-pump.png", icon_size = 64 },
+    { icon = ICONS .. "signal/signal-deny.png", icon_size = 64, scale = 0.28, shift = { 8, 8 } } } },
   { "utl-trains-no-path", icon("locomotive.png", "signal-deny.png") },
   -- Netzverbund: fremde Züge helfen hier aus / eigene Züge helfen anderswo aus
   { "utl-trains-borrowed", arrow("locomotive.png", "signal-input.png") },

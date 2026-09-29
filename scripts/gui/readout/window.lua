@@ -12,12 +12,12 @@ local Window = {}
 
 local NAME = "utl_readout_window"
 -- Bei jedem Umbau des Fensters erhöhen (offene Fenster alter Spielstände werden dann geschlossen).
-local GUI_VERSION = 1
+local GUI_VERSION = 2
 local COLUMNS = 10
 local LEFT_WIDTH = 300
 
 -- Farbe der Slots je Modus (wie im Stationsfenster: grün Angebot, rot Bedarf)
-local SLOT_COLOR = { stock = "provide", storage = "cargo", shortage = "request", trains = "cargo" }
+local SLOT_COLOR = { stock = "provide", storage = "cargo", demand = "request", shortage = "request", trains = "cargo" }
 
 local function guis()
   storage.readout_guis = storage.readout_guis or {}

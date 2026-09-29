@@ -2,7 +2,7 @@
 --- Netz-Kombinator ist keine Station (Reader und Dispatcher sollen ihn nicht sehen).
 ---
 --- storage.readouts = { by_unit = { [unit] = { unit, entity, config, last } }, count, cursor }
----   config = { network = "default", mode = "stock"|"storage"|"shortage"|"trains",
+---   config = { network = "default", mode = "stock"|"storage"|"demand"|"shortage"|"trains",
 ---              star = false (mit verbundenen Netzen), transit = false (unterwegs mitzählen) }
 ---   last   = zuletzt geschriebene Signale { [key] = Menge } (nur neu schreiben, wenn anders)
 local Aggregate = require("scripts.readout.aggregate")
@@ -10,8 +10,8 @@ local Heartbeat = require("scripts.core.heartbeat")
 
 local Readouts = {}
 
-Readouts.MODES = { "stock", "storage", "shortage", "trains" }
-local VALID_MODE = { stock = true, storage = true, shortage = true, trains = true }
+Readouts.MODES = { "stock", "storage", "demand", "shortage", "trains" }
+local VALID_MODE = { stock = true, storage = true, demand = true, shortage = true, trains = true }
 
 local function data()
   local readouts = storage.readouts

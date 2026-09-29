@@ -105,6 +105,9 @@ function Depot.arrive(train, stop, station)
     Alerts.raise("train", "fuel", train.front_stock or stop, { "utl-alert.fuel-failed", Alerts.train_name(train) },
       "fuel:" .. id)
   end
+  -- Unter dem Mindest-Treibstoff und keine Tankstelle erreichbar/frei: Er bleibt im Depot und
+  -- bekommt keine Aufträge (select.lua), bis jemand nachfüllt oder eine Tankstelle frei wird.
+  if Fuel.is_empty(train) then Depot.warn_no_fuel(train, stop) end
   -- Zuglänge passt nicht zum Depot: zu einem passenden, freien gleichnamigen Depot umsetzen.
   -- Gibt es keins (oder kam er gerade von einer Umsetzung), bleibt er hier und ist frei.
   if serviced ~= "relocate" and serviced ~= "relocate-serviced" and not length_ok(station.config, #train.carriages)
@@ -188,6 +191,13 @@ function Depot.send_service(train, network)
   return true, nil
 end
 
+--- Warnung „Treibstoff fehlt“: Zug unter dem Mindest-Treibstoff, keine erreichbare, freie
+--- Tankstelle – er bleibt im Depot.
+function Depot.warn_no_fuel(train, stop)
+  Alerts.raise("train", "fuel", train.front_stock or stop, { "utl-alert.no-fuel", Alerts.train_name(train),
+    stop and stop.valid and stop.backer_name or "?" }, "no-fuel:" .. train.id)
+end
+
 --- Umsetzen in ein freies echtes Depot gleichen Namens (depot-route.lua).
 Depot.relocate = DepotRoute.relocate
 
@@ -202,7 +212,11 @@ function Depot.refuel_idle(limit)
     if train.valid and Fuel.is_low(train) then
       if limit and tries >= limit then return end
       tries = tries + 1
-      if Depot.send_service(train, record.network) then Depot.remove(id) end
+      if Depot.send_service(train, record.network) then
+        Depot.remove(id)
+      elseif Fuel.is_empty(train) then
+        Depot.warn_no_fuel(train, record.stop)
+      end
     end
   end
 end

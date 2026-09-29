@@ -263,17 +263,22 @@ local function find_train(request, provider, wanted)
     if not Depot.is_ready(record) then
       Depot.remove(record.id)
     else
-      -- Knapp an Treibstoff (und es gibt Tankstellen): nur mit Tankhalt losschicken. Ist gerade
-      -- keine frei, bleibt der Zug im Depot (regelmäßig neuer Versuch). Ohne Tankstellen im
-      -- Netzwerk fährt er normal.
+      -- Knapp an Treibstoff und eine Tankstelle erreichbar: mit Tankhalt losschicken; ist gerade
+      -- keine frei, fährt er trotzdem. Unter dem Mindest-Treibstoff fährt er nur mit Tankhalt –
+      -- sonst bleibt er im Depot (Warnung aus depot.lua).
       local fuel_stop = nil
       local usable = true
-      if Fuel.needs_station(record.train, record.network) then
+      if Fuel.needs_station(record.train, record.network, record.stop) then
         fuel_stop = Fuel.stop_if_low(record.train, record.network)
-        usable = fuel_stop ~= nil
+        usable = fuel_stop ~= nil or not Fuel.is_empty(record.train)
+      elseif Fuel.is_empty(record.train) then
+        usable = false
       end
       if usable then
+        -- Anbieter UND Abnehmer müssen erreichbar sein: In einem Netz können getrennte Gleis-
+        -- bzw. Wassernetze liegen (Cargo Ships: Häfen und Haltestellen im selben UTL-Netz)
         local reachable = Reach.check(record.train, record.stop, p_stop)
+        if reachable then reachable = Reach.check(record.train, record.stop, request.station.stop) end
         if reachable then return record, best[i].amount, nil, fuel_stop end
         if reachable == nil then return nil, nil, true end -- Such-Budget aufgebraucht: später
       end

@@ -192,8 +192,10 @@ Mehr, mit Beispielen: [Wiki – Gemischte Anbieter und Auftrags-Ausgabe](https:/
 
 Liegt **eine** Lok unter **40 %** (Map-Einstellung „Tanken unter (%)“), fährt der Zug zur nächsten
 passenden **Tankstelle** – vor dem nächsten Auftrag, nach dem Entladen oder aus dem Depot – und
-wartet, bis alle Loks voll sind oder sich 30 s nichts tut. Ist keine frei, wartet ein knapper Zug im
-Depot; ein Netz **ganz ohne** UTL-Tankstelle tankt auf deine Art (Interrupt, von Hand). Min./max.
+wartet, bis alle Loks voll sind oder sich 30 s nichts tut. Ist keine frei oder keine erreichbar, fährt
+ein knapper Zug trotzdem – erst unter dem **Mindest-Treibstoff** (Map-Einstellung, 10 %) bleibt er im
+Depot, mit der Warnung „Treibstoff fehlt“ und dem Signal „Züge ohne Treibstoff“ an der Depot-Ausgabe.
+Ein Netz **ganz ohne** UTL-Tankstelle tankt auf deine Art (Interrupt, von Hand). Min./max.
 Zuglänge an Tankstellen trennt kleine und große Züge.
 
 ## Cleanup (Restladung)
@@ -231,10 +233,25 @@ zeigt es.
 
 Gibt den Zustand eines UTL-Netzes als Schaltungssignale aus. Im Fenster wählst du das Netz (auf
 Wunsch mit den verbundenen Netzen) und den Modus: **Bestand** (was Anbieter anbieten),
-**Lagerbestand** (was in Lagern liegt), **Fehlmenge** (was Abnehmer brauchen und niemand anbietet)
+**Lagerbestand** (was in Lagern liegt), **Bedarf** (was Abnehmer anfordern), **Fehlmenge** (was Abnehmer brauchen und niemand anbietet)
 oder **Züge** (gesamt, frei, unterwegs, Lieferungen, knapp an Treibstoff, ohne Weg, Züge aus verbundenen Netzen, die aushelfen, und eigene Züge, die anderswo fahren). Was die Signale
 bewirken, verdrahtest du selbst – eine Lampe, eine Anzeige oder in Space Age die Fehlmenge an eine
 Frachtlandeplattform („Anforderungen setzen“). UTL steuert Plattformen nie selbst.
+
+## Cargo Ships
+
+*Nur mit der Mod [Cargo Ships](https://mods.factorio.com/mod/cargo-ships). Neu in 0.0.9.*
+
+Häfen werden zu UTL-Stationen, Schiffe fahren Lieferungen wie Züge. Mit Cargo Ships gibt es den
+**UTL-Hafen** (Forschung „Unified Train Logistics“) – ein Hafen mit eingebauter UTL-Logik, wie die
+UTL-Haltestelle. Ein normaler Hafen geht auch, mit einem UTL-Stations-Kombinator daneben. Häfen und
+Haltestellen dürfen im selben UTL-Netz liegen: UTL schickt nur, wer Anbieter und Abnehmer auch
+erreicht – Schiffe also zu Häfen, Züge zu Haltestellen. Schiffe brauchen ein eigenes Depot (ein
+Hafen mit der Rolle Depot).
+
+Der Knopf **„Blaupause: Gleis ↔ Wasserweg“** in der Shortcut-Leiste tauscht in der Blaupause in der
+Hand (auch aus der Bibliothek) Gleise ↔ Wasserwege, Signale ↔ Bojen und Haltestellen ↔ Häfen – ein
+zweiter Klick tauscht zurück. Gebaut werden Wasserwege weiterhin nur auf Wasser.
 
 ## Depots und Zuglänge
 
@@ -266,7 +283,7 @@ Mehr: [Wiki – UTL-Manager und Warnungen](https://github.com/Marcel1853/UTLogis
 ## Map-Einstellungen
 
 Die wichtigsten: **Direkt der nächste Auftrag** (an), **Nur den Auftrag laden** (an),
-**Auftrags-Ausgabe** (an), **UTL-Funktionen brauchen Forschung** (an), **Tanken unter** (40 %),
+**Auftrags-Ausgabe** (an), **UTL-Funktionen brauchen Forschung** (an), **Tanken unter** (40 %), **Mindest-Treibstoff** (10 %),
 **Inaktivität beim Laden / Entladen** (je 30 s, mit der Fracht per **oder** bzw. **und** verknüpft),
 **Nachladen** (aus), **Cleanup darf Inhalt wieder anbieten** (an), **Lager-Stationen erlauben** (an).
 Die Lade-Werte gehen auch im **UTL-Manager, Reiter „Einstellungen“** – mit Teams je Team; Admins

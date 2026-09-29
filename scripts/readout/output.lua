@@ -17,6 +17,7 @@ local TRAIN_SIGNALS = {
   { "utl-trains-busy", "busy" },
   { "utl-deliveries", "deliveries" },
   { "utl-trains-low-fuel", "low_fuel" },
+  { "utl-trains-no-fuel", "no_fuel" },
   { "utl-trains-no-path", "no_path" },
   { "utl-trains-borrowed", "borrowed" },
   { "utl-trains-lent", "lent" },
@@ -78,6 +79,9 @@ function Output.compute(entry)
   if mode == "stock" then
     values = provide
     if entry.config.transit then add_transit(values, place, names) end
+  elseif mode == "demand" then
+    -- Bedarf: was Abnehmer im Netz anfordern (über ihrer Bedarfs-Schwelle), ob angeboten oder nicht
+    values = request
   elseif mode == "shortage" then
     -- Fehlmenge: was Abnehmer brauchen und im Netz niemand anbietet
     for key, amount in pairs(request) do

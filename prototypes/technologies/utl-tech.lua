@@ -63,7 +63,9 @@ data:extend({
 })
 
 -- Netz-Kombinator: gibt den Zustand eines Netzes als Signale aus (Bestand, Lager, Fehlmenge, Züge).
--- Echtes Bauteil, deshalb unlock-recipe statt „nothing“.
-local readout = upgrade("utl-network-combinator", CIRCUIT_ICON, { "utl-loading-control" }, 100, { RED, GREEN }, nil)
+-- Echtes Bauteil, deshalb unlock-recipe statt „nothing“. Blaue Wissenschaft: das Rezept braucht
+-- rote Schaltkreise (Plastik, also Öl).
+local readout = upgrade("utl-network-combinator", CIRCUIT_ICON, { "utl-loading-control", "chemical-science-pack" }, 150,
+  { RED, GREEN, BLUE }, nil)
 readout.effects = { { type = "unlock-recipe", recipe = C.network_combinator } }
 data:extend({ readout })

@@ -240,6 +240,7 @@ function Deliveries.on_depart(delivery)
   if delivery.state == "loading" then
     delivery.state = "to_requester"
     train_at(delivery.provider, nil)
+    Output.mark(delivery.requester) -- „Züge unterwegs hierher“ am Abnehmer
     release_provider(delivery)
     reread(delivery.provider)
     -- Weniger geladen als bestellt (Zeitlimit, Wartebedingung von Hand/Interrupt beendet)?

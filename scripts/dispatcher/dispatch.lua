@@ -75,7 +75,8 @@ end
 --- verlässt (Schlüssel für den Erreichbarkeits-Cache). Liefert die Lieferung oder nil.
 function Dispatch.chain(train, network, from_stop, depot_name)
   if not (storage.cfg.chaining and train.valid and from_stop and from_stop.valid) then return nil end
-  if Depot.has_cargo(train) or Fuel.needs_station(train, network) then return nil end -- erst Cleanup/Tanken
+  -- erst Cleanup/Tanken; fast leer (unter dem Mindest-Treibstoff): ins Depot, keine weitere Fahrt
+  if Depot.has_cargo(train) or Fuel.needs_station(train, network, from_stop) or Fuel.is_empty(train) then return nil end
   local front = train.front_stock
   if not front then return nil end
   local slots, wagons, fluid = Depot.measure(train)
@@ -109,7 +110,8 @@ function Dispatch.chain(train, network, from_stop, depot_name)
     end
   end
   if not best then return nil end
-  if not Reach.check(train, from_stop, best.provider.station.stop, true) then return nil end
+  if not (Reach.check(train, from_stop, best.provider.station.stop, true)
+      and Reach.check(train, from_stop, best.request.station.stop, true)) then return nil end
   local manifest = Select.manifest(best.request, best.provider, record, best.amount)
   local delivery = Deliveries.create(record, best.provider.station, best.request.station, manifest, nil)
   if delivery then

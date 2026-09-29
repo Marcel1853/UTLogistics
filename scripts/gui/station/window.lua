@@ -20,7 +20,19 @@ local Window = {}
 local NAME = "utl_station_window"
 -- Bei jedem Umbau des Fensters erhöhen: offene Fenster aus alten Spielständen werden dann
 -- geschlossen statt mit falschem Aufbau aufgefrischt.
-local GUI_VERSION = 14 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+local GUI_VERSION = 15 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+-- 15: Depot-Ausgabe, Panel auch am UTL-Hafen
+
+--- Namen der UTL-Haltestellen, an deren Fenster das Panel hängt – nur die, die es als Prototyp
+--- gibt (den UTL-Hafen nur mit Cargo Ships).
+local function anchor_names()
+  local names = {}
+  for name in pairs(C.utl_stops) do
+    if prototypes.entity[name] then names[#names + 1] = name end
+  end
+  table.sort(names)
+  return names
+end
 -- Breiten passend zum Inhalt (Kasten-Innenrand 2 × 12 px):
 local LEFT_WIDTH = 10 * 40 + 24 -- 10 Slots
 local RIGHT_WIDTH = 380         -- Reset 20 + Symbol 32 + Beschriftung 190 + Feld 80 + Ränder
@@ -58,7 +70,7 @@ local function create_frame(player, station, standalone)
       anchor = {
         gui = defines.relative_gui_type.train_stop_gui,
         position = defines.relative_gui_position.left, -- links: rechts sitzt das Schaltungs-Panel
-        name = C.train_stop,
+        names = anchor_names(), -- UTL-Haltestelle und (mit Cargo Ships) UTL-Hafen
       },
     })
   end

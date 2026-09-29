@@ -8,6 +8,7 @@ local Dispatch = require("scripts.dispatcher.dispatch")
 local Pending = require("scripts.trains.pending")
 local ServiceStops = require("scripts.trains.service-stops")
 local Filters = require("scripts.trains.wagon-filters")
+local Output = require("scripts.stations.output")
 local Alerts = require("scripts.alerts.alerts")
 local Heartbeat = require("scripts.core.heartbeat")
 local Perf = require("scripts.core.perf")
@@ -53,6 +54,7 @@ local function on_state(event)
       if station and station.config.roles.depot then
         Filters.reset(id) -- Sicherheitsnetz: im Depot sind die Wagen wieder frei
         Depot.arrive(train, stop, station)
+        Output.mark(unit) -- Depot-Ausgabe: Zug steht hier
       else
         if station and (station.config.roles.fuel or station.config.roles.cleanup) then
           storage.trains.visiting[id] = stop -- für „direkt der nächste Auftrag“ bei der Abfahrt
@@ -72,6 +74,10 @@ local function on_state(event)
         end
       end
     else
+      -- Abfahrt aus dem Depot: dessen Ausgabe neu schreiben
+      local home = storage.trains.home[id]
+      local depot_unit = home and home.stop.valid and storage.stations.by_stop[home.stop.unit_number]
+      if depot_unit then Output.mark(depot_unit) end
       Depot.remove(id)
       -- Abfahrt von Tankstelle/Cleanup nach einer Dienstfahrt: ebenfalls direkt weiter
       local stop = storage.trains.visiting[id]

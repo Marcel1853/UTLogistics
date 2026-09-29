@@ -46,7 +46,7 @@ end
 local function is_station_entity(entity)
   if not (entity and entity.valid) then return false end
   local name = entity.name
-  return name == C.station_combinator or name == C.train_stop
+  return name == C.station_combinator or C.utl_stops[name] == true
 end
 
 Events.on(defines.events.on_gui_opened, function(event)
@@ -62,7 +62,7 @@ Events.on(defines.events.on_gui_closed, function(event)
   -- Eigenes Fenster (Combinator) oder Vanilla-Haltestellenfenster mit unserem Panel.
   -- Nicht beim Combinator-Entity: das Vanilla-Fenster schließt, weil wir es ersetzen.
   local entity = event.entity
-  local utl_stop_closed = entity and entity.valid and entity.name == C.train_stop
+  local utl_stop_closed = entity and entity.valid and C.utl_stops[entity.name] == true
   if Window.is_window(event.element) or utl_stop_closed then
     Window.close(event.player_index)
   end

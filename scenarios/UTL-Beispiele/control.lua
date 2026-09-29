@@ -4,6 +4,7 @@
 local Build = require("__UTLogistics__/scenarios/UTL-Beispiele/build")
 local place_signs = require("__UTLogistics__/scenarios/UTL-Beispiele/signs")
 local Panel = require("__UTLogistics__/scenarios/UTL-Beispiele/panel")
+local place_readout = require("__UTLogistics__/scenarios/UTL-Beispiele/readout")
 local Sandbox = require("__UTLogistics__/scripts/lib/sandbox")
 
 local function place(player)
@@ -35,8 +36,9 @@ local function setup()
   force.chart(made.surface, made.area)
   force.research_all_technologies() -- Übungsnetz: alles erforscht
   local signs = place_signs(made.stops)
-  log(("[BEISPIELE] gebaut: Züge %s/%s, %d Objekte nicht gesetzt, %d Anzeigefelder")
-    :format(tostring(made.train ~= nil), tostring(made.fluid_train ~= nil), made.failed, signs))
+  local readout = place_readout(made.surface, made.start)
+  log(("[BEISPIELE] gebaut: Züge %s/%s, %d Objekte nicht gesetzt, %d Anzeigefelder, Netz-Kombinator %s")
+    :format(tostring(made.train ~= nil), tostring(made.fluid_train ~= nil), made.failed, signs, tostring(readout)))
   for _, player in pairs(game.players) do place(player) end
 end
 

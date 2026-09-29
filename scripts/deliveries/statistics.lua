@@ -5,10 +5,13 @@
 ---   since  = Tick des Beginns (oder des letzten Zurücksetzens),
 ---   places = { [ort] = { [slot 0..59] = { minute, goods = { [key] = Menge }, deliveries = n } } },
 ---   trains = { [zug] = { deliveries = n, busy = Ticks mit Auftrag, first = Tick, surface, force } },
+---   stations = { [station] = { [slot 0..59] = { minute, sent = Menge, received = Menge } } },
 --- }
+--- Je Station nur Summen (keine Waren), damit der Speicher auch bei vielen Stationen klein bleibt.
 --- Ort = Oberfläche + Team (Networks.place). Je Ort 60 Minuten-Eimer: der Eimer einer Minute wird
 --- beim ersten Eintrag einer neuen Minute geleert – so bleibt der Speicher fest begrenzt.
 local Networks = require("scripts.stations.networks")
+local Registry = require("scripts.stations.registry")
 
 local Statistics = {}
 
@@ -18,15 +21,33 @@ local SLOTS = 60
 function Statistics.data()
   local stats = storage.statistics
   if not stats then
-    stats = { since = game.tick, places = {}, trains = {} }
+    stats = { since = game.tick, places = {}, trains = {}, stations = {} }
     storage.statistics = stats
   end
+  stats.stations = stats.stations or {} -- Spielstände vor der Statistik je Station
   return stats
 end
 
 --- Alles verwerfen (Knopf im Reiter).
 function Statistics.reset()
-  storage.statistics = { since = game.tick, places = {}, trains = {} }
+  storage.statistics = { since = game.tick, places = {}, trains = {}, stations = {} }
+end
+
+--- Menge in den Eimer der laufenden Minute einer Station (`field` = "sent" | "received").
+local function add_station(stats, unit, field, amount, minute)
+  if not unit then return end
+  local slots = stats.stations[unit]
+  if not slots then
+    slots = {}
+    stats.stations[unit] = slots
+  end
+  local slot = minute % SLOTS
+  local bucket = slots[slot]
+  if not bucket or bucket.minute ~= minute then
+    bucket = { minute = minute, sent = 0, received = 0 }
+    slots[slot] = bucket
+  end
+  bucket[field] = bucket[field] + amount
 end
 
 --- Eine Lieferung ist zu Ende. `delivered` = { [key] = Menge } beim Abnehmer angekommen (nil bei Abbruch).
@@ -59,9 +80,40 @@ function Statistics.record(delivery, canceled, delivered)
     slots[slot] = bucket
   end
   bucket.deliveries = bucket.deliveries + 1
+  local sum = 0
   for key, amount in pairs(delivered) do
-    if amount > 0 then bucket.goods[key] = (bucket.goods[key] or 0) + amount end
+    if amount > 0 then
+      bucket.goods[key] = (bucket.goods[key] or 0) + amount
+      sum = sum + amount
+    end
   end
+  if sum > 0 then
+    add_station(stats, delivery.provider, "sent", sum, minute)
+    add_station(stats, delivery.requester, "received", sum, minute)
+  end
+end
+
+--- Durchsatz einer Station: { sent_ten, sent_hour, received_ten, received_hour } oder nil, wenn
+--- sie in der letzten Stunde nichts abgegeben oder bekommen hat.
+function Statistics.station(unit)
+  local slots = Statistics.data().stations[unit]
+  if not slots then return nil end
+  local now = math.floor(game.tick / MINUTE)
+  local result = { sent_ten = 0, sent_hour = 0, received_ten = 0, received_hour = 0 }
+  local any = false
+  for _, bucket in pairs(slots) do
+    local age = now - bucket.minute
+    if age >= 0 and age < SLOTS then
+      any = true
+      result.sent_hour = result.sent_hour + bucket.sent
+      result.received_hour = result.received_hour + bucket.received
+      if age < 10 then
+        result.sent_ten = result.sent_ten + bucket.sent
+        result.received_ten = result.received_ten + bucket.received
+      end
+    end
+  end
+  return any and result or nil
 end
 
 --- Durchsatz eines Orts: { [key] = { ten = Menge letzte 10 min, hour = letzte Stunde } } und die
@@ -100,5 +152,11 @@ function Statistics.utilization(train_id, running_since)
   if span <= 0 then return 0, entry end
   return math.min(1, busy / span), entry
 end
+
+-- Station abgerissen: ihre Zahlen verwerfen
+Registry.on_lost(function(station)
+  local stats = storage.statistics
+  if stats and stats.stations and not (station.entity and station.entity.valid) then stats.stations[station.unit] = nil end
+end)
 
 return Statistics

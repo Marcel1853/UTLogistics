@@ -8,10 +8,21 @@ local Filter = require("scripts.gui.manager.surface-filter")
 
 local Tab = {}
 
+--- Summe der Mengen einer Warenliste (zum Sortieren).
+local function total(...)
+  local sum = 0
+  for i = 1, select("#", ...) do
+    for _, amount in pairs(select(i, ...) or {}) do sum = sum + amount end
+  end
+  return sum
+end
+
 local COLUMNS = {
-  { caption = { "utl-manager.col-composition" }, width = 110 },
+  { caption = { "utl-manager.col-composition" }, width = 110, desc_first = true,
+    sort = function(train) return train.valid and #train.carriages or 0 end },
   { caption = { "utl-manager.col-status" }, width = 220 },
-  { caption = { "utl-manager.col-cargo" }, width = 160 },
+  { caption = { "utl-manager.col-cargo" }, width = 160, desc_first = true,
+    sort = function(train) return train.valid and total((Info.cargo(train))) or 0 end },
 }
 
 function Tab.build(parent)
@@ -110,7 +121,7 @@ function Tab.refresh(refs, manager)
 
   local trains = manager.depot and groups[manager.depot].trains or {}
   table.sort(trains, function(a, b) return a.id < b.id end)
-  List.sync(refs.rows, trains, fill)
+  List.sync(refs.rows, trains, fill, COLUMNS)
 end
 
 --- Auswahl in der linken Liste.

@@ -37,11 +37,14 @@ end
 --- Schalterzeile (ja/nein) im selben Raster wie die Zahlen.
 local function add_toggle(grid, cfg, toggle, force)
   local locked = toggle.research and not Unlocks.loading(force)
+  local variant = cfg.roles.depot and toggle.depot or nil -- z. B. „Depot-Ausgabe“ statt „Auftrags-Ausgabe“
+  local label = variant and variant.label or toggle.key
   local tooltip = locked and { "utl-gui.research-needed", { "technology-name." .. toggle.research } }
-    or { "utl-gui.value-" .. toggle.key .. "-tooltip" }
+    or { "utl-gui.value-" .. label .. "-tooltip" }
   grid.add({ type = "empty-widget" })
-  grid.add({ type = "sprite", style = "utl_entry_sprite", sprite = "virtual-signal/" .. toggle.signal, tooltip = tooltip })
-  grid.add({ type = "label", style = "utl_entry_label", caption = { "utl-gui.value-" .. toggle.key }, tooltip = tooltip })
+  grid.add({ type = "sprite", style = "utl_entry_sprite", sprite = "virtual-signal/" .. (variant and variant.signal or toggle.signal),
+    tooltip = tooltip })
+  grid.add({ type = "label", style = "utl_entry_label", caption = { "utl-gui.value-" .. label }, tooltip = tooltip })
   grid.add({
     type = "checkbox",
     state = cfg[toggle.key] == true and not locked,

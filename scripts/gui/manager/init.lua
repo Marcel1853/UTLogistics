@@ -98,6 +98,12 @@ Events.on(defines.events.on_gui_click, function(event)
     Manager.refresh(event.player_index)
   elseif action == "pin" then
     Manager.toggle_pin(manager, player)
+  elseif action == "sort" then
+    local rows = List.rows_of_header(event.element)
+    if rows then
+      List.sort_by(rows, tags.column, tags.desc_first)
+      Manager.refresh(event.player_index)
+    end
   elseif action == "page" then
     local rows = List.rows_of_pager_button(event.element)
     if rows then

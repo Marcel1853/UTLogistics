@@ -10,7 +10,7 @@ local Paste = require("scripts.stations.settings-paste")
 local Blueprint = {}
 
 local TAG = "utl"
-local NAMES = { [C.train_stop] = true, [C.station_combinator] = true }
+local NAMES = { [C.train_stop] = true, [C.utl_port] = true, [C.station_combinator] = true }
 
 -- Weitere UTL-Bauteile mit eigenem Tag (Netz-Kombinator): [Name] = { tag, fn(entity) → Wert }
 local extra = {}

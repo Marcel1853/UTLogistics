@@ -6,11 +6,28 @@ local Filter = require("scripts.gui.manager.surface-filter")
 
 local Tab = {}
 
+--- Summe der Mengen einer Warenliste (zum Sortieren).
+local function total(...)
+  local sum = 0
+  for i = 1, select("#", ...) do
+    for _, amount in pairs(select(i, ...) or {}) do sum = sum + amount end
+  end
+  return sum
+end
+
 local COLUMNS = {
-  { caption = { "utl-manager.col-station" }, width = 220 },
-  { caption = { "utl-manager.col-goods" }, width = 200 },
-  { caption = { "utl-manager.col-transit" }, width = 200 },
-  { caption = { "utl-manager.col-trains" }, width = 60 },
+  { caption = { "utl-manager.col-station" }, width = 220, sort = function(station)
+    local stop = station.stop
+    return stop and stop.valid and string.lower(stop.backer_name) or ""
+  end },
+  { caption = { "utl-manager.col-goods" }, width = 200, desc_first = true,
+    sort = function(station) return total(station.provide, station.request) end },
+  { caption = { "utl-manager.col-transit" }, width = 200, desc_first = true, sort = function(station)
+    local deliveries = storage.deliveries
+    return total(deliveries.incoming[station.unit], deliveries.outgoing[station.unit])
+  end },
+  { caption = { "utl-manager.col-trains" }, width = 60, desc_first = true,
+    sort = function(station) return storage.deliveries.trains_at[station.unit] or 0 end },
 }
 
 local ROLE_ORDER = { "storage", "provider", "requester", "depot", "fuel", "cleanup" }
@@ -89,7 +106,7 @@ function Tab.refresh(refs, manager)
     if names[a] ~= names[b] then return names[a] < names[b] end
     return a.unit < b.unit
   end)
-  List.sync(refs.rows, items, fill)
+  List.sync(refs.rows, items, fill, COLUMNS)
   current = nil
 end
 

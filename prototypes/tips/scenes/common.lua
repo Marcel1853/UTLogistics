@@ -39,15 +39,23 @@ local function combinator(st, dx)
   return c
 end
 
--- Greifarme an der Wagenposition; `load` = Kiste → Wagen, sonst Wagen → Kiste (vernichtet alles,
--- mit `store` eine Stahlkiste, die sich füllt). `item` ist ein Name oder eine Liste von Namen.
+-- Greifarme an der Wagenposition; `load` = Kiste → Wagen, sonst Wagen → Kiste (vernichtet alles
+-- außer Kohle, mit `store` eine Stahlkiste, die sich füllt). `item` ist ein Name oder eine Liste von Namen.
 -- Kisten per Kabel an `target` (Haltestelle oder Combinator-Eingang).
 local function equip(xs, y, load, item, target, store, line)
   line = line or 1
   local chest_y = y + (y > line and 1 or -1)
   local first
   for n, x in ipairs(xs) do
-    s.create_entity({ name = "bulk-inserter", position = { x, y }, direction = load == (y > line) and 8 or 0, force = force })
+    local inserter = s.create_entity({ name = "bulk-inserter", position = { x, y }, direction = load == (y > line) and 8 or 0,
+      force = force })
+    if not load then
+      -- Entladen: nie Kohle greifen – steht eine Lok vor dem Greifarm (Start, Depot), zöge er
+      -- sonst ihren Treibstoff heraus
+      inserter.use_filters = true
+      inserter.inserter_filter_mode = "blacklist"
+      inserter.set_filter(1, { name = "coal" })
+    end
     local chest = s.create_entity({ name = store and "steel-chest" or "infinity-chest", position = { x, chest_y }, force = force })
     if load then
       -- mehrere Waren: je Kiste eine (aus einer gemischten Kiste nähme ein Greifarm nur eine Sorte)
@@ -254,6 +262,12 @@ end)
 local ROLES = [[
 local cleanup = stop("Cleanup", 5, false, false)
 remote.call("utl", "configure_station", cleanup.unit_number, { mode = "cleanup" })
+-- Lager nur zum Zeigen (braucht „UTL: Lager“; in der Tipps-Welt ist nichts erforscht). Mindest 0:
+-- es fordert nichts an – ohne Greifarme bliebe ein Zug dort sonst beim Entladen stehen.
+force.technologies["utl-storage"].researched = true
+local lager = stop("Lager", -13, false, false)
+remote.call("utl", "configure_station", lager.unit_number, { mode = "storage", storage = { accept_leftover = false,
+  limits = { { signal = { type = "item", name = "iron-plate" }, min = 0, max = 600 } } } })
 ]]
 
 -- Zwei Waren, Abnehmer mit Stahlkisten: Zielbestand 400 je Ware, danach fährt kein Zug mehr.

@@ -1,5 +1,5 @@
---- Reiter „Statistik“: links Durchsatz je Ware (letzte 10 min / letzte Stunde / je Minute), rechts
---- die Züge mit Lieferungen und Auslastung. Daten: scripts/deliveries/statistics.lua (nur beim Ende
+--- Reiter „Statistik“: links Durchsatz je Ware (letzte 10 min / letzte Stunde / je Minute) und
+--- darunter je Station (abgegeben / bekommen), rechts die Züge mit Lieferungen und Auslastung. Daten: scripts/deliveries/statistics.lua (nur beim Ende
 --- einer Lieferung erfasst). Gefiltert wie die übrigen Reiter nach Oberfläche und eigenem Team.
 local List = require("scripts.gui.common.list")
 local Widgets = require("scripts.gui.common.widgets")
@@ -7,21 +7,35 @@ local Filter = require("scripts.gui.manager.surface-filter")
 local Info = require("scripts.gui.manager.train-info")
 local Networks = require("scripts.stations.networks")
 local Statistics = require("scripts.deliveries.statistics")
+local Registry = require("scripts.stations.registry")
 local Deliveries = require("scripts.deliveries.deliveries")
 local flib_format = require("__flib__.format")
 
 local Tab = {}
 
 local GOODS = {
-  { caption = { "utl-manager.col-good" }, width = 170 },
-  { caption = { "utl-manager.col-stat-ten" }, width = 70 },
-  { caption = { "utl-manager.col-stat-hour" }, width = 70 },
-  { caption = { "utl-manager.col-stat-minute" }, width = 70 },
+  { caption = { "utl-manager.col-good" }, width = 170, sort = function(item) return item.key end },
+  { caption = { "utl-manager.col-stat-ten" }, width = 70, desc_first = true, sort = function(item) return item.ten end },
+  { caption = { "utl-manager.col-stat-hour" }, width = 70, desc_first = true, sort = function(item) return item.hour end },
+  { caption = { "utl-manager.col-stat-minute" }, width = 70, desc_first = true, sort = function(item) return item.hour end },
+}
+local STATIONS = {
+  { caption = { "utl-manager.col-station" }, width = 124, sort = function(item) return string.lower(item.name) end },
+  { caption = { "utl-manager.col-stat-sent-ten" }, tooltip = { "utl-manager.col-stat-sent-ten-tooltip" }, width = 72, desc_first = true,
+    sort = function(item) return item.stats.sent_ten end },
+  { caption = { "utl-manager.col-stat-sent-hour" }, tooltip = { "utl-manager.col-stat-sent-hour-tooltip" }, width = 72, desc_first = true,
+    sort = function(item) return item.stats.sent_hour end },
+  { caption = { "utl-manager.col-stat-received-ten" }, tooltip = { "utl-manager.col-stat-received-ten-tooltip" }, width = 72, desc_first = true,
+    sort = function(item) return item.stats.received_ten end },
+  { caption = { "utl-manager.col-stat-received-hour" }, tooltip = { "utl-manager.col-stat-received-hour-tooltip" }, width = 72, desc_first = true,
+    sort = function(item) return item.stats.received_hour end },
 }
 local TRAINS = {
-  { caption = { "utl-manager.col-train" }, width = 150 },
-  { caption = { "utl-manager.col-stat-deliveries" }, width = 70 },
-  { caption = { "utl-manager.col-stat-utilization" }, width = 150 },
+  { caption = { "utl-manager.col-train" }, width = 130, sort = function(item) return item.train.id end },
+  { caption = { "utl-manager.col-stat-deliveries" }, width = 70, desc_first = true,
+    sort = function(item) return item.deliveries end },
+  { caption = { "utl-manager.col-stat-utilization" }, width = 140, desc_first = true,
+    sort = function(item) return item.utilization end },
 }
 
 function Tab.build(parent)
@@ -37,12 +51,15 @@ function Tab.build(parent)
   columns.style.horizontal_spacing = 8
   columns.style.vertically_stretchable = true
   local left = columns.add({ type = "flow", direction = "vertical" })
-  left.style.width = 430
+  -- Stationsliste: Name + vier Zahlen ohne abgeschnittene Köpfe; zusammen mit der Zugliste rechts
+  -- höchstens so breit wie der Manager-Inhalt (880)
+  left.style.width = 460
   left.style.vertically_stretchable = true
   local right = columns.add({ type = "flow", direction = "vertical" })
   right.style.horizontally_stretchable = true
   right.style.vertically_stretchable = true
-  return { summary = summary, goods = List.build(left, GOODS), trains = List.build(right, TRAINS) }
+  return { summary = summary, goods = List.build(left, GOODS), stations = List.build(left, STATIONS),
+    trains = List.build(right, TRAINS) }
 end
 
 local function fill_good(row, item)
@@ -54,6 +71,14 @@ local function fill_good(row, item)
   List.cell(row, GOODS[2].width, { type = "label", caption = flib_format.number(item.ten) })
   List.cell(row, GOODS[3].width, { type = "label", caption = flib_format.number(item.hour) })
   List.cell(row, GOODS[4].width, { type = "label", caption = flib_format.number(math.floor(item.hour / 60 + 0.5)) })
+end
+
+local function fill_station(row, item)
+  List.station_label(row, STATIONS[1].width, item.name, item.station.stop)
+  local stats = item.stats
+  for i, field in ipairs({ "sent_ten", "sent_hour", "received_ten", "received_hour" }) do
+    List.cell(row, STATIONS[i + 1].width, { type = "label", caption = flib_format.number(stats[field]) })
+  end
 end
 
 local function fill_train(row, item)
@@ -97,6 +122,24 @@ function Tab.refresh(refs, manager)
     if a.hour ~= b.hour then return a.hour > b.hour end
     return a.key < b.key
   end)
+  -- Stationen, die in der letzten Stunde etwas abgegeben oder bekommen haben
+  local stations = {}
+  for unit in pairs(stats.stations) do
+    local station = Registry.get(unit)
+    local stop = station and station.stop
+    local name = stop and stop.valid and stop.backer_name
+    if name and Filter.station(manager, station)
+      and (search == "" or string.find(string.lower(name), search, 1, true)) then
+      local numbers = Statistics.station(unit)
+      if numbers then stations[#stations + 1] = { station = station, name = name, stats = numbers } end
+    end
+  end
+  table.sort(stations, function(a, b)
+    local ta = a.stats.sent_hour + a.stats.received_hour
+    local tb = b.stats.sent_hour + b.stats.received_hour
+    if ta ~= tb then return ta > tb end
+    return a.station.unit < b.station.unit
+  end)
   -- Züge: alle bekannten (schon einmal im Depot) des eigenen Teams auf der gewählten Oberfläche
   local trains = {}
   for id, home in pairs(storage.trains.home) do
@@ -113,8 +156,9 @@ function Tab.refresh(refs, manager)
     return a.train.id < b.train.id
   end)
   refs.summary.caption = { "utl-manager.stat-summary", deliveries, Widgets.duration(game.tick - stats.since) }
-  List.sync(refs.goods, goods_list, fill_good)
-  List.sync(refs.trains, trains, fill_train)
+  List.sync(refs.goods, goods_list, fill_good, GOODS)
+  List.sync(refs.stations, stations, fill_station, STATIONS)
+  List.sync(refs.trains, trains, fill_train, TRAINS)
 end
 
 return Tab

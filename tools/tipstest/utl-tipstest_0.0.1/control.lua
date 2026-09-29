@@ -29,6 +29,15 @@ script.on_nth_tick(30, function(e)
     if t.station and t.station.backer_name == "Abnehmer 2" then seen.second = true end
     if t.station and t.station.backer_name == "Depot" and t.state == defines.train_state.wait_station then seen.depot = true end
   end
+  -- Greift ein Greifarm am Abnehmer (links) Kohle? Die käme aus einer Lok, die zu nah steht.
+  if not seen.coal_grab then
+    for _, ins in pairs(game.surfaces[1].find_entities_filtered({ type = "inserter", area = { { -42, -14 }, { -15, 16 } } })) do
+      if ins.held_stack.valid_for_read and ins.held_stack.name == "coal" then
+        seen.coal_grab = true
+        log(("[TIPS] %s erstes KOHLE GEGRIFFEN am Greifarm x=%.1f nach %d s"):format(scene, ins.position.x, (e.tick - 30) / 60))
+      end
+    end
+  end
   if e.tick == 1500 or e.tick == 3000 then
     for _, t in pairs(game.train_manager.get_trains({})) do
       local c = {}

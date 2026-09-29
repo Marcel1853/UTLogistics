@@ -37,10 +37,10 @@ end
 local function bump(counts, key, field)
   local entry = counts[key]
   if not entry then
-    entry = { total = 0, free = 0, busy = 0, deliveries = 0, low_fuel = 0, no_path = 0, borrowed = 0, lent = 0 }
+    entry = { total = 0, free = 0, busy = 0, deliveries = 0, low_fuel = 0, no_fuel = 0, no_path = 0, borrowed = 0, lent = 0 }
     counts[key] = entry
   end
-  entry[field] = entry[field] + 1
+  entry[field] = (entry[field] or 0) + 1 -- „or 0“: Zählungen aus älteren Spielständen
 end
 
 local function count_train(counts, id, home)
@@ -66,6 +66,7 @@ local function count_train(counts, id, home)
     end
   end
   if Fuel.is_low(train) then bump(counts, key, "low_fuel") end
+  if Fuel.is_empty(train) then bump(counts, key, "no_fuel") end
   if train.state == defines.train_state.no_path then bump(counts, key, "no_path") end
 end
 
@@ -107,7 +108,7 @@ function Census.step()
   census.cursor = id
 end
 
-local ZERO = { total = 0, free = 0, busy = 0, deliveries = 0, low_fuel = 0, no_path = 0, borrowed = 0, lent = 0 }
+local ZERO = { total = 0, free = 0, busy = 0, deliveries = 0, low_fuel = 0, no_fuel = 0, no_path = 0, borrowed = 0, lent = 0 }
 
 --- Zugzahlen eines Netzes aus der letzten vollständigen Runde (nie nil).
 function Census.net(place, name)

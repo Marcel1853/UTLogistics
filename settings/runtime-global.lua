@@ -65,6 +65,16 @@ data:extend({
     order = "c-a",
   },
   {
+    -- Mindest-Treibstoff: darunter bleibt ein Zug im Depot (Warnung), sofern er nicht tanken kann
+    type = "int-setting",
+    name = "utl-fuel-minimum",
+    setting_type = "runtime-global",
+    default_value = 10,
+    minimum_value = 0,
+    maximum_value = 100,
+    order = "c-b",
+  },
+  {
     type = "int-setting",
     name = "utl-alert-no-train-minutes",
     setting_type = "runtime-global",

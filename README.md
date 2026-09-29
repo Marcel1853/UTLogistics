@@ -154,8 +154,10 @@ More, with examples: [wiki – Mixed providers and job output](https://github.co
 
 If **any** locomotive is below **40 %** (map setting “Refuel below (%)”), the train visits the nearest
 fitting **fuel station** – before its next job, after unloading or from the depot – and waits until
-all locomotives are full or nothing changed for 30 s. Without a free fuel station a low train waits
-in the depot; a network with **no** UTL fuel station at all refuels your way (interrupts, by hand).
+all locomotives are full or nothing changed for 30 s. If none is free or reachable, a low train runs
+anyway – only below the **minimum fuel** (map setting, 10 %) it stays in the depot, with the alert
+“fuel missing” and the signal “trains out of fuel” at the depot output. A network with **no** UTL
+fuel station at all refuels your way (interrupts, by hand).
 Min./max. train length on fuel stations separates small and large trains.
 
 ## Cleanup
@@ -192,10 +194,24 @@ shows it.
 
 Outputs the state of a UTL network as circuit signals. In its window pick the network (optionally
 with its linked networks) and the mode: **stock** (what providers offer), **storage stock** (what is
-in storage stations), **shortage** (what requesters need and nobody offers) or **trains** (total,
+in storage stations), **demand** (what requesters request), **shortage** (what requesters need and nobody offers) or **trains** (total,
 free, on the way, deliveries, low on fuel, without path, trains from linked networks helping out and own trains working elsewhere). What the signals do is up to your own
 wiring – a lamp, a display, or in Space Age the shortage to a cargo landing pad (“set requests”).
 UTL never controls platforms or pads itself.
+
+## Cargo Ships
+
+*Only with the [Cargo Ships](https://mods.factorio.com/mod/cargo-ships) mod. New in 0.0.9.*
+
+Ports become UTL stations, and ships run deliveries like trains. With Cargo Ships there is the
+**UTL port** (research “Unified Train Logistics”) – a port with built-in UTL logic, like the UTL train
+stop. A normal port works too, with a UTL station combinator next to it. Ports and train stops may
+share one UTL network: UTL only sends a vehicle that can reach both provider and requester – ships
+to ports, trains to train stops. Ships need their own depot (a port with the depot role).
+
+The **“Blueprint: rail ↔ waterway”** button in the shortcut bar swaps, in the blueprint you hold
+(library blueprints too), rails ↔ waterways, signals ↔ buoys and train stops ↔ ports – a second
+click swaps back. Waterways can still only be built on water.
 
 ## Depots and train length
 

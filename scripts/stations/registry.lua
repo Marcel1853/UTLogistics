@@ -81,7 +81,7 @@ local function wired_stop(combinator)
     if connector then
       for _, connection in pairs(connector.connections) do
         local owner = connection.target.owner
-        if owner and owner.valid and owner.type == "train-stop" and owner.name ~= C.train_stop then return owner end
+        if owner and owner.valid and owner.type == "train-stop" and not C.utl_stops[owner.name] then return owner end
       end
     end
   end
@@ -143,7 +143,7 @@ function Registry.on_built(entity)
   State.ensure() -- Bau-Events können vor UTLs on_init kommen (Szenario-Script)
   if not (entity and entity.valid) then return nil end
   local name = entity.name
-  if name == C.train_stop then
+  if C.utl_stops[name] then
     return Registry.add_utl_stop(entity)
   elseif name == C.station_combinator then
     return Registry.add_combinator(entity)

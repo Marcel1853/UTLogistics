@@ -1,7 +1,9 @@
 --- Auftrags-Ausgabe: Neben jeder Station steht ein kleiner Konstant-Kombinator
 --- (`utl-station-output`), an dem die laufenden Aufträge anliegen:
 ---   * beim Anbieter positiv – so viel soll hier geladen werden,
----   * beim Abnehmer negativ – so viel kommt hier an.
+---   * beim Abnehmer negativ – so viel kommt hier an,
+---   * „Züge unterwegs hierher“: Lieferzüge auf dem Weg zu dieser Station,
+---   * am Depot steht stattdessen die Depot-Ausgabe (`utl-depot-output`, stations/depot-output.lua).
 --- Damit lassen sich Filter-Greifarme, Pumpen und Anzeigen schalten. Bei Flüssigkeiten ist das
 --- der einzige Weg, die richtige Pumpe zu öffnen (Wagen haben dort keine Filter).
 ---
@@ -12,6 +14,7 @@ local Config = require("scripts.core.config")
 local Registry = require("scripts.stations.registry")
 local Util = require("scripts.lib.util")
 local Unlocks = require("scripts.core.unlocks")
+local DepotOutput = require("scripts.stations.depot-output")
 
 local Output = {}
 
@@ -41,10 +44,17 @@ local function place_for(stop)
 end
 
 --- Ausgabe einer Station holen oder anlegen. nil, wenn die Station keine Haltestelle hat oder
---- die Ausgabe abgeschaltet ist.
+--- die Ausgabe abgeschaltet ist. Depots bekommen die Depot-Ausgabe; wechselt die Rolle, wird das
+--- Bauteil getauscht (Kabel daran gehen dabei verloren).
 function Output.ensure(station)
+  local name = station.config.roles.depot and C.depot_output or C.station_output
+  local other = name == C.depot_output and C.station_output or C.depot_output
   local existing = station.output
-  if existing and existing.valid then return existing end
+  if existing and existing.valid then
+    if existing.name == name then return existing end
+    existing.destroy()
+  end
+  station.output = nil
   local stop = station.stop
   if not (stop and stop.valid and station.config.output) then return nil end
 
@@ -53,15 +63,19 @@ function Output.ensure(station)
   for _, position in ipairs(place_for(stop)) do
     local area = { { position.x - 0.6, position.y - 0.6 }, { position.x + 0.6, position.y + 0.6 } }
     -- Schon vorhanden (Spielstand, Klon) oder als Geist aus einer Blaupause?
-    output = surface.find_entities_filtered({ area = area, name = C.station_output })[1]
+    output = surface.find_entities_filtered({ area = area, name = name })[1]
     if not output then
-      for _, ghost in pairs(surface.find_entities_filtered({ area = area, ghost_name = C.station_output })) do
-        local _, revived = ghost.revive({ raise_revive = false })
-        output = revived or output
+      for _, ghost in pairs(surface.find_entities_filtered({ area = area, ghost_name = { name, other } })) do
+        if ghost.ghost_name == name then
+          local _, revived = ghost.revive({ raise_revive = false })
+          output = revived or output
+        else
+          ghost.destroy() -- Geist der anderen Ausgabe (Rolle seit der Blaupause geändert)
+        end
       end
     end
     output = output or surface.create_entity({
-      name = C.station_output, position = position, force = stop.force, raise_built = false,
+      name = name, position = position, force = stop.force, raise_built = false,
     })
     if output then break end
   end
@@ -80,8 +94,22 @@ function Output.destroy(station)
   if output and output.valid then output.destroy() end
 end
 
---- Aufträge einer Station als Signale schreiben.
-function Output.write(station)
+--- Lieferzüge, die gerade zu einer Station fahren: { [Station] = Anzahl } – zum Anbieter während
+--- der Anfahrt, zum Abnehmer nach dem Laden. Ein Durchlauf je Heartbeat, nur wenn es etwas zu
+--- schreiben gibt.
+local function heading_counts()
+  local counts = {}
+  for _, delivery in pairs(storage.deliveries.active) do
+    local unit = delivery.state == "to_provider" and delivery.provider
+      or delivery.state == "to_requester" and delivery.requester
+    if unit then counts[unit] = (counts[unit] or 0) + 1 end
+  end
+  return counts
+end
+
+--- Aufträge einer Station als Signale schreiben. `heading` = heading_counts(), `depots` =
+--- DepotOutput.cache() (sonst neu gezählt).
+function Output.write(station, heading, depots)
   local output = Output.ensure(station)
   if not output then return end
   local behavior = output.get_or_create_control_behavior()
@@ -109,6 +137,11 @@ function Output.write(station)
   local deliveries = storage.deliveries
   for key, amount in pairs(deliveries.outgoing[station.unit] or {}) do put(key, amount) end
   for key, amount in pairs(deliveries.incoming[station.unit] or {}) do put(key, -amount) end
+  if station.config.roles.depot then
+    DepotOutput.write(station, put_signal, depots)
+    return
+  end
+  put_signal("utl-trains-incoming", (heading or heading_counts())[station.unit] or 0)
 
   -- Solange ein Lieferzug hier steht: seine Kennzahlen dazu (wie bei LTN).
   local train = deliveries.at_station[station.unit]
@@ -134,11 +167,18 @@ end
 function Output.step()
   if not Config.get().station_output then return end
   local dirty = storage.deliveries.output_dirty
+  DepotOutput.scan(Output.mark)
+  if next(dirty) == nil then return end
+  local heading = heading_counts()
+  local depots = nil -- erst zählen, wenn ein Depot dran ist
   local done = 0
   for unit in pairs(dirty) do
     dirty[unit] = nil
     local station = Registry.get(unit)
-    if station and Unlocks.loading(Unlocks.force_of(station)) then Output.write(station) end
+    if station and Unlocks.loading(Unlocks.force_of(station)) then
+      if station.config.roles.depot and not depots then depots = DepotOutput.cache() end
+      Output.write(station, heading, depots)
+    end
     done = done + 1
     if done >= PER_TICK then return end
   end

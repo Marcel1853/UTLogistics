@@ -32,7 +32,8 @@ return {
   combinator = scene({ vanilla = true, SIMPLE, COMBINATOR_SIGNS, "train(-8, 150)",
     window('remote.call("utl", "open_station", player.index, r_unit, nil, true)') }),
   -- alle Rollen: Depot, Anbieter, Abnehmer, Tankstelle, Cleanup
-  roles = scene({ SIMPLE, FUEL, ROLES, ROLE_SIGNS, FUEL_SIGN, signs({ { 5, -4, "cleanup", CLEANUP_ITEM } }),
+  roles = scene({ SIMPLE, FUEL, ROLES, ROLE_SIGNS, FUEL_SIGN, signs({ { 5, -4, "cleanup", CLEANUP_ITEM },
+    { -13, -6, "roles-storage", '{ type = "item", name = "steel-chest" }' } }),
     "train(-8, 8)", "show()" }),
   -- Zielbestand und zwei Waren in einem Zug
   requests = scene({ REQUESTS, signs({ { -16.5, -4.5, "requests-target", CLEANUP_ITEM } }),
@@ -75,8 +76,9 @@ if not game.simulation then
     script.on_nth_tick(600, nil)
   end)
 end
-]], signs({ { -7.5, -9.5, "network-combinator", '{ type = "item", name = "utl-network-combinator" }' } }),
-    "train(-8, 150)", window("player.opened = readout") }),
+]], signs({ { -7.5, -9.5, "network-combinator", '{ type = "item", name = "utl-network-combinator" }' },
+    { -16.5, -4.5, "network-combinator-requester", '{ type = "item", name = "copper-plate" }' } }),
+    "train(-8, 150)", window('remote.call("utl", "open_readout", player.index, readout.unit_number)') }),
   -- Einstellungen vom Abnehmer auf „Abnehmer 2“ kopieren (einmal, ohne Zug), danach dessen Fenster
   copy = scene({ SIMPLE, COPY, signs({ { -9, -4, "copy", '{ type = "item", name = "blueprint" }' } }), [[
 show({

@@ -1,5 +1,6 @@
 local W = defines.wire_connector_id
 local Builder = require("__UTLogistics__/scenarios/UTL-Lasttest/builder")
+local Rounds = require("rounds")
 local results = {}
 local function check(name, ok, info) results[#results+1] = (ok and "PASS " or "FAIL ") .. name .. (info and (" -- " .. info) or "") end
 local st = {}
@@ -103,6 +104,9 @@ script.on_nth_tick(10, function(e)
       and v["item|stone|normal"] == 500, serpent.line(v))
     v = values({ mode = "storage" })
     check("R26 lagerbestand: was im lager liegt", v["item|stone|normal"] == 700 and v["item|iron-plate|normal"] == nil,
+      serpent.line(v))
+    v = values({ mode = "demand" })
+    check("R26 bedarf: was abnehmer anfordern", v["item|copper-plate|normal"] == 1500 and v["item|iron-plate|normal"] == nil,
       serpent.line(v))
     v = values({ mode = "shortage" })
     check("R26 fehlmenge: bedarf ohne angebot", v["item|copper-plate|normal"] == 1500 and v["item|iron-plate|normal"] == nil,
@@ -222,12 +226,41 @@ script.on_nth_tick(10, function(e)
       check("R28 statistik: eisen im durchsatz der letzten stunde", iron ~= nil and iron.hour > 0, serpent.line(iron))
       check("R28 statistik: testzug mit lieferungen und auslastung", tr ~= nil and tr.deliveries >= 1 and tr.utilization > 0,
         serpent.line(tr))
+      -- je Station: was abgegeben wurde, kam auch an (Summen gleich, beide > 0)
+      local sent, received = 0, 0
+      for _, numbers in pairs(stats.stations) do
+        sent, received = sent + numbers.sent_hour, received + numbers.received_hour
+      end
+      check("R28 statistik je station: abgegeben = bekommen", sent > 0 and sent == received,
+        "abgegeben " .. sent .. ", bekommen " .. received)
       build_wait_test()
       build_home_test()
+      st.r30 = { done = false }
     end
     watch_wait_test()
     watch_home_test()
-    if (st.r27.done and st.r29.done) or e.tick >= 199900 then
+    -- R31/R32 erst nach R29 (das schaltet „direkt der nächste Auftrag“ ab)
+    if st.r29.done and not st.r31 then st.r31 = Rounds.build(check) end
+    local r31_done = st.r31 ~= nil and Rounds.watch(st.r31, check)
+    -- R30 Depot-Ausgabe: steht der Testzug in einem Depot (es gibt mehrere „UTL-D“), zeigt sie ihn
+    -- und die freien Züge
+    local r30_stop = st.train and st.train.valid and st.train.station
+    if not st.r30.done and r30_stop and st.d.valid and r30_stop.backer_name == st.d.backer_name then
+      local found = r30_stop.surface.find_entities_filtered{ name = "utl-depot-output", position = r30_stop.position, radius = 4 }[1]
+      local section = found and found.get_control_behavior().get_section(1)
+      local out = {}
+      for _, filter in pairs(section and section.filters or {}) do
+        if filter.value then out[filter.value.name] = filter.min end
+      end
+      if out["utl-train-id"] == st.train.id and (out["utl-trains-free"] or 0) >= 1 then
+        st.r30.done = true
+        check("R30 depot-ausgabe: zug im depot und freie züge", true, serpent.line(out))
+      end
+      st.r30.last = out
+    end
+    if (st.r27.done and st.r29.done and st.r30.done and r31_done) or e.tick >= 199900 then
+      if not st.r30.done then check("R30 depot-ausgabe: zug im depot und freie züge", false, serpent.line(st.r30.last)) end
+      if not r31_done then check("R31/R32 anschlussfahrt und lager", false, "zeit abgelaufen") end
       if not st.r27.done then check("R27 wartezeit: die ältere anfrage bekommt den zug", false, "zeit abgelaufen") end
       if not st.r29.done then check("R29 depot-heimfahrt", false, "zeit abgelaufen, " .. st.r29.finished .. " fertig") end
       st.finished = true
@@ -1489,11 +1522,14 @@ function train_test_step()
         if entry.requester == st.ra.unit_number then d = entry end
       end
       local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
+      -- „Züge unterwegs hierher“: am Anbieter während der Anfahrt, am Abnehmer nach dem Laden
+      if d and d.state == "to_provider" and output_of(st.pa)["utl-trains-incoming"] == 1 then r.seen_in_p = true end
+      if d and d.state == "to_requester" and output_of(st.ra)["utl-trains-incoming"] == 1 then r.seen_in_r = true end
       if d and d.state == "loading" and not r.seen_load then
         local out = output_of(st.pa)
         r.seen_load = true
-        check("R23 auftrags-ausgabe am anbieter: zug lädt", out["utl-loading"] == 1 and out["utl-unloading"] == nil,
-          serpent.line(out))
+        check("R23 auftrags-ausgabe am anbieter: zug lädt", out["utl-loading"] == 1 and out["utl-unloading"] == nil
+          and out["utl-trains-incoming"] == nil, serpent.line(out))
         if inv then inv.insert{ name = "iron-plate", count = 500 } end
       elseif d and d.state == "unloading" and not r.seen_unload then
         local out = output_of(st.ra)
@@ -1504,6 +1540,8 @@ function train_test_step()
         if inv then inv.clear() end
       end
       if r.seen_load and r.seen_unload then
+        check("R23 züge unterwegs hierher: anbieter und abnehmer", r.seen_in_p and r.seen_in_r,
+          "anbieter " .. tostring(r.seen_in_p) .. ", abnehmer " .. tostring(r.seen_in_r))
         -- Runde 24: Lager
         st.r24 = { phase = "setup" }
         st.round = 24
