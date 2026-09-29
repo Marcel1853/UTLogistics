@@ -36,16 +36,27 @@ function Fuel.is_low(train)
   return threshold > 0 and Fuel.lowest(train) < threshold / 100
 end
 
+--- Unter dem Mindest-Treibstoff (Map-Einstellung, Standard 10 %): Ohne erreichbare, freie
+--- Tankstelle fährt der Zug keinen Auftrag mehr, er bleibt im Depot (Warnung „Treibstoff fehlt“).
+function Fuel.is_empty(train)
+  local minimum = storage.cfg.fuel_minimum or 0
+  return minimum > 0 and Fuel.lowest(train) < minimum / 100
+end
+
 --- Passende Tankstelle, falls der Zug knapp ist; sonst nil.
 function Fuel.stop_if_low(train, network)
   if not Fuel.is_low(train) then return nil end
   return ServiceStops.find(train, network, "fuel")
 end
 
---- Muss der Zug vor einem Auftrag tanken? Nur wenn er knapp ist UND es im Netzwerk Tankstellen
---- gibt – wer ohne UTL-Tankstellen spielt (eigene Interrupts, Hand), dessen Züge fahren normal.
-function Fuel.needs_station(train, network)
-  return Fuel.is_low(train) and ServiceStops.exists(network, "fuel", train.front_stock)
+--- Muss der Zug vor einem Auftrag tanken? Nur wenn er knapp ist UND es im Netzwerk eine Tankstelle
+--- gibt, die er erreicht (`from_stop` = Depot/Haltestelle, an der er steht) – wer ohne
+--- UTL-Tankstellen spielt (eigene Interrupts, Hand), dessen Züge fahren normal. Ohne `from_stop`
+--- zählt jede Tankstelle im Netzwerk.
+function Fuel.needs_station(train, network, from_stop)
+  if not Fuel.is_low(train) then return false end
+  if from_stop then return ServiceStops.reachable(train, from_stop, network, "fuel") end
+  return ServiceStops.exists(network, "fuel", train.front_stock)
 end
 
 return Fuel

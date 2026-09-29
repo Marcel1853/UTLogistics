@@ -78,21 +78,21 @@ und möchte ihn später veröffentlichen.
 
 Tipp: Mit **Shift + Rechtsklick** auf eine fertige Station und **Shift + Linksklick** auf
 eine andere überträgst du alle UTL-Einstellungen (wie bei Vanilla-Maschinen; Haltestelle ↔
-Haltestelle, Combinator ↔ Combinator). **Blaupausen** sowie Strg + C / Strg + V nehmen die
+Haltestelle, Kombinator ↔ Kombinator). **Blaupausen** sowie Strg + C / Strg + V nehmen die
 Einstellungen ebenfalls mit.
 
 ---
 
 ## Zwei Bauarten, gleiche Funktion
 
-| | UTL-Haltestelle | UTL-Stations-Combinator |
+| | UTL-Haltestelle | UTL-Stations-Kombinator |
 |---|---|---|
 | Aufbau | ersetzt die normale Haltestelle (lässt sich direkt darüberbauen) | gehört zu einer normalen Haltestelle: **Ausgang per Kabel** (rot oder grün) mit der Haltestelle verbinden |
-| Kabel | Kisten an die **Haltestelle** | Kisten an den **Eingang**, Haltestelle an den **Ausgang** des Combinators |
+| Kabel | Kisten an die **Haltestelle** | Kisten an den **Eingang**, Haltestelle an den **Ausgang** des Kombinators |
 | Fenster | UTL-Panel links neben dem Haltestellenfenster, Reiter „Station“ und „Werte“ | eigenes Fenster |
 | Strom | nein | nein |
 
-Gut für bestehende Bahnhöfe: Combinator danebenstellen, Ausgang mit der Haltestelle verkabeln, Kisten an den Eingang – fertig.
+Gut für bestehende Bahnhöfe: Kombinator danebenstellen, Ausgang mit der Haltestelle verkabeln, Kisten an den Eingang – fertig.
 
 ## Rollen
 
@@ -179,6 +179,8 @@ Mehr, mit Beispielen: [Wiki – Gemischte Anbieter und Auftrags-Ausgabe](https:/
 - Ein Schienen-Wegpunkt vor jeder Haltestelle sorgt dafür, dass der Zug genau diese anfährt, auch
   wenn mehrere gleich heißen.
 - Beim Anbieter wartet der Zug, bis die bestellte Menge geladen ist, beim Abnehmer, bis er leer ist.
+- Anfragen gleicher Priorität kommen **der Reihe nach** dran – die älteste zuerst, so wartet kein
+  Abnehmer ewig.
 - Auswahl: Anbieter mit höchster Priorität und Menge, dann ein freier, naher Zug, der möglichst viel
   auf einmal mitnimmt; die Erreichbarkeit prüft die Pfadsuche. Reservierungen verhindern doppelte
   Fahrten.
@@ -190,8 +192,10 @@ Mehr, mit Beispielen: [Wiki – Gemischte Anbieter und Auftrags-Ausgabe](https:/
 
 Liegt **eine** Lok unter **40 %** (Map-Einstellung „Tanken unter (%)“), fährt der Zug zur nächsten
 passenden **Tankstelle** – vor dem nächsten Auftrag, nach dem Entladen oder aus dem Depot – und
-wartet, bis alle Loks voll sind oder sich 30 s nichts tut. Ist keine frei, wartet ein knapper Zug im
-Depot; ein Netz **ganz ohne** UTL-Tankstelle tankt auf deine Art (Interrupt, von Hand). Min./max.
+wartet, bis alle Loks voll sind oder sich 30 s nichts tut. Ist keine frei oder keine erreichbar, fährt
+ein knapper Zug trotzdem – erst unter dem **Mindest-Treibstoff** (Map-Einstellung, 10 %) bleibt er im
+Depot, mit der Warnung „Treibstoff fehlt“ und dem Signal „Züge ohne Treibstoff“ an der Depot-Ausgabe.
+Ein Netz **ganz ohne** UTL-Tankstelle tankt auf deine Art (Interrupt, von Hand). Min./max.
 Zuglänge an Tankstellen trennt kleine und große Züge.
 
 ## Cleanup (Restladung)
@@ -223,6 +227,32 @@ Umlade-Greifarm → Kiste → Lade-Greifarm. Die Auftrags-Ausgabe an Entlade- un
 verdrahten: Laden **[utl-loading] > 0**, Entladen **[utl-loading] = 0**. Das Szenario „UTL-Lager“
 zeigt es.
 
+## Netz-Kombinator
+
+*Braucht die Forschung „UTL: Netz-Kombinator“. Neu in 0.0.9.*
+
+Gibt den Zustand eines UTL-Netzes als Schaltungssignale aus. Im Fenster wählst du das Netz (auf
+Wunsch mit den verbundenen Netzen) und den Modus: **Bestand** (was Anbieter anbieten),
+**Lagerbestand** (was in Lagern liegt), **Bedarf** (was Abnehmer anfordern), **Fehlmenge** (was Abnehmer brauchen und niemand anbietet)
+oder **Züge** (gesamt, frei, unterwegs, Lieferungen, knapp an Treibstoff, ohne Weg, Züge aus verbundenen Netzen, die aushelfen, und eigene Züge, die anderswo fahren). Was die Signale
+bewirken, verdrahtest du selbst – eine Lampe, eine Anzeige oder in Space Age die Fehlmenge an eine
+Frachtlandeplattform („Anforderungen setzen“). UTL steuert Plattformen nie selbst.
+
+## Cargo Ships
+
+*Nur mit der Mod [Cargo Ships](https://mods.factorio.com/mod/cargo-ships). Neu in 0.0.9.*
+
+Häfen werden zu UTL-Stationen, Schiffe fahren Lieferungen wie Züge. Mit Cargo Ships gibt es den
+**UTL-Hafen** (Forschung „Unified Train Logistics“) – ein Hafen mit eingebauter UTL-Logik, wie die
+UTL-Haltestelle. Ein normaler Hafen geht auch, mit einem UTL-Stations-Kombinator daneben. Häfen und
+Haltestellen dürfen im selben UTL-Netz liegen: UTL schickt nur, wer Anbieter und Abnehmer auch
+erreicht – Schiffe also zu Häfen, Züge zu Haltestellen. Schiffe brauchen ein eigenes Depot (ein
+Hafen mit der Rolle Depot).
+
+Der Knopf **„Blaupause: Gleis ↔ Wasserweg“** in der Shortcut-Leiste tauscht in der Blaupause in der
+Hand (auch aus der Bibliothek) Gleise ↔ Wasserwege, Signale ↔ Bojen und Haltestellen ↔ Häfen – ein
+zweiter Klick tauscht zurück. Gebaut werden Wasserwege weiterhin nur auf Wasser.
+
 ## Depots und Zuglänge
 
 Freie Züge warten **leer** an Haltestellen mit der Rolle **Depot**. **Jede** Depot-Haltestelle
@@ -240,7 +270,8 @@ er stehen und ist trotzdem verfügbar.
 
 Öffnen mit dem **Lok-Knopf** in der Shortcut-Leiste oder **Strg + Umschalt + U** (oder
 **Strg + Alt + U**). Reiter: **Depots**, **Stationen**, **Netzwerke**, **Inventar** (Klick auf eine Ware
-zeigt Details), **Verlauf** (letzte 100 Lieferungen), **Alarme** (letzte 100), **Einstellungen**. Suche
+zeigt Details), **Verlauf** (letzte 100 Lieferungen), **Statistik** (Durchsatz je Ware über 10 Minuten und die
+letzte Stunde, Auslastung je Zug), **Alarme** (letzte 100), **Einstellungen**. Der Pin-Knopf hält das Fenster offen, lange Listen lassen sich blättern. Suche
 nach Stationsnamen, Klick auf eine Station zeigt sie auf der Karte, Klick auf einen Zug verfolgt ihn.
 Mit Space Age wählt eine Auswahl den Planeten.
 
@@ -252,7 +283,7 @@ Mehr: [Wiki – UTL-Manager und Warnungen](https://github.com/Marcel1853/UTLogis
 ## Map-Einstellungen
 
 Die wichtigsten: **Direkt der nächste Auftrag** (an), **Nur den Auftrag laden** (an),
-**Auftrags-Ausgabe** (an), **UTL-Funktionen brauchen Forschung** (an), **Tanken unter** (40 %),
+**Auftrags-Ausgabe** (an), **UTL-Funktionen brauchen Forschung** (an), **Tanken unter** (40 %), **Mindest-Treibstoff** (10 %),
 **Inaktivität beim Laden / Entladen** (je 30 s, mit der Fracht per **oder** bzw. **und** verknüpft),
 **Nachladen** (aus), **Cleanup darf Inhalt wieder anbieten** (an), **Lager-Stationen erlauben** (an).
 Die Lade-Werte gehen auch im **UTL-Manager, Reiter „Einstellungen“** – mit Teams je Team; Admins

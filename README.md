@@ -142,6 +142,7 @@ More, with examples: [wiki – Mixed providers and job output](https://github.co
   stops share the name.
 - The train waits at the provider until the ordered amount is loaded, at the requester until
   it is empty.
+- Requests of the same priority are served **oldest first**, so no requester is left waiting forever.
 - Selection: highest provider priority and amount, then a free train that carries as much as
   possible in one trip and is close; reachability is checked with the pathfinder.
 - Reservations prevent several trains from being sent for the same demand.
@@ -153,8 +154,10 @@ More, with examples: [wiki – Mixed providers and job output](https://github.co
 
 If **any** locomotive is below **40 %** (map setting “Refuel below (%)”), the train visits the nearest
 fitting **fuel station** – before its next job, after unloading or from the depot – and waits until
-all locomotives are full or nothing changed for 30 s. Without a free fuel station a low train waits
-in the depot; a network with **no** UTL fuel station at all refuels your way (interrupts, by hand).
+all locomotives are full or nothing changed for 30 s. If none is free or reachable, a low train runs
+anyway – only below the **minimum fuel** (map setting, 10 %) it stays in the depot, with the alert
+“fuel missing” and the signal “trains out of fuel” at the depot output. A network with **no** UTL
+fuel station at all refuels your way (interrupts, by hand).
 Min./max. train length on fuel stations separates small and large trains.
 
 ## Cleanup
@@ -185,6 +188,31 @@ transfer inserter → chest → loading inserter. Wire the job output to the unl
 inserters: loading **[utl-loading] > 0**, unloading **[utl-loading] = 0**. Scenario “UTL storage”
 shows it.
 
+## Network combinator
+
+*Needs research: “UTL: Network combinator”. New in 0.0.9.*
+
+Outputs the state of a UTL network as circuit signals. In its window pick the network (optionally
+with its linked networks) and the mode: **stock** (what providers offer), **storage stock** (what is
+in storage stations), **demand** (what requesters request), **shortage** (what requesters need and nobody offers) or **trains** (total,
+free, on the way, deliveries, low on fuel, without path, trains from linked networks helping out and own trains working elsewhere). What the signals do is up to your own
+wiring – a lamp, a display, or in Space Age the shortage to a cargo landing pad (“set requests”).
+UTL never controls platforms or pads itself.
+
+## Cargo Ships
+
+*Only with the [Cargo Ships](https://mods.factorio.com/mod/cargo-ships) mod. New in 0.0.9.*
+
+Ports become UTL stations, and ships run deliveries like trains. With Cargo Ships there is the
+**UTL port** (research “Unified Train Logistics”) – a port with built-in UTL logic, like the UTL train
+stop. A normal port works too, with a UTL station combinator next to it. Ports and train stops may
+share one UTL network: UTL only sends a vehicle that can reach both provider and requester – ships
+to ports, trains to train stops. Ships need their own depot (a port with the depot role).
+
+The **“Blueprint: rail ↔ waterway”** button in the shortcut bar swaps, in the blueprint you hold
+(library blueprints too), rails ↔ waterways, signals ↔ buoys and train stops ↔ ports – a second
+click swaps back. Waterways can still only be built on water.
+
 ## Depots and train length
 
 Free trains wait **empty** at stops with the **Depot** role – **every** depot stop needs the
@@ -198,7 +226,8 @@ and remains available.
 
 Open with the **locomotive button** in the shortcut bar or **Ctrl + Shift + U** (or **Ctrl + Alt + U**).
 Tabs: **Depots**, **Stations**, **Networks**, **Inventory** (click a good for details), **History**
-(last 100 deliveries), **Alerts** (last 100), **Settings**. Search by station name, click a station to
+(last 100 deliveries), **Statistics** (throughput per good over 10 minutes and the last hour,
+utilization per train), **Alerts** (last 100), **Settings**. The pin button keeps the window open; long lists can be paged. Search by station name, click a station to
 see it on the map, click a train to follow it. With Space Age a drop-down picks the planet.
 
 **Alerts** come as regular Factorio alerts in three groups – no suitable train (after 5 minutes),

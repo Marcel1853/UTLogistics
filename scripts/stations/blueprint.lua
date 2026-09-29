@@ -10,7 +10,13 @@ local Paste = require("scripts.stations.settings-paste")
 local Blueprint = {}
 
 local TAG = "utl"
-local NAMES = { [C.train_stop] = true, [C.station_combinator] = true }
+local NAMES = { [C.train_stop] = true, [C.utl_port] = true, [C.station_combinator] = true }
+
+-- Weitere UTL-Bauteile mit eigenem Tag (Netz-Kombinator): [Name] = { tag, fn(entity) → Wert }
+local extra = {}
+function Blueprint.register(name, tag, fn)
+  extra[name] = { tag = tag, fn = fn }
+end
 
 --- Blaupause des Events: Item im Cursor/Bibliothek-Eintrag (2.x: stack oder record).
 local function blueprint_of(event, player)
@@ -43,6 +49,13 @@ function Blueprint.tag(bp, mapping, surface)
       local station = entity and entity.unit_number and Registry.get(entity.unit_number)
       if station then
         bp.set_blueprint_entity_tag(index, TAG, station.config)
+        tagged = tagged + 1
+      end
+    elseif extra[entry.name] then
+      local entity = real_entity(surface, mapping, index, entry)
+      local value = entity and entity.valid and extra[entry.name].fn(entity)
+      if value then
+        bp.set_blueprint_entity_tag(index, extra[entry.name].tag, value)
         tagged = tagged + 1
       end
     end

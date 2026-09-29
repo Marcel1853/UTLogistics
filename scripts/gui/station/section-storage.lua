@@ -2,12 +2,14 @@
 --- „Restladung annehmen“. Unter Mindest fordert das Lager an (bis Höchst), über Mindest bietet es an.
 local Fields = require("scripts.stations.fields")
 local Roles = require("scripts.stations.roles")
+local Util = require("scripts.lib.util")
 
 local Section = {}
 
 local function number_field(parent, value, action, slot, tooltip)
   local field = parent.add({
-    type = "textfield", text = value and tostring(value) or "", numeric = true, allow_decimal = false,
+    -- nicht numeric: Rechnen wie „10*s“ (s = Stapelgröße der Ware) erlaubt
+    type = "textfield", text = value and tostring(value) or "",
     lose_focus_on_confirm = true, clear_and_focus_on_right_click = true, tooltip = tooltip,
     tags = { utl_action = action, slot = slot },
   })
@@ -41,8 +43,8 @@ function Section.build(parent, station)
       elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } },
       tooltip = { "utl-gui.storage-good-tooltip" }, tags = { utl_action = "storage_signal", slot = slot },
     })
-    number_field(grid, limit.min, "storage_min", slot, { "utl-gui.storage-min-tooltip" })
-    number_field(grid, limit.max, "storage_max", slot, { "utl-gui.storage-max-tooltip" })
+    number_field(grid, limit.min, "storage_min", slot, { "", { "utl-gui.storage-min-tooltip" }, "\n", { "utl-gui.expression-tooltip" } })
+    number_field(grid, limit.max, "storage_max", slot, { "", { "utl-gui.storage-max-tooltip" }, "\n", { "utl-gui.expression-tooltip" } })
   end
   inner.add({
     type = "checkbox", caption = { "utl-gui.storage-leftover" }, state = st.accept_leftover == true,
@@ -65,10 +67,10 @@ end
 
 --- Mindest oder Höchst eines Slots (Text aus dem Feld). Liefert true bei gültiger Zahl.
 function Section.set_number(cfg, action, slot, text)
-  local value = tonumber(text)
-  if not value then return false end
   local limit = cfg.storage.limits[slot]
   if not limit then return false end
+  local value = Util.parse_number(text, Util.variables(limit.signal and Util.signal_key(limit.signal)))
+  if not value then return false end
   value = math.max(0, math.floor(value))
   if action == "storage_min" then limit.min = value else limit.max = value end
   return true

@@ -32,7 +32,8 @@ return {
   combinator = scene({ vanilla = true, SIMPLE, COMBINATOR_SIGNS, "train(-8, 150)",
     window('remote.call("utl", "open_station", player.index, r_unit, nil, true)') }),
   -- alle Rollen: Depot, Anbieter, Abnehmer, Tankstelle, Cleanup
-  roles = scene({ SIMPLE, FUEL, ROLES, ROLE_SIGNS, FUEL_SIGN, signs({ { 5, -4, "cleanup", CLEANUP_ITEM } }),
+  roles = scene({ SIMPLE, FUEL, ROLES, ROLE_SIGNS, FUEL_SIGN, signs({ { 5, -4, "cleanup", CLEANUP_ITEM },
+    { -13, -6, "roles-storage", '{ type = "item", name = "steel-chest" }' } }),
     "train(-8, 8)", "show()" }),
   -- Zielbestand und zwei Waren in einem Zug
   requests = scene({ REQUESTS, signs({ { -16.5, -4.5, "requests-target", CLEANUP_ITEM } }),
@@ -52,6 +53,32 @@ return {
   cleanup_return = scene({ SIMPLE, CLEANUP_RETURN, signs({ { 13, 6, "cleanup-return", CLEANUP_ITEM } }),
     "local wagon = train(-8, 150).cargo_wagons[1]; wagon.insert({ name = 'copper-plate', count = 300 }); wagon.insert({ name = 'iron-plate', count = 200 })",
     window('remote.call("utl", "open_station", player.index, c_unit, 2, true)') }),
+  -- Netz-Kombinator, Modus „Fehlmenge“: Der Abnehmer will auch Kupfer, das niemand anbietet –
+  -- der Kombinator gibt es aus, eine Lampe daran leuchtet; danach sein Fenster
+  network_combinator = scene({ SIMPLE, [[
+remote.call("utl", "set_request", r_unit, 2, { type = "item", name = "copper-plate" }, 200)
+readout = s.create_entity({ name = "utl-network-combinator", position = { -8.5, -5.5 }, force = force, raise_built = true })
+remote.call("utl", "configure_readout", readout.unit_number, { network = "default", mode = "shortage" })
+local lamp = s.create_entity({ name = "small-lamp", position = { -6.5, -5.5 }, force = force })
+lamp.always_on = true -- auch tagsüber
+local lamp_cb = lamp.get_or_create_control_behavior()
+lamp_cb.circuit_enable_disable = true
+lamp_cb.circuit_condition = { first_signal = { type = "item", name = "copper-plate" }, comparator = ">", constant = 0 }
+readout.get_wire_connector(W.circuit_red, true).connect_to(lamp.get_wire_connector(W.circuit_red, true))
+s.create_entity({ name = "medium-electric-pole", position = { -7.5, -6.5 }, force = force })
+local lamp_power = s.create_entity({ name = "electric-energy-interface", position = { -9, -8 }, force = force })
+lamp_power.power_production = 100000
+lamp_power.electric_buffer_size = 1000000
+if not game.simulation then
+  -- nur für tools/tipstest: was gibt der Kombinator aus?
+  script.on_nth_tick(600, function()
+    log("[TIPS] network_combinator erstes ausgabe " .. serpent.line((remote.call("utl", "get_readout", readout.unit_number) or {}).values))
+    script.on_nth_tick(600, nil)
+  end)
+end
+]], signs({ { -7.5, -9.5, "network-combinator", '{ type = "item", name = "utl-network-combinator" }' },
+    { -16.5, -4.5, "network-combinator-requester", '{ type = "item", name = "copper-plate" }' } }),
+    "train(-8, 150)", window('remote.call("utl", "open_readout", player.index, readout.unit_number)') }),
   -- Einstellungen vom Abnehmer auf „Abnehmer 2“ kopieren (einmal, ohne Zug), danach dessen Fenster
   copy = scene({ SIMPLE, COPY, signs({ { -9, -4, "copy", '{ type = "item", name = "blueprint" }' } }), [[
 show({

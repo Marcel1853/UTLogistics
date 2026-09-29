@@ -18,6 +18,7 @@ local Unlocks = require("scripts.core.unlocks")
 local TeamConfig = require("scripts.core.team-config")
 local Pending = require("scripts.trains.pending")
 local Output = require("scripts.stations.output")
+local Statistics = require("scripts.deliveries.statistics")
 
 local Deliveries = {}
 
@@ -154,6 +155,17 @@ end
 
 local function remove(delivery, canceled)
   record_history(delivery, canceled)
+  -- Statistik: was kam beim Abnehmer an? (Rest, der noch im Zug ist, zählt nicht)
+  local delivered = nil
+  if not canceled and delivery.state == "unloading" then
+    delivered = {}
+    local train = delivery.train
+    for key, amount in pairs(delivery.manifest) do
+      local left = train.valid and Deliveries.loaded(train, key) or 0
+      delivered[key] = math.max(0, amount - left)
+    end
+  end
+  Statistics.record(delivery, canceled, delivered)
   Filters.clear(delivery)
   Pending.release(delivery.train_id) -- ein vorgemerkter Tankhalt dieser Fahrt fällt weg
   -- Abbruch mitten im Laden: den Zug auch aus der Ausgabe nehmen.
@@ -228,6 +240,7 @@ function Deliveries.on_depart(delivery)
   if delivery.state == "loading" then
     delivery.state = "to_requester"
     train_at(delivery.provider, nil)
+    Output.mark(delivery.requester) -- „Züge unterwegs hierher“ am Abnehmer
     release_provider(delivery)
     reread(delivery.provider)
     -- Weniger geladen als bestellt (Zeitlimit, Wartebedingung von Hand/Interrupt beendet)?

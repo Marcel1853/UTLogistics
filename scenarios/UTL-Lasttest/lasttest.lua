@@ -97,6 +97,28 @@ local function configure(spec)
   end
 end
 
+--- Netz-Kombinatoren beim Start: je Netz einer pro Modus (misst ihre Last mit). Reihe je Netz,
+--- nahe am Startpunkt; die Werte stehen in ihrem Fenster (und per Kabel für eigene Versuche).
+local function place_readouts(built)
+  local surface, start = built.surface, built.start
+  if not start then return end
+  local modes = { "stock", "storage", "shortage", "trains" }
+  storage.readouts_placed = {}
+  for row, net in ipairs(Lasttest.CFG.networks) do
+    for column, mode in ipairs(modes) do
+      local wanted = { start.x + 4 + 2 * column, start.y - 4 - 2 * row }
+      local pos = surface.find_non_colliding_position("utl-network-combinator", wanted, 10, 1)
+      local entity = pos and surface.create_entity({ name = "utl-network-combinator", position = pos, force = "player",
+        raise_built = true })
+      if entity then
+        remote.call("utl", "configure_readout", entity.unit_number, { network = net.name, mode = mode })
+        storage.readouts_placed[#storage.readouts_placed + 1] = entity
+      end
+    end
+  end
+  L(("%d Netz-Kombinatoren gesetzt"):format(#storage.readouts_placed))
+end
+
 --- Karten-Markierung für besondere Bahnhöfe, damit man sie auf der Karte (M) findet.
 local function tag_of(spec)
   if spec.min_length then
@@ -164,6 +186,7 @@ function Lasttest.setup()
       L(("Netz %s ↔ %s: %s"):format(center, net.name, tostring(remote.call("utl", "link_networks", built.surface.index, center, net.name))))
     end
   end
+  place_readouts(built)
   L(("Gleisnetz %s, Aufbau im Tick %d"):format(prebuilt and "aus der Karte" or "selbst gebaut", started))
   local s = built.stats
   L(("gebaut: %d City Blocks (%d × %d), %d Stationen, %d Züge, Nebengleis-Stücke %d (%d fehlgeschlagen), Signale %d (%d fehlgeschlagen), %d Geräte, %d Drähte fehlgeschlagen, %d Großmasten, %d Radare, %d Combinator-Stationen, %d Abstellbahnhöfe, %d × %d Felder")
@@ -248,6 +271,17 @@ function Lasttest.on_nth_tick_60(event)
     L(("min %d: frei %d, Lieferungen %d, Ankünfte Anbieter %d, Abnehmer %d (davon Flüssigkeit %d), Tankstelle %d, Cleanup %d, Lager %d, mit Latch %d, mit Zuglänge %d, Warnungen %d, ohne Treibstoff %d, an Depots wartend %d, Zustände %s")
       :format(event.tick / 3600, remote.call("utl", "idle_train_count"), remote.call("utl", "delivery_count"),
         c.provider, c.requester, c.fluid or 0, c.fuel, c.cleanup, c.storage or 0, c.latch or 0, c.length or 0, #remote.call("utl", "get_alerts"), empty, at_depot, serpent.line(states)))
+    -- Netz-Kombinatoren: wie viele Signale geben sie aus (je Netz: Bestand/Lager/Fehlmenge/Züge)?
+    local parts = {}
+    for _, entity in ipairs(storage.readouts_placed or {}) do
+      local r = entity.valid and remote.call("utl", "get_readout", entity.unit_number) --[[@as table?]]
+      if r then
+        local n = 0
+        for _ in pairs(r.values) do n = n + 1 end
+        parts[#parts + 1] = r.config.network:sub(1, 1) .. "/" .. r.config.mode .. "=" .. n
+      end
+    end
+    if #parts > 0 then L("Netz-Kombinatoren (Signale): " .. table.concat(parts, " ")) end
   end
 end
 

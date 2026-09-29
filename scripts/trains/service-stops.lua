@@ -5,6 +5,7 @@ local Registry = require("scripts.stations.registry")
 local Networks = require("scripts.stations.networks")
 local Pending = require("scripts.trains.pending")
 local Capacity = require("scripts.trains.capacity")
+local Reach = require("scripts.dispatcher.reach")
 
 local ServiceStops = {}
 
@@ -50,6 +51,26 @@ function ServiceStops.exists(network, role, front)
       and (surface == nil or stop.surface_index == surface)
       and (force == nil or stop.force_index == force)
       and Networks.related(Networks.place_of(stop), station.config.network, network) then
+      return true
+    end
+  end
+  return false
+end
+
+--- Wie `exists`, aber nur Stationen, die der Zug von `from_stop` (Depot oder Haltestelle, an der er
+--- steht) aus auch erreicht – belegt oder nicht. Nutzt den Erreichbarkeits-Cache (reach.lua), die
+--- Pfadsuche läuft also je Depot-Name und Station nur einmal. Beispiel: Mit Cargo Ships liegen Häfen
+--- und Haltestellen im selben Netz – eine Hafen-Tankstelle erreicht kein Zug.
+function ServiceStops.reachable(train, from_stop, network, role)
+  local front = train.front_stock
+  if not (front and from_stop and from_stop.valid) then return false end
+  for unit in pairs(set_of(role)) do
+    local station = Registry.get(unit)
+    local stop = station and station.stop
+    if station and station.config.roles[role] and stop and stop.valid
+      and stop.surface_index == front.surface_index and stop.force_index == front.force_index
+      and Networks.related(Networks.place_of(stop), station.config.network, network)
+      and Reach.check(train, from_stop, stop, true) then
       return true
     end
   end

@@ -71,12 +71,19 @@ end
 function StorageReader.apply(station, net, cfg)
   local enabled = storage.cfg.storage_enabled ~= false
   local provide, request, rank = StorageReader.compute(net, cfg, enabled)
-  if same(provide, station.provide) and same(request, station.request) and same(rank, station.provide_rank or {}) then
+  -- Bestand merken (für den Netz-Kombinator, Modus „Lagerbestand“)
+  local stock = {}
+  for key, n in pairs(net) do
+    if n > 0 then stock[key] = n end
+  end
+  if same(provide, station.provide) and same(request, station.request) and same(rank, station.provide_rank or {})
+    and same(stock, station.stock or {}) then
     return
   end
   station.provide, station.provide_count = provide, count(provide)
   station.request, station.request_count = request, count(request)
   station.provide_rank = rank
+  station.stock = stock
   station.version = station.version + 1
   storage.stations.dirty[station.unit] = true
 end

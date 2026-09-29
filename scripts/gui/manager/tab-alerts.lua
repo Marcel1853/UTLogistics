@@ -9,7 +9,7 @@ local Alerts = require("scripts.alerts.alerts")
 local Tab = {}
 
 local COLUMNS = {
-  { caption = { "utl-manager.col-time" }, width = 70 },
+  { caption = { "utl-manager.col-time" }, width = 70, desc_first = true, sort = function(e) return e.tick end },
   { caption = "", width = 32 },
   { caption = { "utl-manager.col-alert" }, width = 560 },
   { caption = { "utl-manager.col-place" }, width = 120 },
@@ -55,7 +55,7 @@ function Tab.refresh(refs, manager)
     if Filter.match(manager, entry.surface, entry.force) then list[#list + 1] = entry end
   end
   refs.count.caption = { "utl-manager.alerts-count", #list }
-  List.sync(refs.rows, list, fill)
+  List.sync(refs.rows, list, fill, COLUMNS)
 end
 
 return Tab

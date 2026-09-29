@@ -26,9 +26,10 @@ local function tick()
   end
 end
 
---- Gibt es gerade etwas zu tun? Ohne Stationen und Lieferungen schläft der Takt.
+--- Gibt es gerade etwas zu tun? Ohne Stationen, Lieferungen und Netz-Kombinatoren schläft der Takt.
 function Heartbeat.is_needed()
   return storage.stations.count > 0 or storage.deliveries.count > 0
+    or (storage.readouts ~= nil and storage.readouts.count > 0)
 end
 
 --- Registriert den Takt passend zu storage. Darf auch in on_load laufen.

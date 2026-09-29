@@ -11,9 +11,12 @@ local Tab = {}
 local COLUMNS = {
   -- zusammen mit der Netzliste links (230) höchstens so breit wie der Manager-Inhalt (880),
   -- Rahmen und Scrollbalken eingerechnet – vorher ragte die Liste rechts aus dem Fenster
-  { caption = { "utl-manager.col-station" }, width = 240 },
+  { caption = { "utl-manager.col-station" }, width = 240, sort = function(entry)
+    local stop = entry.station.stop
+    return stop and stop.valid and string.lower(stop.backer_name) or ""
+  end },
   { caption = { "utl-manager.col-role" }, width = 180 },
-  { caption = { "utl-manager.col-network" }, width = 130 },
+  { caption = { "utl-manager.col-network" }, width = 130, sort = function(entry) return string.lower(entry.network) end },
 }
 
 local ROLE_ORDER = { "storage", "provider", "requester", "depot", "fuel", "cleanup" }
@@ -236,7 +239,7 @@ function Tab.refresh(refs, manager)
     if a.network ~= b.network then return a.network < b.network end
     return a.station.unit < b.station.unit
   end)
-  List.sync(refs.rows, entries, fill)
+  List.sync(refs.rows, entries, fill, COLUMNS)
 end
 
 --- Auswahl in der linken Liste.

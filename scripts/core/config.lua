@@ -14,6 +14,7 @@ Config.KEYS = {
   ["utl-station-batch-size"] = "station_batch_size",
   ["utl-max-deliveries-per-cycle"] = "max_deliveries",
   ["utl-fuel-threshold"] = "fuel_threshold",
+  ["utl-fuel-minimum"] = "fuel_minimum",
   ["utl-chaining"] = "chaining",
   ["utl-wagon-filters"] = "wagon_filters",
   ["utl-station-output"] = "station_output",

@@ -15,7 +15,9 @@ Fields.groups = {
       { key = "max_trains", signal = "utl-max-trains", default = 0, min = 0 },
     },
     toggles = {
-      { key = "output", signal = "utl-station-output", setting = "station_output", research = "utl-loading-control" },
+      -- am Depot heißt derselbe Schalter „Depot-Ausgabe“ (eigenes Bauteil, eigene Signale)
+      { key = "output", signal = "utl-station-output", setting = "station_output", research = "utl-loading-control",
+        depot = { label = "depot-output", signal = "utl-depot-output" } },
     },
   },
   {

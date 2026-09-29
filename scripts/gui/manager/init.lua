@@ -3,6 +3,8 @@ local Events = require("scripts.core.events")
 local Heartbeat = require("scripts.core.heartbeat")
 local C = require("scripts.core.constants")
 local Manager = require("scripts.gui.manager.window")
+local Statistics = require("scripts.deliveries.statistics")
+local List = require("scripts.gui.common.list")
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
 local Filter = require("scripts.gui.manager.surface-filter")
@@ -94,6 +96,20 @@ Events.on(defines.events.on_gui_click, function(event)
     Manager.close(event.player_index)
   elseif action == "refresh" then
     Manager.refresh(event.player_index)
+  elseif action == "pin" then
+    Manager.toggle_pin(manager, player)
+  elseif action == "sort" then
+    local rows = List.rows_of_header(event.element)
+    if rows then
+      List.sort_by(rows, tags.column, tags.desc_first)
+      Manager.refresh(event.player_index)
+    end
+  elseif action == "page" then
+    local rows = List.rows_of_pager_button(event.element)
+    if rows then
+      List.turn(rows, tags.delta or 0)
+      Manager.refresh(event.player_index)
+    end
   elseif action == "toggle_search" then
     Manager.toggle_search(manager)
     Manager.refresh(event.player_index)
@@ -105,6 +121,9 @@ Events.on(defines.events.on_gui_click, function(event)
     if locomotive then remote_view(player, manager, locomotive.surface_index, locomotive.position, locomotive) end
   elseif action == "ware" then
     manager.ware = manager.ware ~= tags.key and tags.key or nil
+    Manager.refresh(event.player_index)
+  elseif action == "reset_statistics" then
+    Statistics.reset()
     Manager.refresh(event.player_index)
   elseif action == "clear_history" then
     storage.history = {}
@@ -186,7 +205,7 @@ end)
 Events.on(defines.events.on_gui_closed, function(event)
   if not Manager.is_window(event.element) then return end
   local manager = storage.managers[event.player_index]
-  if manager and manager.jumping then return end
+  if manager and (manager.jumping or manager.pinned) then return end
   Manager.close(event.player_index)
 end)
 

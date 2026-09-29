@@ -6,12 +6,23 @@ local Filter = require("scripts.gui.manager.surface-filter")
 
 local Tab = {}
 
+--- Summe der Mengen einer Warenliste (zum Sortieren).
+local function total(...)
+  local sum = 0
+  for i = 1, select("#", ...) do
+    for _, amount in pairs(select(i, ...) or {}) do sum = sum + amount end
+  end
+  return sum
+end
+
 local COLUMNS = {
-  { caption = { "utl-manager.col-depot" }, width = 120 },
-  { caption = { "utl-manager.col-route" }, width = 260 },
-  { caption = { "utl-manager.col-runtime" }, width = 70 },
-  { caption = { "utl-manager.col-finished" }, width = 80 },
-  { caption = { "utl-manager.col-cargo" }, width = 160 },
+  { caption = { "utl-manager.col-depot" }, width = 120, sort = function(e) return string.lower(e.depot or "") end },
+  { caption = { "utl-manager.col-route" }, width = 260, sort = function(e) return string.lower(e.from or "") end },
+  { caption = { "utl-manager.col-runtime" }, width = 70, desc_first = true,
+    sort = function(e) return e.finished - e.started end },
+  { caption = { "utl-manager.col-finished" }, width = 80, desc_first = true, sort = function(e) return e.finished end },
+  { caption = { "utl-manager.col-cargo" }, width = 160, desc_first = true,
+    sort = function(e) return total(e.manifest or (e.key and { [e.key] = e.amount })) end },
 }
 
 function Tab.build(parent)
@@ -65,7 +76,7 @@ function Tab.refresh(refs, manager)
   end
   refs.count.caption = { "utl-manager.history-count", #items }
   current = manager
-  List.sync(refs.rows, items, fill)
+  List.sync(refs.rows, items, fill, COLUMNS)
   current = nil
 end
 

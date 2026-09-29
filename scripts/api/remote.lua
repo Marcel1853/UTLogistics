@@ -15,6 +15,12 @@ local Blueprint = require("scripts.stations.blueprint")
 local Perf = require("scripts.core.perf")
 local Window = require("scripts.gui.station.window")
 local Manager = require("scripts.gui.manager.window")
+local Readouts = require("scripts.readout.readouts")
+local ReadoutOutput = require("scripts.readout.output")
+local ReadoutWindow = require("scripts.gui.readout.window")
+local Statistics = require("scripts.deliveries.statistics")
+local Water = require("scripts.compat.cargo-ships")
+local RecipeNotice = require("scripts.gui.notice.recipe-notice")
 local util = require("util")
 
 local function copy(t)
@@ -24,6 +30,70 @@ end
 local interface = {
   station_count = function()
     return storage.stations.count
+  end,
+
+  --- Netz-Kombinator: Einstellungen und zuletzt ausgegebene Signale, nil wenn unbekannt.
+  --- mode: "stock", "storage", "demand", "shortage", "trains".
+  --- { config = { network, mode, star, transit }, values = { [key] = Menge } }
+  get_readout = function(unit)
+    local entry = Readouts.get(unit)
+    if not entry then return nil end
+    return { config = copy(entry.config), values = copy(ReadoutOutput.compute(entry)) }
+  end,
+
+  --- Statistik (Manager-Reiter „Statistik“): { since, deliveries, goods = { [key] = { ten, hour } },
+  --- trains = { [zug] = { deliveries, utilization } }, stations = { [station] = { sent_ten, sent_hour,
+  --- received_ten, received_hour } } } über alle Oberflächen und Teams.
+  get_statistics = function()
+    local stats = Statistics.data()
+    local goods, deliveries = {}, 0
+    for place in pairs(stats.places) do
+      local by_key, count = Statistics.goods(place)
+      deliveries = deliveries + count
+      for key, entry in pairs(by_key) do
+        local sum = goods[key] or { ten = 0, hour = 0 }
+        sum.ten, sum.hour = sum.ten + entry.ten, sum.hour + entry.hour
+        goods[key] = sum
+      end
+    end
+    local trains = {}
+    for id, entry in pairs(stats.trains) do
+      trains[id] = { deliveries = entry.deliveries, utilization = (Statistics.utilization(id)) }
+    end
+    local stations = {}
+    for unit in pairs(stats.stations) do stations[unit] = Statistics.station(unit) end
+    return { since = stats.since, deliveries = deliveries, goods = goods, trains = trains, stations = stations }
+  end,
+
+  --- Fenster eines Netz-Kombinators öffnen (ohne Reichweite, z. B. für Tipps-Szenen).
+  open_readout = function(player_index, unit)
+    local player = game.get_player(player_index)
+    local entry = Readouts.get(unit)
+    if not (player and entry and entry.entity.valid) then return false end
+    ReadoutWindow.open(player, entry)
+    return true
+  end,
+
+  --- Netz-Kombinator einstellen, z. B. { network = "Eisen", mode = "shortage", star = true }.
+  --- Liefert false, wenn es den Kombinator nicht gibt.
+  configure_readout = function(unit, changes)
+    local entry = Readouts.get(unit)
+    if not entry then return false end
+    Readouts.configure(entry, changes)
+    ReadoutOutput.write(entry)
+    return true
+  end,
+
+  --- Cargo Ships: in einer Blaupause (LuaItemStack/LuaRecord) Gleise ↔ Wasserwege, Signale ↔ Bojen,
+  --- Haltestellen ↔ Häfen tauschen (wie der Knopf). Liefert die Zahl getauschter Bauteile oder nil.
+  convert_blueprint_water = function(blueprint)
+    return Water.convert(blueprint)
+  end,
+
+  --- Hinweis-Fenster „Rezepte geändert“ (erscheint sonst nur einmal nach dem Update auf 0.0.9) zeigen.
+  --- Konsole: /c remote.call("utl", "show_recipe_notice", game.player.index)
+  show_recipe_notice = function(player_index)
+    RecipeNotice.show(game.get_player(player_index))
   end,
 
   --- Anzahl freier Züge im Depot und laufender Lieferungen.
@@ -231,6 +301,7 @@ local interface = {
     if player then player.opened = nil end
     Window.close(player_index)
     Manager.close(player_index)
+    ReadoutWindow.close(player_index)
   end,
 }
 

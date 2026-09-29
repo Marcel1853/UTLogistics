@@ -1,4 +1,33 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.9
+Date: 2026-09-29
+  Features:
+    - Network combinator (research "UTL: Network combinator"): outputs the state of a UTL network as signals – stock, storage stock, shortage or trains (total, free, on the way, deliveries, low on fuel, without path, trains from linked networks helping out, own trains working elsewhere). Pick the network in its window, optionally with its linked networks. What the signals do is up to your wiring, e.g. the shortage to a cargo landing pad in Space Age. Settings survive blueprints, copy/paste and cloning.
+    - Tips & tricks: new entry "Network combinator" with a scene.
+    - UTL Manager: new tab "Statistics" – throughput per good (last 10 minutes, last hour, per minute) and utilization per train (time with a job since its first delivery). Recorded only when a delivery ends; a button resets it.
+    - Number fields: "s" stands for the stack size of the good when calculating, e.g. 10*s in the request editor or in the minimum/maximum of a storage (these now allow calculations, too).
+    - UTL Manager: pin button – a pinned manager stays open when you open another window or press E. Lists with more than 200 rows can be paged instead of being cut off.
+    - Network combinator: new mode "Demand" – what requesters request, whether offered or not.
+    - Job output: new signal "Trains on their way here" (delivery trains heading to this station).
+    - Depot output: depots get their own green output instead of the job output – with the train standing here (number, length, locomotives, wagons, low on fuel), the free trains of the depots with this name and the trains on their way here.
+    - UTL Manager: sort columns by clicking the header, click again to reverse.
+    - UTL Manager, "Statistics" tab: throughput per station (given out and received, last 10 minutes and last hour).
+    - Cargo Ships (optional): ports become UTL stations, ships run deliveries like trains. New UTL port (only with Cargo Ships, research "Unified Train Logistics"); a normal port works with a station combinator.
+    - Cargo Ships: button "Blueprint: rail ↔ waterway" – swaps rails ↔ waterways, signals ↔ buoys, train stops ↔ ports in a blueprint (legacy rails excluded).
+    - Minimum fuel (map setting, default 10 %): below it a train takes no more jobs (except with a fuel stop) and stays in the depot – alert "fuel missing", signal "trains out of fuel" at the depot output and the network combinator.
+    - Update notice: after updating to 0.0.9 a window shows the changed recipes once per player, so no factory stalls.
+  Changes:
+    - A low train now runs even if no fuel station is free (before it waited in the depot) – only below the minimum fuel it stays.
+    - Recipes cost more: the UTL train stop also needs steel, iron and copper cable, the station combinator a decider combinator, iron and copper cable, the network combinator advanced circuits, steel and copper cable. The research "UTL: Network combinator" now needs chemical science.
+    - Tips & tricks: entries sorted into groups (basics, special stations, networks, manager), each with an icon; the "Roles" scene also shows the storage, the "Network combinator" scene opens its window and explains why it outputs only copper.
+    - Scenario "UTL examples": network combinator with a lamp at the start.
+    - Requests with the same priority are now served oldest first. Before, the order was random, so with few trains the same requester could lose again and again.
+    - German texts now write "Kombinator" like the game itself (e.g. "UTL-Stations-Kombinator").
+  Bugfixes:
+    - Low trains waited forever in the depot if the only fuel station in the network was one they cannot reach (e.g. a port fuel station).
+    - A train only gets a job if it can reach the provider and the requester (before: only the provider). With separate rail or water networks in one UTL network it would otherwise leave and get stuck without a path.
+    - Tips & tricks: unloading inserters took coal out of the rear locomotive in some scenes.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.8
 Date: 2026-09-28
   Features:

@@ -12,6 +12,7 @@ local Index = require("scripts.dispatcher.index")
 local Reach = require("scripts.dispatcher.reach")
 local Fuel = require("scripts.trains.fuel")
 local Fields = require("scripts.stations.fields")
+local Warn = require("scripts.dispatcher.no-train-alerts")
 
 local Select = {}
 
@@ -84,16 +85,22 @@ local function collect_requests()
         if cfg.roles.storage and need > 0 and need < minimum then minimum = need end
         if need >= minimum then
           list[#list + 1] = { station = station, key = key, need = need, minimum = minimum,
-            priority = cfg.request_priority, storage = cfg.roles.storage }
+            priority = cfg.request_priority, storage = cfg.roles.storage,
+            -- seit wann offen (dieselbe Uhr wie die Warnung „kein Zug“; beim Beliefern zurückgesetzt)
+            since = Warn.waiting_since(unit, key) }
         end
       end
     end
   end
   dispatch.cursor = unit
-  -- höhere Priorität zuerst; bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer)
+  -- höhere Priorität zuerst; bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer),
+  -- dann die älteste Anfrage (sonst gewinnt bei knappen Zügen immer derselbe – Reihenfolge von pairs)
   table.sort(list, function(a, b)
     if a.priority ~= b.priority then return a.priority > b.priority end
-    return (not a.storage) and (b.storage == true)
+    if (a.storage == true) ~= (b.storage == true) then return not a.storage end
+    if a.since ~= b.since then return a.since < b.since end
+    if a.station.unit ~= b.station.unit then return a.station.unit < b.station.unit end
+    return a.key < b.key
   end)
   return list
 end
@@ -256,17 +263,22 @@ local function find_train(request, provider, wanted)
     if not Depot.is_ready(record) then
       Depot.remove(record.id)
     else
-      -- Knapp an Treibstoff (und es gibt Tankstellen): nur mit Tankhalt losschicken. Ist gerade
-      -- keine frei, bleibt der Zug im Depot (regelmäßig neuer Versuch). Ohne Tankstellen im
-      -- Netzwerk fährt er normal.
+      -- Knapp an Treibstoff und eine Tankstelle erreichbar: mit Tankhalt losschicken; ist gerade
+      -- keine frei, fährt er trotzdem. Unter dem Mindest-Treibstoff fährt er nur mit Tankhalt –
+      -- sonst bleibt er im Depot (Warnung aus depot.lua).
       local fuel_stop = nil
       local usable = true
-      if Fuel.needs_station(record.train, record.network) then
+      if Fuel.needs_station(record.train, record.network, record.stop) then
         fuel_stop = Fuel.stop_if_low(record.train, record.network)
-        usable = fuel_stop ~= nil
+        usable = fuel_stop ~= nil or not Fuel.is_empty(record.train)
+      elseif Fuel.is_empty(record.train) then
+        usable = false
       end
       if usable then
+        -- Anbieter UND Abnehmer müssen erreichbar sein: In einem Netz können getrennte Gleis-
+        -- bzw. Wassernetze liegen (Cargo Ships: Häfen und Haltestellen im selben UTL-Netz)
         local reachable = Reach.check(record.train, record.stop, p_stop)
+        if reachable then reachable = Reach.check(record.train, record.stop, request.station.stop) end
         if reachable then return record, best[i].amount, nil, fuel_stop end
         if reachable == nil then return nil, nil, true end -- Such-Budget aufgebraucht: später
       end

@@ -1,4 +1,6 @@
 local W = defines.wire_connector_id
+local Builder = require("__UTLogistics__/scenarios/UTL-Lasttest/builder")
+local Rounds = require("rounds")
 local results = {}
 local function check(name, ok, info) results[#results+1] = (ok and "PASS " or "FAIL ") .. name .. (info and (" -- " .. info) or "") end
 local st = {}
@@ -75,6 +77,50 @@ script.on_nth_tick(10, function(e)
     end
     check("station_count == 2", remote.call("utl","station_count") == 2, tostring(remote.call("utl","station_count")))
     remote.call("utl","configure_station", st.comb.unit_number, {mode="station", provide=true, request=true})
+    -- R26 Netz-Kombinator: ein Lager (Stein 700, Mindest 200) und der Kombinator selbst
+    force.technologies["utl-storage"].researched = true
+    st.lstop = s.create_entity{name="utl-train-stop", position={3,9}, direction=defines.direction.north, force=force, raise_built=true}
+    st.lchest = s.create_entity{name="steel-chest", position={5,9}, force=force}
+    st.lchest.insert{name="stone", count=700}
+    st.lchest.get_wire_connector(W.circuit_red, true).connect_to(st.lstop.get_wire_connector(W.circuit_red, true))
+    remote.call("utl","configure_station", st.lstop.unit_number, {mode="storage",
+      storage={limits={{signal={type="item", name="stone"}, min=200, max=1000}}}})
+    st.readout = s.create_entity{name="utl-network-combinator", position={-8,1}, force=force, raise_built=true}
+    -- M4: Rechnen mit „s“ (Stapelgröße) – die Spiel-Funktion nimmt Variablen an
+    local ok_s, value_s = pcall(helpers.evaluate_expression, "2*s", { s = 50 })
+    check("rechnen: 2*s mit s = 50 ergibt 100", ok_s and value_s == 100, tostring(value_s))
+    check("R26 netz-kombinator gebaut", st.readout ~= nil and remote.call("utl","get_readout", st.readout.unit_number) ~= nil)
+  elseif e.tick == 180 then
+    -- R26: Bestand, Lagerbestand und Fehlmenge im Netz „default“ (Stationen oben: Eisen 2000 und
+    -- Kupfer-Bedarf 1500 am Combinator, Kohle 500 an der UTL-Haltestelle, Lager Stein 700/Mindest 200)
+    local unit = st.readout.unit_number
+    local function values(changes)
+      remote.call("utl","configure_readout", unit, changes)
+      local r = remote.call("utl","get_readout", unit) --[[@as table]]
+      return r and r.values or {}
+    end
+    local v = values({ network = "default", mode = "stock" })
+    check("R26 bestand: angebot der anbieter", v["item|iron-plate|normal"] == 2000 and v["item|coal|normal"] == 500
+      and v["item|stone|normal"] == 500, serpent.line(v))
+    v = values({ mode = "storage" })
+    check("R26 lagerbestand: was im lager liegt", v["item|stone|normal"] == 700 and v["item|iron-plate|normal"] == nil,
+      serpent.line(v))
+    v = values({ mode = "demand" })
+    check("R26 bedarf: was abnehmer anfordern", v["item|copper-plate|normal"] == 1500 and v["item|iron-plate|normal"] == nil,
+      serpent.line(v))
+    v = values({ mode = "shortage" })
+    check("R26 fehlmenge: bedarf ohne angebot", v["item|copper-plate|normal"] == 1500 and v["item|iron-plate|normal"] == nil,
+      serpent.line(v))
+    v = values({ network = "anderes-netz", mode = "stock" })
+    check("R26 anderes netz: nichts", next(v) == nil, serpent.line(v))
+    -- Die Werte liegen wirklich am Kombinator an (geschrieben beim Einstellen)
+    values({ network = "default", mode = "stock" })
+    local section = st.readout.get_control_behavior().get_section(1)
+    local written = 0
+    for _, filter in pairs(section and section.filters or {}) do
+      if filter.value and filter.value.name == "iron-plate" and filter.min == 2000 then written = written + 1 end
+    end
+    check("R26 signale am kombinator geschrieben", written == 1, serpent.line(section and section.filters))
   elseif e.tick == 190 then
     local u = station_info(st.ustop.unit_number)
     check("utl-halt: art stop", u and u.kind == "stop", u and u.kind)
@@ -105,7 +151,26 @@ script.on_nth_tick(10, function(e)
     check("stop entfernt -> nicht verbunden", info and info.stop_name == nil)
     st.comb.destroy()
   elseif e.tick == 240 then
-    check("station entfernt", remote.call("utl","station_count") == 0, tostring(remote.call("utl","station_count")))
+    -- nur das Lager aus R26 bleibt übrig
+    check("station entfernt", remote.call("utl","station_count") == 1, tostring(remote.call("utl","station_count")))
+    local r = remote.call("utl","get_readout", st.readout.unit_number) --[[@as table]]
+    local v = r and r.values or {}
+    check("R26 abgerissene stationen zählen nicht mehr", v["item|iron-plate|normal"] == nil and v["item|coal|normal"] == nil
+      and v["item|stone|normal"] == 500, serpent.line(v))
+    -- Blaupause mit Tag, Klonen
+    local ghost = s.create_entity{name="entity-ghost", inner_name="utl-network-combinator", position={-8,4}, force=force,
+      tags={utl_readout={network="bp-netz", mode="shortage", star=true}}}
+    local _, built = ghost.revive{raise_revive=true}
+    local b = built and remote.call("utl","get_readout", built.unit_number) --[[@as table]]
+    check("R26 blaupause: einstellungen übernommen", b and b.config.network == "bp-netz" and b.config.mode == "shortage"
+      and b.config.star == true, b and serpent.line(b.config))
+    local copy = built and built.clone{position={-8,6}, surface=s, force=force}
+    local c = copy and remote.call("utl","get_readout", copy.unit_number) --[[@as table]]
+    check("R26 klonen: einstellungen übernommen", c and c.config.network == "bp-netz" and c.config.mode == "shortage",
+      c and serpent.line(c.config))
+    if built then built.destroy() end
+    if copy then copy.destroy() end
+    st.lstop.destroy(); st.lchest.destroy()
   elseif e.tick == 250 then
     -- Blaupause: Geist mit Tags → beim Bauen werden die Einstellungen übernommen.
     local ghost = s.create_entity{name="entity-ghost", inner_name="utl-train-stop", position={3,-3},
@@ -146,8 +211,61 @@ script.on_nth_tick(10, function(e)
     check("combinator mit kabel am ausgang: verbunden", vi and vi.stop_name == st.vstop.backer_name, vi and tostring(vi.stop_name))
     st.vcomb.destroy(); st.vstop.destroy()
     build_train_test(s, force)
+    -- R26: ab jetzt Zugzahlen (liegen nach der ersten vollständigen Zählrunde vor; geprüft am Ende)
+    remote.call("utl","configure_readout", st.readout.unit_number, { network = "default", mode = "trains", star = false })
   elseif e.tick > 260 and not st.done then
+    watch_readouts()
     train_test_step()
+  elseif st.done and not st.finished then
+    -- Hauptzugtest fertig: R27 läuft allein (ein zusätzlicher Zug stört dessen Zählungen)
+    if not st.r27 then
+      -- R28 Statistik: nach dem Hauptzugtest steht Eisen im Durchsatz, der Testzug hat Lieferungen
+      local stats = remote.call("utl", "get_statistics") --[[@as table]]
+      local iron = stats.goods["item|iron-plate|normal"]
+      local tr = st.train and st.train.valid and stats.trains[st.train.id]
+      check("R28 statistik: eisen im durchsatz der letzten stunde", iron ~= nil and iron.hour > 0, serpent.line(iron))
+      check("R28 statistik: testzug mit lieferungen und auslastung", tr ~= nil and tr.deliveries >= 1 and tr.utilization > 0,
+        serpent.line(tr))
+      -- je Station: was abgegeben wurde, kam auch an (Summen gleich, beide > 0)
+      local sent, received = 0, 0
+      for _, numbers in pairs(stats.stations) do
+        sent, received = sent + numbers.sent_hour, received + numbers.received_hour
+      end
+      check("R28 statistik je station: abgegeben = bekommen", sent > 0 and sent == received,
+        "abgegeben " .. sent .. ", bekommen " .. received)
+      build_wait_test()
+      build_home_test()
+      st.r30 = { done = false }
+    end
+    watch_wait_test()
+    watch_home_test()
+    -- R31/R32 erst nach R29 (das schaltet „direkt der nächste Auftrag“ ab)
+    if st.r29.done and not st.r31 then st.r31 = Rounds.build(check) end
+    local r31_done = st.r31 ~= nil and Rounds.watch(st.r31, check)
+    -- R30 Depot-Ausgabe: steht der Testzug in einem Depot (es gibt mehrere „UTL-D“), zeigt sie ihn
+    -- und die freien Züge
+    local r30_stop = st.train and st.train.valid and st.train.station
+    if not st.r30.done and r30_stop and st.d.valid and r30_stop.backer_name == st.d.backer_name then
+      local found = r30_stop.surface.find_entities_filtered{ name = "utl-depot-output", position = r30_stop.position, radius = 4 }[1]
+      local section = found and found.get_control_behavior().get_section(1)
+      local out = {}
+      for _, filter in pairs(section and section.filters or {}) do
+        if filter.value then out[filter.value.name] = filter.min end
+      end
+      if out["utl-train-id"] == st.train.id and (out["utl-trains-free"] or 0) >= 1 then
+        st.r30.done = true
+        check("R30 depot-ausgabe: zug im depot und freie züge", true, serpent.line(out))
+      end
+      st.r30.last = out
+    end
+    if (st.r27.done and st.r29.done and st.r30.done and r31_done) or e.tick >= 199900 then
+      if not st.r30.done then check("R30 depot-ausgabe: zug im depot und freie züge", false, serpent.line(st.r30.last)) end
+      if not r31_done then check("R31/R32 anschlussfahrt und lager", false, "zeit abgelaufen") end
+      if not st.r27.done then check("R27 wartezeit: die ältere anfrage bekommt den zug", false, "zeit abgelaufen") end
+      if not st.r29.done then check("R29 depot-heimfahrt", false, "zeit abgelaufen, " .. st.r29.finished .. " fertig") end
+      st.finished = true
+      for _, r in ipairs(results) do log("[SELFTEST] " .. r) end
+    end
   end
 end)
 
@@ -244,6 +362,160 @@ function build_network_test()
   sch.add_record{ station = "UTL-RD", wait_conditions = {{ type = "inactivity", ticks = 300 }} }
   sch.go_to_station(1)
   remote.call("utl", "set_request", st.ra.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+  -- R26: Netz-Kombinatoren „Züge“ für A (bekommt Hilfe) und R (hilft aus); Höchstwerte werden mitgeschrieben
+  st.ro_a = s.create_entity{ name = "utl-network-combinator", position = { 127, -80 }, force = force, raise_built = true }
+  st.ro_r = s.create_entity{ name = "utl-network-combinator", position = { 127, -78 }, force = force, raise_built = true }
+  remote.call("utl", "configure_readout", st.ro_a.unit_number, { network = "A", mode = "trains" })
+  remote.call("utl", "configure_readout", st.ro_r.unit_number, { network = "R", mode = "trains" })
+  st.max_borrowed, st.max_lent = 0, 0
+end
+
+--- R27 Anfragen nach Wartezeit: eigenes Gleis bei x = 211, Netz „WZ“. Abnehmer B wird zuerst gebaut
+--- (kleinere Nummer, bei pairs meist vorn), A meldet aber zuerst Bedarf. Der einzige Zug steht erst
+--- im Handbetrieb und wird freigegeben, wenn beide warten – er muss zu A (wartet länger).
+function build_wait_test()
+  local s, force = game.surfaces["nauvis"], game.forces["player"]
+  local t = {} for x = 204, 220 do for y = -90, 90 do t[#t + 1] = { name = "concrete", position = { x, y } } end end
+  s.set_tiles(t)
+  for _, ent in pairs(s.find_entities_filtered{ area = {{204,-90},{220,90}} }) do if ent.type ~= "character" then ent.destroy() end end
+  for y = -80, 80, 2 do s.create_entity{ name = "straight-rail", position = { 211, y }, direction = defines.direction.north, force = force } end
+  local function stop(name, pos, dir)
+    local e = s.create_entity{ name = "utl-train-stop", position = pos, direction = dir, force = force, raise_built = true }
+    e.backer_name = name
+    return e
+  end
+  local wb = stop("UTL-WB", { 209, 40 }, defines.direction.south) -- zuerst gebaut
+  local wa = stop("UTL-WA", { 209, 60 }, defines.direction.south)
+  local wd = stop("UTL-WD", { 213, -20 }, defines.direction.north)
+  local wp = stop("UTL-WP", { 213, -60 }, defines.direction.north)
+  local cc = s.create_entity{ name = "constant-combinator", position = { 215, -60 }, force = force }
+  cc.get_control_behavior().get_section(1).set_slot(1, { value = { type = "item", name = "iron-plate", quality = "normal" }, min = 5000 })
+  cc.get_wire_connector(W.circuit_green, true).connect_to(wp.get_wire_connector(W.circuit_green, true))
+  remote.call("utl", "configure_station", wd.unit_number, { mode = "depot", network = "WZ" })
+  remote.call("utl", "configure_station", wp.unit_number, { mode = "station", provide = true, request = false, network = "WZ", provide_threshold = 100 })
+  for _, r in ipairs({ wa, wb }) do
+    remote.call("utl", "configure_station", r.unit_number, { mode = "station", provide = false, request = true, network = "WZ", request_threshold = 100 })
+  end
+  remote.call("utl", "set_request", wa.unit_number, 1, { type = "item", name = "iron-plate" }, 1000) -- A zuerst
+  local l1 = s.create_entity{ name = "locomotive", position = { 211, 0 }, direction = defines.direction.north, force = force }
+  s.create_entity{ name = "cargo-wagon", position = { 211, 7 }, direction = defines.direction.north, force = force }
+  local l2 = s.create_entity{ name = "locomotive", position = { 211, 14 }, direction = defines.direction.south, force = force }
+  for _, l in ipairs({ l1, l2 }) do l.insert{ name = "coal", count = 120 } end
+  local sch = l1.train.get_schedule()
+  sch.add_record{ station = "UTL-WD", wait_conditions = {{ type = "inactivity", ticks = 300 }} }
+  l1.train.manual_mode = true
+  st.r27 = { start = game.tick, train = l1.train, wb = wb }
+end
+
+--- R27 Ablauf: nach 5 s wünscht auch B, nach 15 s fährt der Zug; die erste Lieferung zählt.
+function watch_wait_test()
+  local r = st.r27
+  if not r or r.done then return end
+  local age = game.tick - r.start
+  if age >= 300 and not r.b_set then
+    r.b_set = true
+    remote.call("utl", "set_request", r.wb.unit_number, 1, { type = "item", name = "iron-plate" }, 1000)
+  elseif age >= 900 and not r.released and r.train.valid then
+    r.released = true
+    r.train.manual_mode = false
+    r.train.get_schedule().go_to_station(1)
+  elseif r.released then
+    for _, d in pairs(remote.call("utl", "get_deliveries")) do
+      if d.to == "UTL-WA" or d.to == "UTL-WB" then
+        r.done = true
+        check("R27 wartezeit: die ältere anfrage bekommt den zug", d.to == "UTL-WA", "erste lieferung an " .. tostring(d.to))
+        return
+      end
+    end
+    if age > 9000 then
+      r.done = true
+      check("R27 wartezeit: die ältere anfrage bekommt den zug", false, "keine lieferung")
+    end
+  end
+end
+
+--- R29 Depot-Heimfahrt: kleines Netz (2 × 2 City Blocks) auf eigener Oberfläche, Abstellbahnhof
+--- mit 12 Depotgleisen „HD“ und 12 Zügen, ohne Vanilla-Zuglimit (nur „max. Züge“ = 1 je Gleis),
+--- ein Anbieter und ein Abnehmer. Nie dürfen zwei Züge zugleich an/auf dem Weg zu einem Depotgleis sein.
+function build_home_test()
+  -- ohne „direkt der nächste Auftrag“: jeder Zug fährt nach der Lieferung heim (das wird geprüft)
+  remote.call("utl", "set_map_config", "utl-chaining", false)
+  local built = Builder.build({ surface = "utl-selftest-home", grid = 2, vanilla_limits = false,
+    depots = { { name = "HD", cars = 1, blocks = { { 0, 0 } } } },
+    assign = function(places)
+      local specs = {}
+      specs[#places] = { kind = "provider", item = "iron-plate", name = "HP" }
+      specs[1] = { kind = "requester", item = "iron-plate", name = "HR" }
+      return specs
+    end })
+  local depots = {}
+  for _, spec in ipairs(built.stations) do
+    local unit = (spec.combinator_entity or spec.stop).unit_number
+    if spec.kind == "depot" then
+      remote.call("utl", "configure_station", unit, { mode = "depot", max_trains = 1 })
+      depots[#depots + 1] = spec.stop
+    elseif spec.kind == "provider" then
+      remote.call("utl", "configure_station", unit, { mode = "station", provide = true, request = false, max_trains = 3 })
+    elseif spec.kind == "requester" then
+      remote.call("utl", "configure_station", unit, { mode = "station", provide = false, request = true,
+        request_threshold = 500, max_trains = 3 })
+      remote.call("utl", "set_request", unit, 1, { type = "item", name = "iron-plate" }, 8000)
+    end
+  end
+  st.r29 = { start = game.tick, depots = depots, trains = built.trains, max = 0, seen = {}, finished = 0, homed = 0,
+    away = {} }
+end
+
+function watch_home_test()
+  local r = st.r29
+  if not r or r.done then return end
+  for _, stop in ipairs(r.depots) do
+    if stop.valid then
+      local n = stop.trains_count + remote.call("utl", "pending_trains", stop.unit_number)
+      if n > r.max then r.max = n end
+    end
+  end
+  local active = {}
+  for _, d in pairs(remote.call("utl", "get_deliveries")) do
+    if d.to == "HR" then
+      active[d.id] = true
+      r.seen[d.id] = true
+    end
+  end
+  for id in pairs(r.seen) do
+    if not active[id] then
+      r.seen[id] = nil
+      r.finished = r.finished + 1
+    end
+  end
+  -- Heimkehr: ein Zug, der unterwegs war und wieder an einem Depotgleis „HD“ steht
+  for _, train in pairs(r.trains) do
+    if train.valid then
+      local at_depot = train.state == defines.train_state.wait_station and train.station and train.station.backer_name == "HD"
+      if not at_depot then
+        r.away[train.id] = true
+      elseif r.away[train.id] then
+        r.away[train.id] = nil
+        r.homed = r.homed + 1
+      end
+    end
+  end
+  local age = game.tick - r.start
+  if (r.finished >= 4 and r.homed >= 4 and age > 3000) or age > 40000 then
+    r.done = true
+    check("R29 depot-heimfahrt: züge liefern und kommen heim", r.finished >= 4 and r.homed >= 4,
+      r.finished .. " fertig, " .. r.homed .. " heimgekehrt")
+    check("R29 depot-heimfahrt: nie zwei züge je depotgleis (ohne zuglimit)", r.max <= 1, "höchstens " .. r.max)
+  end
+end
+
+--- Höchstwerte der Kombinatoren aus build_network_test mitschreiben (R26 Netzverbund).
+function watch_readouts()
+  if not (st.ro_a and st.ro_a.valid and st.ro_r and st.ro_r.valid) then return end
+  local a = remote.call("utl", "get_readout", st.ro_a.unit_number) --[[@as table?]]
+  local r = remote.call("utl", "get_readout", st.ro_r.unit_number) --[[@as table?]]
+  st.max_borrowed = math.max(st.max_borrowed, a and a.values["virtual|utl-trains-borrowed|normal"] or 0)
+  st.max_lent = math.max(st.max_lent, r and r.values["virtual|utl-trains-lent|normal"] or 0)
 end
 
 -- Runde 20: eigenes Gleis bei x = 151 mit Depot „UTL-QD“ (Limit 2) und Cleanup „UTL-QC“
@@ -1250,11 +1522,14 @@ function train_test_step()
         if entry.requester == st.ra.unit_number then d = entry end
       end
       local inv = st.nwagon.valid and st.nwagon.get_inventory(CARGO)
+      -- „Züge unterwegs hierher“: am Anbieter während der Anfahrt, am Abnehmer nach dem Laden
+      if d and d.state == "to_provider" and output_of(st.pa)["utl-trains-incoming"] == 1 then r.seen_in_p = true end
+      if d and d.state == "to_requester" and output_of(st.ra)["utl-trains-incoming"] == 1 then r.seen_in_r = true end
       if d and d.state == "loading" and not r.seen_load then
         local out = output_of(st.pa)
         r.seen_load = true
-        check("R23 auftrags-ausgabe am anbieter: zug lädt", out["utl-loading"] == 1 and out["utl-unloading"] == nil,
-          serpent.line(out))
+        check("R23 auftrags-ausgabe am anbieter: zug lädt", out["utl-loading"] == 1 and out["utl-unloading"] == nil
+          and out["utl-trains-incoming"] == nil, serpent.line(out))
         if inv then inv.insert{ name = "iron-plate", count = 500 } end
       elseif d and d.state == "unloading" and not r.seen_unload then
         local out = output_of(st.ra)
@@ -1265,6 +1540,8 @@ function train_test_step()
         if inv then inv.clear() end
       end
       if r.seen_load and r.seen_unload then
+        check("R23 züge unterwegs hierher: anbieter und abnehmer", r.seen_in_p and r.seen_in_r,
+          "anbieter " .. tostring(r.seen_in_p) .. ", abnehmer " .. tostring(r.seen_in_r))
         -- Runde 24: Lager
         st.r24 = { phase = "setup" }
         st.round = 24
@@ -1401,7 +1678,14 @@ function train_test_step()
       .. (st.ntrain and st.ntrain.valid and (" ntrain=" .. st.ntrain.state .. " " .. tostring(st.ntrain.station and st.ntrain.station.backer_name)) or ""))
     st.done = true
   end
-  if st.done then
-    for _, r in ipairs(results) do log("[SELFTEST] " .. r) end
+  if st.done and not st.readout_trains_checked then
+    -- R26 Züge: der Zug des Zugtests hat sein Heimatdepot „UTL-D“ im Netz „default“
+    st.readout_trains_checked = true
+    local unit = st.readout and st.readout.valid and st.readout.unit_number
+    local r = unit and remote.call("utl","get_readout", unit) --[[@as table]]
+    local v = r and r.values or {}
+    check("R26 züge: zug des netzes gezählt", (v["virtual|utl-trains-total|normal"] or 0) >= 1, serpent.line(v))
+    check("R26 netzverbund: zug aus R hilft in A aus", (st.max_borrowed or 0) >= 1 and (st.max_lent or 0) >= 1,
+      "A borrowed " .. tostring(st.max_borrowed) .. ", R lent " .. tostring(st.max_lent))
   end
 end

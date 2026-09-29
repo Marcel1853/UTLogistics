@@ -4,6 +4,17 @@
 --- Entfernte Stationen fallen beim nächsten Zugriff heraus (lazy).
 local Index = {}
 
+-- Wer geänderte Stationen mitbekommen will (Netz-Kombinator: Summen je Netz), meldet sich hier.
+-- fn(unit, station) – station = nil, wenn die Station weg ist.
+local listeners = {}
+function Index.on_change(fn)
+  listeners[#listeners + 1] = fn
+end
+
+local function notify(unit, station)
+  for _, fn in ipairs(listeners) do fn(unit, station) end
+end
+
 local function unindex(dispatch, unit)
   local keys = dispatch.provider_keys[unit]
   if not keys then return end
@@ -63,6 +74,7 @@ function Index.update()
       dispatch.waiting[unit] = nil
     end
     dirty[unit] = nil
+    notify(unit, station)
   end
 end
 
@@ -73,6 +85,7 @@ function Index.remove(unit)
   dispatch.requesters[unit] = nil
   dispatch.waiting[unit] = nil
   if dispatch.cursor == unit then dispatch.cursor = nil end
+  notify(unit, nil)
 end
 
 return Index
