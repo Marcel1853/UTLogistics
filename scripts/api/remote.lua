@@ -1,6 +1,7 @@
 --- Remote-Schnittstelle „utl“ für andere Mods, Tests und die Konsole.
 --- Beispiel: /c game.print(serpent.line(remote.call("utl", "get_station", 123)))
 local Registry = require("scripts.stations.registry")
+local C = require("scripts.core.constants")
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
 local TeamConfig = require("scripts.core.team-config")
@@ -142,7 +143,7 @@ local interface = {
 
   --- Zeitmessung für die nächsten `heartbeats` Heartbeats (Ergebnis in factorio-current.log).
   perf = function(heartbeats)
-    Perf.start(heartbeats or 60)
+    Perf.start(tonumber(heartbeats) or 60)
   end,
 
   --- Letzte Warnungen (neueste zuerst): { key, group, icon, count, tick }.
@@ -188,7 +189,14 @@ local interface = {
   --- Einstellungen übernehmen, z. B. { mode = "station", provide = true, request = false, priority = 5 }.
   configure_station = function(unit, changes)
     local station = Registry.get(unit)
-    if not station then return false end
+    if not station or type(changes) ~= "table" then return false end
+    -- unbekannter Modus nähme der Station still alle Rollen
+    local mode = changes.mode
+    if mode ~= nil and mode ~= "storage" then
+      local ok = false
+      for _, known in ipairs(C.modes) do ok = ok or known == mode end
+      if not ok then return false end
+    end
     local cfg = station.config
     for key, value in pairs(changes) do
       if key ~= "roles" and cfg[key] ~= nil and type(cfg[key]) == type(value) then
@@ -221,6 +229,23 @@ local interface = {
   set_team_config = function(force_name, key, value)
     local force = game.forces[force_name]
     if not force then return false end
+    -- nur bekannte Team-Werte, Typ wie der zugehörige Kartenwert (sonst stürzte später der
+    -- Zeitlimit-Code über einen Text statt einer Zahl); nil = wieder der Kartenwert
+    local setting = nil
+    for _, entry in ipairs(TeamConfig.KEYS) do
+      if entry.key == key then setting = entry.setting end
+    end
+    local proto = setting and prototypes.mod_setting[setting]
+    if not proto then return false end
+    if value ~= nil then
+      if proto.allowed_values then
+        local ok = false
+        for _, allowed in ipairs(proto.allowed_values) do ok = ok or allowed == value end
+        if not ok then return false end
+      elseif type(value) ~= "number" then
+        return false
+      end
+    end
     TeamConfig.set(force, key, value)
     return true
   end,
@@ -268,7 +293,8 @@ local interface = {
   --- Stern eines Netzes: { role, center, partners } (`force` wie bei link_networks).
   get_network_star = function(surface_index, name, force)
     local f = game.forces[force or "player"]
-    return Networks.star(Networks.place(surface_index, f and f.index or 1), name)
+    if not f then return nil end
+    return Networks.star(Networks.place(surface_index, f.index), name)
   end,
 
   --- Alle Einstellungen einer Station auf eine andere kopieren (wie Shift-Klick).
@@ -288,7 +314,7 @@ local interface = {
   --- signal = nil leert den Slot.
   set_request = function(unit, slot, signal, count)
     local station = Registry.get(unit)
-    if not station or slot < 1 or slot > Requests.slot_count then return false end
+    if not station or type(slot) ~= "number" or slot < 1 or slot > Requests.slot_count then return false end
     Requests.set(station.config, slot, signal, count or 0)
     Reader.read(station)
     return true

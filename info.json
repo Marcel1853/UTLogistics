@@ -11,6 +11,7 @@
         "base >= 2.1",
         "flib >= 0.17.2",
         "? space-age",
-        "? cargo-ships"
+        "? cargo-ships",
+        "? space-exploration"
     ]
 }

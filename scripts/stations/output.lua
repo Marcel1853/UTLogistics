@@ -62,8 +62,17 @@ function Output.ensure(station)
   local output
   for _, position in ipairs(place_for(stop)) do
     local area = { { position.x - 0.6, position.y - 0.6 }, { position.x + 0.6, position.y + 0.6 } }
-    -- Schon vorhanden (Spielstand, Klon) oder als Geist aus einer Blaupause?
+    -- Schon vorhanden (Spielstand, Klon) oder als Geist aus einer Blaupause? Nicht die Ausgabe
+    -- einer Nachbarstation übernehmen (dichte Haltestellenreihen) – selten, deshalb ohne Index.
     output = surface.find_entities_filtered({ area = area, name = name })[1]
+    if output then
+      for _, other in pairs(storage.stations.by_unit) do
+        if other ~= station and other.output == output then
+          output = nil
+          break
+        end
+      end
+    end
     if not output then
       for _, ghost in pairs(surface.find_entities_filtered({ area = area, ghost_name = { name, other } })) do
         if ghost.ghost_name == name then
@@ -171,14 +180,19 @@ function Output.step()
   local dirty = storage.deliveries.output_dirty
   DepotOutput.scan(Output.mark)
   if next(dirty) == nil then return end
-  local heading = heading_counts()
-  local depots = nil -- erst zählen, wenn ein Depot dran ist
+  -- beides erst zählen, wenn es gebraucht wird (Depots brauchen kein `heading`, andere kein `depots`;
+  -- die Depot-Ausgabe markiert alle 2 s alle Depots)
+  local heading, depots = nil, nil
   local done = 0
   for unit in pairs(dirty) do
     dirty[unit] = nil
     local station = Registry.get(unit)
     if station and Unlocks.loading(Unlocks.force_of(station)) then
-      if station.config.roles.depot and not depots then depots = DepotOutput.cache() end
+      if station.config.roles.depot then
+        depots = depots or DepotOutput.cache()
+      else
+        heading = heading or heading_counts()
+      end
       Output.write(station, heading, depots)
     end
     done = done + 1

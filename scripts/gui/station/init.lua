@@ -95,7 +95,6 @@ local function apply_network_name(event, gui, station, target)
   elseif not link_home(event, station, name) then
     return
   end
-  Networks.invalidate()
   changed(event, station, true)
 end
 
@@ -188,7 +187,6 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
     local name = element.get_item(element.selected_index)
     if type(name) == "string" then
       Nets.apply_home(station.config, name)
-      Networks.invalidate()
       changed(event, station, true)
     end
   elseif action == "cleanup_offer_tier" then

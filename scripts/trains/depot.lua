@@ -314,7 +314,6 @@ end
 --- Einstellungen geändert (Rolle, Netzwerk): Züge dieser Station neu erfassen.
 function Depot.refresh_station(station)
   Depot.invalidate_names()
-  Networks.invalidate()
   if station.stop_unit then Depot.forget(station.stop_unit) end
   if station.config.roles.depot then
     Depot.scan(station)

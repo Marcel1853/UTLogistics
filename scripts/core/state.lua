@@ -24,8 +24,7 @@ function State.init()
   trains.idle = trains.idle or {}   -- ["<ort>|<netzwerk>"] = { [train_id] = true } (Ort = Oberfläche + Team)
   -- [train_id] = "fuel" | "cleanup" | "both" | "relocate" | "relocate-serviced": auf
   -- Dienstfahrt bzw. zu einem passenden Depot geschickt (verhindert Pendeln)
-  trains.service = trains.service or trains.refueling or {}
-  trains.refueling = nil
+  trains.service = trains.service or {} -- (früher „refueling“: migrations/0.0.10-altlasten.lua)
   trains.pending = trains.pending or {} -- [train_id] = { [Haltestelle] = true }: per Wegpunkt unterwegs dorthin
   trains.visiting = trains.visiting or {} -- [train_id] = Tank-/Cleanup-Haltestelle, an der er steht
   trains.cargo_waiting = trains.cargo_waiting or {} -- [train_id] = { train, stop, network }: Restladung, kein Cleanup frei
@@ -36,10 +35,9 @@ function State.init()
 
   -- Dienst-Stationen: [rolle][station] = true (fuel, cleanup)
   local services = storage.service_stations or {}
-  services.fuel = services.fuel or storage.fuel_stations or {}
+  services.fuel = services.fuel or {} -- (früher storage.fuel_stations: migrations/0.0.10-altlasten.lua)
   services.cleanup = services.cleanup or {}
   storage.service_stations = services
-  storage.fuel_stations = nil
 
   -- Lieferungen und Reservierungen.
   local deliveries = storage.deliveries or {}
