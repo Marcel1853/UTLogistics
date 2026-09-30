@@ -22,6 +22,7 @@ local Statistics = require("scripts.deliveries.statistics")
 local Water = require("scripts.compat.cargo-ships")
 local RecipeNotice = require("scripts.gui.notice.recipe-notice")
 local Rekey = require("scripts.trains.rekey")
+local Elevators = require("scripts.compat.se-elevators")
 local util = require("util")
 
 local function copy(t)
@@ -106,6 +107,25 @@ local interface = {
   end,
   train_transfer_finished = function(old_id, train)
     Rekey.move(old_id, train)
+  end,
+
+  --- Schalter „über den Weltraumaufzug liefern“ für ein Netz eines Teams (nur mit SE wirksam).
+  set_elevator_network = function(force_name, network, on)
+    local force = game.forces[force_name or "player"]
+    if not (force and network) then return false end
+    Elevators.set_enabled(force.index, network, on ~= false)
+    return true
+  end,
+  --- Bekannte Aufzug-Seiten: Liste { unit, stop, opposite, surface, ok }.
+  get_elevators = function()
+    local list = {}
+    for unit, entry in pairs(storage.elevators and storage.elevators.by_unit or {}) do
+      if entry.main.valid then
+        list[#list + 1] = { unit = unit, stop = entry.stop, opposite = entry.opposite,
+          surface = entry.main.surface_index, ok = entry.ok }
+      end
+    end
+    return list
   end,
 
   --- Anzahl freier Züge im Depot und laufender Lieferungen.

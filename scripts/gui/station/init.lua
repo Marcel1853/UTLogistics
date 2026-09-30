@@ -13,6 +13,7 @@ local StorageSection = require("scripts.gui.station.section-storage")
 local Networks = require("scripts.stations.networks")
 local Nets = require("scripts.gui.station.section-networks")
 local Unlocks = require("scripts.core.unlocks")
+local Elevators = require("scripts.compat.se-elevators")
 
 local function tags_of(element)
   if not (element and element.valid) then return nil end
@@ -168,6 +169,13 @@ Events.on(defines.events.on_gui_checked_state_changed, function(event)
   elseif tags.utl_action == "cleanup_offer" then
     CleanupSection.set_offer(station.config, event.element.state)
     changed(event, station, true)
+  elseif tags.utl_action == "elevator_network" then
+    -- gilt fürs ganze Netz des Teams, nicht nur für diese Station
+    local stop = station.stop
+    if stop and stop.valid then
+      Elevators.set_enabled(stop.force_index, station.config.network, event.element.state)
+      changed(event, station, true)
+    end
   end
 end)
 

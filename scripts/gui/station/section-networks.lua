@@ -4,6 +4,7 @@
 --- scripts/stations/networks.lua), nicht nur für diese Station.
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
+local Elevators = require("scripts.compat.se-elevators")
 
 local Nets = {}
 
@@ -153,6 +154,18 @@ function Nets.build(parent, station)
     refs.add.tooltip, refs.new.tooltip = why, why
   end
   refs.new_edit, refs.new_field = edit_row(box, "extra")
+
+  -- Space Exploration: Lieferungen über den Weltraumaufzug (Schalter je Netz und Team)
+  if place and Elevators.available() then
+    local _, force_index = Networks.split_place(place)
+    local here = Elevators.at(place)
+    refs.elevator = parent.add({ type = "checkbox", caption = { "utl-gui.elevator-network" },
+      state = Elevators.enabled(force_index, cfg.network),
+      tooltip = here and { "utl-gui.elevator-network-tooltip", cfg.network }
+        or { "", { "utl-gui.elevator-network-tooltip", cfg.network }, "\n\n", { "utl-gui.elevator-none-here" } },
+      tags = { utl_action = "elevator_network" } })
+    refs.elevator.style.top_margin = 4
+  end
 
   return refs
 end

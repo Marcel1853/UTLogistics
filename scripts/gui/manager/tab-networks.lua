@@ -3,6 +3,7 @@
 --- Hinzufügen und Lösen, darunter die Stationen des Netzes und seiner verbundenen Netze.
 local List = require("scripts.gui.common.list")
 local Networks = require("scripts.stations.networks")
+local Elevators = require("scripts.compat.se-elevators")
 local Unlocks = require("scripts.core.unlocks")
 local Filter = require("scripts.gui.manager.surface-filter")
 
@@ -68,10 +69,14 @@ function Tab.build(parent)
   field.style.width = 180
   local confirm = row.add({ type = "sprite-button", style = "utl_confirm_button", sprite = "utility/check_mark",
     tooltip = { "utl-gui.networks-new-tooltip" }, tags = { utl_mgr = "link_confirm" } })
+  -- Nur mit Space Exploration: Netz darf über den Weltraumaufzug liefern
+  local elevator = bar.add({ type = "checkbox", state = false, caption = { "utl-gui.elevator-network" },
+    visible = Elevators.available(), tags = { utl_mgr = "elevator_network" } })
+  elevator.style.top_margin = 4
 
   return {
     list = list, keys = {}, rows = List.build(right, COLUMNS),
-    caption = caption, chips = chips, add = add, field = field, confirm = confirm,
+    caption = caption, chips = chips, add = add, field = field, confirm = confirm, elevator = elevator,
   }
 end
 
@@ -163,10 +168,18 @@ local function refresh_links(refs, net, force)
   if not (net and force) then
     refs.caption.caption = { "utl-gui.links" }
     refs.add.items, refs.add.enabled, refs.field.enabled, refs.confirm.enabled = {}, false, false, false
+    if refs.elevator and refs.elevator.valid then refs.elevator.enabled = false end
     return
   end
   local limit = Unlocks.networks_limit(force)
   local place = Networks.place(net.surface, force.index)
+  local elevator = refs.elevator
+  if elevator and elevator.valid and elevator.visible then
+    elevator.enabled = true
+    elevator.state = Elevators.enabled(force.index, net.name)
+    elevator.tooltip = Elevators.at(place) and { "utl-gui.elevator-network-tooltip", net.name }
+      or { "", { "utl-gui.elevator-network-tooltip", net.name }, "\n\n", { "utl-gui.elevator-none-here" } }
+  end
   local star = Networks.star(place, net.name)
   refs.caption.caption = star.role == "partner" and { "utl-gui.links" }
     or { "utl-gui.links-count", #star.partners, limit }

@@ -20,7 +20,8 @@ local Window = {}
 local NAME = "utl_station_window"
 -- Bei jedem Umbau des Fensters erhöhen: offene Fenster aus alten Spielständen werden dann
 -- geschlossen statt mit falschem Aufbau aufgefrischt.
-local GUI_VERSION = 15 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+local GUI_VERSION = 16 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+-- 16: Schalter „über den Weltraumaufzug liefern“ (nur mit Space Exploration)
 -- 15: Depot-Ausgabe, Panel auch am UTL-Hafen
 
 --- Namen der UTL-Haltestellen, an deren Fenster das Panel hängt – nur die, die es als Prototyp
