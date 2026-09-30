@@ -26,6 +26,16 @@ local dist2 = Util.dist2
 --- Sammelwarnung je Netz (Heartbeat-Aufgabe).
 Dispatch.starving_alerts = Warn.starving_alerts
 
+--- Zweiter Anbieter (Kartenwert „utl-multi-pickup“): Reicht `first` nicht für den Bedarf, den
+--- nächstbesten Anbieter auf derselben Seite (nicht hinter einem Aufzug) für den Rest nehmen.
+local function second_provider(request, providers, first)
+  if not storage.cfg.multi_pickup or first.via or first.amount >= request.need then return nil end
+  for _, other in ipairs(providers) do
+    if other ~= first and not other.via then return other end
+  end
+  return nil
+end
+
 local function try_request(request)
   -- Kein einziger freier Zug im Netzwerk: nicht nach Anbietern suchen (spart im Dauerbetrieb den
   -- Großteil der Zeit). Nur die Wartezeit für die Warnung mitführen; erst wenn gewarnt würde,
@@ -45,11 +55,25 @@ local function try_request(request)
   if not providers or #providers == 0 then return false end
   for i = 1, math.min(#providers, Select.PROVIDER_TRIES) do
     local provider = providers[i]
-    local record, amount, later, fuel_stop = Select.train(request, provider, provider.amount)
+    local second = second_provider(request, providers, provider)
+    local wanted = provider.amount + (second and math.min(second.amount, request.need - provider.amount) or 0)
+    local record, amount, later, fuel_stop = Select.train(request, provider, wanted)
     if later then return false, true end -- im nächsten Lauf weiter, keine Warnung
+    local pickup = nil
+    if record and second and amount > provider.amount then
+      -- Rest beim zweiten Anbieter, wenn der Zug ihn erreicht; sonst nur der erste (falls das lohnt)
+      if Reach.check(record.train, record.stop, second.station.stop) then
+        pickup = { station = second.station, manifest = { [request.key] = amount - provider.amount } }
+      elseif provider.amount >= request.minimum then
+        amount = provider.amount
+      else
+        record = nil
+      end
+    end
     if record then
       local manifest = Select.manifest(request, provider, record, amount)
-      local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop, provider.via) ~= nil
+      local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop, provider.via,
+        pickup) ~= nil
       if created then Warn.waiting_since(request.station.unit, request.key, true) end
       return created
     end

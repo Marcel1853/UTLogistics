@@ -26,6 +26,7 @@ Config.KEYS = {
   ["utl-unload-timeout"] = "unload_timeout",
   ["utl-timeout-mode"] = "timeout_mode",
   ["utl-top-up"] = "top_up",
+  ["utl-multi-pickup"] = "multi_pickup",
   ["utl-cleanup-offer"] = "cleanup_offer",
   ["utl-storage"] = "storage_enabled",
   ["utl-leader-inactive-days"] = "leader_inactive_days",

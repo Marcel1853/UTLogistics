@@ -20,49 +20,17 @@ local Pending = require("scripts.trains.pending")
 local Output = require("scripts.stations.output")
 local Statistics = require("scripts.deliveries.statistics")
 local Home = require("scripts.compat.se-home")
+local Reservations = require("scripts.deliveries.reservations")
 
 local Deliveries = {}
 
 local HISTORY_SIZE = 100
 
-local function add(map, unit, key, amount)
-  Output.mark(unit) -- Auftrags-Ausgabe dieser Station neu schreiben
-  local by_key = map[unit]
-  if not by_key then
-    by_key = {}
-    map[unit] = by_key
-  end
-  local value = (by_key[key] or 0) + amount
-  if value <= 0 then
-    by_key[key] = nil
-    if next(by_key) == nil then map[unit] = nil end
-  else
-    by_key[key] = value
-  end
-end
-
-local function count_train(unit, delta)
-  local trains_at = storage.deliveries.trains_at
-  local value = (trains_at[unit] or 0) + delta
-  trains_at[unit] = value > 0 and value or nil
-end
-
---- Reservierte Menge beim Anbieter.
-function Deliveries.outgoing(unit, key)
-  local by_key = storage.deliveries.outgoing[unit]
-  return by_key and by_key[key] or 0
-end
-
---- Menge, die zum Abnehmer unterwegs ist.
-function Deliveries.incoming(unit, key)
-  local by_key = storage.deliveries.incoming[unit]
-  return by_key and by_key[key] or 0
-end
-
---- Züge, die gerade zu dieser Station unterwegs sind oder dort stehen.
-function Deliveries.trains_at(unit)
-  return storage.deliveries.trains_at[unit] or 0
-end
+local add = Reservations.add
+Deliveries.outgoing = Reservations.outgoing
+Deliveries.incoming = Reservations.incoming
+Deliveries.trains_at = Reservations.trains_at
+local release_provider = Reservations.release_provider
 
 function Deliveries.of_train(train_id)
   local id = storage.deliveries.by_train[train_id]
@@ -76,13 +44,24 @@ end
 --- die Lieferung bleibt bis zum Anbieter im Zustand to_provider). Der Dispatcher sucht sie aus.
 --- `via` (Space Exploration): { here, there } = Aufzug-Halte, wenn der Abnehmer hinter einem
 --- Weltraumaufzug liegt (Anbieter-Seite = Seite des Zugs).
-function Deliveries.create(record, provider, requester, manifest, fuel_stop, via)
+--- `second` (zweiter Anbieter): { station, manifest } – dort lädt der Zug den Rest; `manifest` ist
+--- dann die Gesamtmenge beider Halte.
+function Deliveries.create(record, provider, requester, manifest, fuel_stop, via, second)
   local train = record.train
   -- Zeitlimits des Teams, dem der Zug gehört (sonst Kartenwert)
   local force = train.front_stock and train.front_stock.force
   local timeouts = { load = TeamConfig.get(force, "load_timeout"), unload = TeamConfig.get(force, "unload_timeout"),
     mode = TeamConfig.get(force, "timeout_mode") }
-  if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop, timeouts, via) then return nil end
+  local pickup2 = nil
+  if second then
+    local share = {}
+    for key, amount in pairs(manifest) do
+      local rest = amount - (second.manifest[key] or 0)
+      if rest > 0 then share[key] = rest end
+    end
+    pickup2 = { stop = second.station.stop, first = share }
+  end
+  if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop, timeouts, via, pickup2) then return nil end
   -- Tankhalt vormerken: bis zur Ankunft zählt ihn das Zuglimit der Tankstelle sonst nicht mit
   if fuel_stop then Pending.reserve(train.id, { fuel_stop }) end
   Depot.remove(record.id)
@@ -102,9 +81,12 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop, via
     started = game.tick,
     -- Namen für Manager und Verlauf (Haltestellen können später umbenannt/abgerissen werden)
     depot = record.depot_name or (record.stop and record.stop.valid and record.stop.backer_name) or "",
-    from = provider.stop.backer_name,
+    from = provider.stop.backer_name .. (second and (" + " .. second.station.stop.backer_name) or ""),
     to = requester.stop.backer_name,
     via = via,
+    second = second and { unit = second.station.unit, manifest = second.manifest,
+      name = second.station.stop.backer_name } or nil,
+    leg = 1,
   }
   deliveries.active[id] = delivery
   deliveries.by_train[train.id] = id
@@ -115,12 +97,7 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop, via
   end
   of_requester[id] = true
   deliveries.count = deliveries.count + 1
-  for key, amount in pairs(manifest) do
-    add(deliveries.outgoing, provider.unit, key, amount)
-    add(deliveries.incoming, requester.unit, key, amount)
-  end
-  count_train(provider.unit, 1)
-  count_train(requester.unit, 1)
+  Reservations.book(delivery)
   -- Ladefilter: nur die Waren des Auftrags dürfen in die Wagen (Anbieter kann es abschalten).
   if provider.config.filter_load and Unlocks.loading(Unlocks.force_of(provider)) then
     Filters.apply(delivery, provider.config.locked_slots)
@@ -128,14 +105,6 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop, via
   Heartbeat.update_registration()
   Log.debug("Lieferung " .. id .. " mit Zug " .. train.id .. ": " .. serpent.line(manifest))
   return delivery
-end
-
---- Reservierung beim Anbieter freigeben (einmalig).
-local function release_provider(delivery)
-  if delivery.provider_released then return end
-  delivery.provider_released = true
-  for key, amount in pairs(delivery.manifest) do add(storage.deliveries.outgoing, delivery.provider, key, -amount) end
-  count_train(delivery.provider, -1)
 end
 
 --- Eintrag im Verlauf (neueste zuerst, höchstens HISTORY_SIZE).
@@ -174,16 +143,16 @@ local function remove(delivery, canceled)
   Pending.release(delivery.train_id) -- ein vorgemerkter Tankhalt dieser Fahrt fällt weg
   -- Abbruch mitten im Laden: den Zug auch aus der Ausgabe nehmen.
   local at = storage.deliveries.at_station
-  for _, unit in ipairs({ delivery.provider, delivery.requester }) do
-    if at[unit] and at[unit].id == delivery.train_id then
+  for _, unit in ipairs({ delivery.provider, delivery.requester, delivery.second and delivery.second.unit }) do
+    if unit and at[unit] and at[unit].id == delivery.train_id then
       at[unit] = nil
       Output.mark(unit)
     end
   end
   local deliveries = storage.deliveries
   release_provider(delivery)
-  for key, amount in pairs(delivery.manifest) do add(deliveries.incoming, delivery.requester, key, -amount) end
-  count_train(delivery.requester, -1)
+  Reservations.release_second(delivery)
+  Reservations.release_requester(delivery)
   deliveries.active[delivery.id] = nil
   if deliveries.by_train[delivery.train_id] == delivery.id then deliveries.by_train[delivery.train_id] = nil end
   local of_requester = deliveries.by_requester[delivery.requester]
@@ -228,10 +197,11 @@ end
 --- Zug wartet an einer Haltestelle.
 function Deliveries.on_arrive(delivery, stop)
   local unit = stop.unit_number
-  if delivery.state == "to_provider" and unit == stop_unit_of(delivery.provider) then
+  local pickup = Reservations.pickup_unit(delivery)
+  if delivery.state == "to_provider" and unit == stop_unit_of(pickup) then
     delivery.state = "loading"
     Filters.repair(delivery) -- Slots, die beim Losschicken noch belegt waren
-    train_at(delivery.provider, delivery.train, "load")
+    train_at(pickup, delivery.train, "load")
   elseif delivery.state == "to_requester" and unit == stop_unit_of(delivery.requester) then
     delivery.state = "unloading"
     train_at(delivery.requester, delivery.train, "unload")
@@ -241,12 +211,21 @@ end
 --- Zug fährt von einer Haltestelle ab. Liefert true, wenn die Lieferung damit fertig ist und
 --- der Zug leer und ausreichend betankt ist (dann kann er direkt den nächsten Auftrag bekommen).
 function Deliveries.on_depart(delivery)
-  if delivery.state == "loading" then
-    delivery.state = "to_requester"
+  if delivery.state == "loading" and delivery.second and delivery.leg ~= 2 then
+    -- erster von zwei Anbietern fertig: weiter zum zweiten
+    delivery.state = "to_provider"
+    delivery.leg = 2
     train_at(delivery.provider, nil)
-    Output.mark(delivery.requester) -- „Züge unterwegs hierher“ am Abnehmer
     release_provider(delivery)
     reread(delivery.provider)
+    Output.mark(delivery.second.unit)
+  elseif delivery.state == "loading" then
+    delivery.state = "to_requester"
+    train_at(Reservations.pickup_unit(delivery), nil)
+    Output.mark(delivery.requester) -- „Züge unterwegs hierher“ am Abnehmer
+    release_provider(delivery)
+    Reservations.release_second(delivery)
+    reread(Reservations.pickup_unit(delivery))
     -- Weniger geladen als bestellt (Zeitlimit, Wartebedingung von Hand/Interrupt beendet)?
     -- Dann Ladeliste und „unterwegs“ beim Abnehmer auf das tatsächlich Geladene setzen – sonst
     -- bestellt der Abnehmer bis zum Entladen zu wenig nach.
@@ -371,7 +350,9 @@ end
 function Deliveries.cancel_for_station(unit)
   for _, delivery in pairs(storage.deliveries.active) do
     -- Anbieter nach der Abfahrt ist egal, die Ware ist schon im Zug.
-    if delivery.requester == unit or (delivery.provider == unit and not delivery.provider_released) then
+    local second = delivery.second
+    if delivery.requester == unit or (delivery.provider == unit and not delivery.provider_released)
+      or (second and second.unit == unit and not second.released) then
       Deliveries.cancel(delivery, "station-lost")
     end
   end

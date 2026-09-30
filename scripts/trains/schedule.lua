@@ -100,15 +100,21 @@ end
 --- losschicken. `timeouts` = { load = s, unload = s, mode = "and" | "or" } (0 = keine Zeit).
 --- `via` (Space Exploration): { here, there } = Aufzug-Halte; dann Anbieter → Aufzug → Abnehmer.
 --- Den Rückweg durch den Aufzug setzt compat/se-home.lua bei der Abfahrt drüben.
+--- `pickup2` (zweiter Anbieter): { stop, first = Anteil des ersten Anbieters }; am ersten Halt wird
+--- bis zu dessen Anteil geladen, am zweiten bis zur Gesamtmenge `manifest`.
 --- Liefert true bei Erfolg.
-function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop, timeouts, via)
+function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop, timeouts, via, pickup2)
   local schedule = train.get_schedule()
   if not schedule then return false end
   local first = (schedule.current or 0) + 1
   local index = first
   if fuel_stop then index = add_stop(schedule, index, fuel_stop, FUEL_WAIT) end
   timeouts = timeouts or {}
-  index = add_stop(schedule, index, provider_stop, with_timeout(loading_conditions(manifest), timeouts.load, timeouts.mode))
+  index = add_stop(schedule, index, provider_stop,
+    with_timeout(loading_conditions(pickup2 and pickup2.first or manifest), timeouts.load, timeouts.mode))
+  if pickup2 then
+    index = add_stop(schedule, index, pickup2.stop, with_timeout(loading_conditions(manifest), timeouts.load, timeouts.mode))
+  end
   local unload = with_timeout({ { type = "empty" } }, timeouts.unload, timeouts.mode)
   if via then
     index = add_station(schedule, index, via.here, {})

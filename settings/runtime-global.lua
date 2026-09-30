@@ -139,6 +139,15 @@ data:extend({
     default_value = false,
     order = "e-d",
   },
+  -- Zweiter Anbieter: reicht einer nicht für die Zugladung, holt der Zug den Rest bei einem zweiten
+  -- Anbieter im selben Netz (Standard aus)
+  {
+    type = "bool-setting",
+    name = "utl-multi-pickup",
+    setting_type = "runtime-global",
+    default_value = false,
+    order = "e-da",
+  },
   -- Cleanup darf seinen Inhalt wieder anbieten (je Station zusätzlich ein Häkchen, Standard aus).
   -- Hier für die ganze Karte abschaltbar.
   {

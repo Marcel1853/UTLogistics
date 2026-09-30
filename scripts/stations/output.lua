@@ -100,7 +100,9 @@ end
 local function heading_counts()
   local counts = {}
   for _, delivery in pairs(storage.deliveries.active) do
-    local unit = delivery.state == "to_provider" and delivery.provider
+    -- zum zweiten Anbieter: dort zählen (deliveries/reservations.lua, pickup_unit)
+    local pickup = delivery.leg == 2 and delivery.second and delivery.second.unit or delivery.provider
+    local unit = delivery.state == "to_provider" and pickup
       or delivery.state == "to_requester" and delivery.requester
     if unit then counts[unit] = (counts[unit] or 0) + 1 end
   end

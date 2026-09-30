@@ -88,7 +88,16 @@ function Statistics.record(delivery, canceled, delivered)
     end
   end
   if sum > 0 then
-    add_station(stats, delivery.provider, "sent", sum, minute)
+    -- zwei Anbieter: der zweite bekommt seinen Anteil (höchstens das Gelieferte), der erste den Rest
+    local second = delivery.second
+    if second then
+      local part = 0
+      for key, amount in pairs(second.manifest) do part = part + math.min(amount, delivered[key] or 0) end
+      if part > 0 then add_station(stats, second.unit, "sent", part, minute) end
+      if sum - part > 0 then add_station(stats, delivery.provider, "sent", sum - part, minute) end
+    else
+      add_station(stats, delivery.provider, "sent", sum, minute)
+    end
     add_station(stats, delivery.requester, "received", sum, minute)
   end
 end
