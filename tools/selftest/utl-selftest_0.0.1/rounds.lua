@@ -81,9 +81,23 @@ function Rounds.build(check)
     { signal = { type = "item", name = "iron-plate" }, min = 200, max = 600 },
     { signal = { type = "item", name = "copper-plate" }, min = 200, max = 600 } } } })
   local r32_train, r32_wagon = train(s, force, 4, "R32-Depot")
+  -- R33: Zug bekommt mitten in der Lieferung eine neue ID (wie beim SE-Weltraumaufzug)
+  LINE = 81
+  rails(s, force, -85, 85)
+  local depot3 = stop(s, force, "R33-Depot", 10, true)
+  local prov3 = stop(s, force, "R33-Anbieter", 60, true)
+  local req3 = stop(s, force, "R33-Abnehmer", -60, false)
+  supply(s, force, prov3, 60, { "iron-plate" })
+  local function cfg3(e, changes) changes.network = "R33"; remote.call("utl", "configure_station", e.unit_number, changes) end
+  cfg3(depot3, { mode = "depot" })
+  cfg3(prov3, { mode = "station", provide = true, request = false })
+  cfg3(req3, { mode = "station", provide = false, request = true, request_threshold = 100 })
+  remote.call("utl", "set_request", req3.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
+  local r33_train, r33_wagon = train(s, force, 4, "R33-Depot")
   LINE = 1
   check("R31/R32 strecken gebaut", r31_train ~= nil and r32_train ~= nil)
   return { start = game.tick, train = r31_train, wagon = r31_wagon, train2 = r32_train, wagon2 = r32_wagon,
+    train3 = r33_train, wagon3 = r33_wagon, loco3 = r33_train and r33_train.front_stock,
     far = far.backer_name, near = near.backer_name, chained = nil, loaded = {}, unloaded = {} }
 end
 
@@ -106,9 +120,37 @@ end
 --- Liefert true, wenn beide Runden fertig sind.
 function Rounds.watch(r, check)
   if not r or r.done then return true end
+  -- R33: Zug hat nach dem Umzug eine neue ID – immer den aktuellen Zug der Lok nehmen
+  if r.loco3 and r.loco3.valid then r.train3 = r.loco3.train end
   for _, d in pairs(remote.call("utl", "get_deliveries")) do
     handle(r, d, r.train, r.wagon)
     handle(r, d, r.train2, r.wagon2)
+    if r.train3 and r.train3.valid then handle(r, d, r.train3, r.wagon3) end
+    -- R33: beim Laden am Anbieter „Aufzug“ spielen: Umzug melden, abkoppeln, ankoppeln, fertig melden
+    if r.train3 and r.train3.valid and d.train_id == r.train3.id and d.state == "loading" and not r.moved then
+      local old_id = r.train3.id
+      r.moved = { delivery = d.id, old = old_id }
+      remote.call("utl", "train_transfer_started", old_id)
+      -- wie SE: Fahrplan sichern und nach dem Neubau wiederherstellen
+      local schedule = r.train3.get_schedule()
+      local records, current = schedule.get_records(), schedule.current
+      local loco = r.loco3
+      loco.disconnect_rolling_stock(defines.rail_direction.back)
+      loco.connect_rolling_stock(defines.rail_direction.back)
+      r.train3 = loco.train
+      local restored = r.train3.get_schedule()
+      restored.set_records(records)
+      restored.go_to_station(current)
+      r.train3.manual_mode = false
+      remote.call("utl", "train_transfer_finished", old_id, r.train3)
+      r.moved.new = r.train3.id
+    end
+    if r.moved and d.id == r.moved.delivery then r.moved.seen = d.state .. " " .. d.train_id end
+    if r.moved and d.id == r.moved.delivery and d.state == "unloading" and not r.moved.ok then
+      r.moved.ok = true
+      check("R33 neue zug-id mitten in der lieferung: lieferung läuft weiter",
+        d.train_id == r.moved.new and r.moved.new ~= r.moved.old, "alt " .. r.moved.old .. ", neu " .. d.train_id)
+    end
     -- R31: erste Anschlussfahrt des Testzugs
     if r.train.valid and d.train_id == r.train.id and d.chained and not r.chained then
       r.chained = d.from
@@ -121,8 +163,11 @@ function Rounds.watch(r, check)
         d.manifest["item|iron-plate|normal"] ~= nil and d.manifest["item|copper-plate|normal"] ~= nil, serpent.line(d.manifest))
     end
   end
-  if (r.chained and r.storage) or game.tick - r.start > 36000 then
+  if (r.chained and r.storage and r.moved and r.moved.ok) or game.tick - r.start > 36000 then
     r.done = true
+    if not (r.moved and r.moved.ok) then
+      check("R33 neue zug-id mitten in der lieferung: lieferung läuft weiter", false, serpent.line(r.moved))
+    end
     if not r.chained then check("R31 anschlussfahrt beachtet angebots-priorität", false, "keine anschlussfahrt gesehen") end
     if not r.storage then check("R32 lager bekommt zwei waren in einer fahrt", false, "keine lieferung ans lager") end
   end

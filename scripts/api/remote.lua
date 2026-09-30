@@ -21,6 +21,7 @@ local ReadoutWindow = require("scripts.gui.readout.window")
 local Statistics = require("scripts.deliveries.statistics")
 local Water = require("scripts.compat.cargo-ships")
 local RecipeNotice = require("scripts.gui.notice.recipe-notice")
+local Rekey = require("scripts.trains.rekey")
 local util = require("util")
 
 local function copy(t)
@@ -94,6 +95,17 @@ local interface = {
   --- Konsole: /c remote.call("utl", "show_recipe_notice", game.player.index)
   show_recipe_notice = function(player_index)
     RecipeNotice.show(game.get_player(player_index))
+  end,
+
+  --- Für Mods, die Züge versetzen und dabei neu bauen (wie der SE-Weltraumaufzug, den UTL selbst
+  --- erkennt): vorher `train_transfer_started(alte_id)`, danach `train_transfer_finished(alte_id, zug)`.
+  --- Dazwischen bricht UTL die Lieferung nicht als „Zug umgebaut“ ab; am Ende ziehen alle Einträge
+  --- auf die neue ID um.
+  train_transfer_started = function(old_id)
+    Rekey.start(old_id)
+  end,
+  train_transfer_finished = function(old_id, train)
+    Rekey.move(old_id, train)
   end,
 
   --- Anzahl freier Züge im Depot und laufender Lieferungen.

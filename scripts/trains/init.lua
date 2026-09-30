@@ -9,6 +9,7 @@ local Pending = require("scripts.trains.pending")
 local ServiceStops = require("scripts.trains.service-stops")
 local Filters = require("scripts.trains.wagon-filters")
 local Output = require("scripts.stations.output")
+local Rekey = require("scripts.trains.rekey")
 local Alerts = require("scripts.alerts.alerts")
 local Heartbeat = require("scripts.core.heartbeat")
 local Perf = require("scripts.core.perf")
@@ -107,6 +108,8 @@ Events.on(defines.events.on_train_created, function(event)
   State.ensure()
   local function retire(old)
     if not old then return end
+    -- fährt durch einen Weltraumaufzug (SE): kein Umbau, die Einträge ziehen am Ende um (rekey.lua)
+    if Rekey.in_transfer(old) then return end
     Filters.reset(old) -- die Wagen gehören jetzt zu einer anderen Zug-ID
     Depot.remove(old)
     storage.trains.service[old] = nil

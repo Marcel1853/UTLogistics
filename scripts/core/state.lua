@@ -31,6 +31,7 @@ function State.init()
   trains.cargo_waiting = trains.cargo_waiting or {} -- [train_id] = { train, stop, network }: Restladung, kein Cleanup frei
   trains.home = trains.home or {} -- [train_id] = { train, depot = Name, stop = Haltestelle } (für den Manager)
   trains.filtered = trains.filtered or {} -- [train_id] = von UTL gesetzte Ladefilter (wagon-filters.lua)
+  trains.transfer = trains.transfer or {} -- [alte train_id] = Tick: fährt gerade durch einen Aufzug (SE)
   storage.trains = trains
 
   -- Dienst-Stationen: [rolle][station] = true (fuel, cleanup)

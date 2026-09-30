@@ -123,6 +123,34 @@ function Filters.repair(delivery)
   end
 end
 
+--- Zug hat neue Wagen bekommen (Weltraumaufzug: die Wagen werden auf der anderen Oberfläche geklont,
+--- samt Filtern). Einträge mit ungültigem Wagen auf den Wagen umhängen, der dieselben Filter trägt.
+function Filters.rehome(entries, train)
+  if not (entries and train and train.valid) then return end
+  local taken = {}
+  for _, entry in ipairs(entries) do
+    if not (entry.wagon and entry.wagon.valid) then
+      for _, wagon in pairs(train.cargo_wagons) do
+        local match = false
+        if not taken[wagon.unit_number] and next(entry.slots) ~= nil then
+          local inventory = wagon.get_inventory(CARGO)
+          if inventory then
+            match = true
+            for slot in pairs(entry.slots) do
+              if not inventory.get_filter(slot) then match = false break end
+            end
+          end
+        end
+        if match then
+          entry.wagon = wagon
+          taken[wagon.unit_number] = true
+          break
+        end
+      end
+    end
+  end
+end
+
 --- Alles zurücknehmen, was UTL gesetzt hat.
 local function clear_entries(entries)
   for _, entry in ipairs(entries or {}) do
