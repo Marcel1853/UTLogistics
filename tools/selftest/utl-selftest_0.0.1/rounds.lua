@@ -95,15 +95,17 @@ function Rounds.build(check)
   cfg3(req3, { mode = "station", provide = false, request = true, request_threshold = 100 })
   remote.call("utl", "set_request", req3.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
   local r33_train, r33_wagon = train(s, force, 4, "R33-Depot")
-  -- R34: zweiter Anbieter – A und B haben je 200 Eisen, der Abnehmer braucht 400
+  -- R34: zweiter Anbieter – A und B haben je 200 Eisen, der Abnehmer braucht 400. Umweg über B
+  -- (Luftlinie): A → B 10, B → Abnehmer 110, direkt 100 → 20 %. Erst Grenze 10 % (kein Umweg,
+  -- 200 allein liegt unter der Schwelle → keine Lieferung), nach 20 s Grenze 50 % (zwei Halte).
   LINE = 121
   rails(s, force, -85, 85)
   local depot4 = stop(s, force, "R34-Depot", 10, true)
   local prov_a = stop(s, force, "R34-A", 40, true)
-  local prov_b = stop(s, force, "R34-B", 76, true)
+  local prov_b = stop(s, force, "R34-B", 50, true)
   local req4 = stop(s, force, "R34-Abnehmer", -60, false)
   supply(s, force, prov_a, 40, { "iron-plate" }, 200)
-  supply(s, force, prov_b, 76, { "iron-plate" }, 200)
+  supply(s, force, prov_b, 50, { "iron-plate" }, 200)
   local function cfg4(e, changes) changes.network = "R34"; remote.call("utl", "configure_station", e.unit_number, changes) end
   cfg4(depot4, { mode = "depot" })
   cfg4(prov_a, { mode = "station", provide = true, request = false, provide_threshold = 100 })
@@ -111,6 +113,7 @@ function Rounds.build(check)
   cfg4(req4, { mode = "station", provide = false, request = true, request_threshold = 300 })
   remote.call("utl", "set_request", req4.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
   remote.call("utl", "set_map_config", "utl-multi-pickup", true)
+  remote.call("utl", "set_map_config", "utl-multi-pickup-detour", 10)
   local r34_train, r34_wagon = train(s, force, 4, "R34-Depot")
   LINE = 1
   check("R31/R32 strecken gebaut", r31_train ~= nil and r32_train ~= nil)
@@ -145,6 +148,7 @@ function Rounds.watch(r, check)
     handle(r, d, r.train, r.wagon)
     handle(r, d, r.train2, r.wagon2)
     if r.train3 and r.train3.valid then handle(r, d, r.train3, r.wagon3) end
+    if d.to == "R34-Abnehmer" and not r.r34.opened then r.r34.early = true end
     -- R34: Laden je Halt nur den Anteil dieses Anbieters (erst A, dann B)
     if r.train4.valid and d.train_id == r.train4.id and d.state == "loading" then
       local leg = d.leg or 1
@@ -158,6 +162,7 @@ function Rounds.watch(r, check)
       r.r34.cargo = r.wagon4.get_inventory(CARGO).get_item_count("iron-plate")
       r.wagon4.get_inventory(CARGO).clear()
       remote.call("utl", "set_map_config", "utl-multi-pickup", false)
+      remote.call("utl", "set_map_config", "utl-multi-pickup-detour", 50)
       check("R34 zweiter anbieter: ein zug, zwei ladehalte, volle menge",
         r.r34[1] and r.r34[2] and r.r34.second ~= nil and r.r34.cargo == 400 and d.manifest["item|iron-plate|normal"] == 400,
         serpent.line({ halte = { r.r34[1], r.r34[2] }, zweiter = r.r34.second, ladung = r.r34.cargo, liste = d.manifest }))
@@ -198,6 +203,12 @@ function Rounds.watch(r, check)
       check("R32 lager bekommt zwei waren in einer fahrt",
         d.manifest["item|iron-plate|normal"] ~= nil and d.manifest["item|copper-plate|normal"] ~= nil, serpent.line(d.manifest))
     end
+  end
+  -- R34: nach 20 s die Umweg-Grenze von 10 % auf 50 % heben
+  if not r.r34.opened and game.tick - r.start > 1200 then
+    r.r34.opened = true
+    check("R34 umweg über der grenze: kein zweiter anbieter", not r.r34.early)
+    remote.call("utl", "set_map_config", "utl-multi-pickup-detour", 50)
   end
   if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done) or game.tick - r.start > 36000 then
     r.done = true

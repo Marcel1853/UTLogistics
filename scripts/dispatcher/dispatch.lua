@@ -26,12 +26,26 @@ local dist2 = Util.dist2
 --- Sammelwarnung je Netz (Heartbeat-Aufgabe).
 Dispatch.starving_alerts = Warn.starving_alerts
 
+--- Umweg über `b` in Prozent der direkten Strecke a → r (Luftlinie, keine Pfadsuche).
+local function detour_percent(a, b, r)
+  local direct = math.sqrt(dist2(a, r))
+  local via = math.sqrt(dist2(a, b)) + math.sqrt(dist2(b, r))
+  if direct < 1 then return via < 1 and 0 or math.huge end
+  return (via - direct) * 100 / direct
+end
+
 --- Zweiter Anbieter (Kartenwert „utl-multi-pickup“): Reicht `first` nicht für den Bedarf, den
---- nächstbesten Anbieter auf derselben Seite (nicht hinter einem Aufzug) für den Rest nehmen.
+--- nächstbesten Anbieter auf derselben Seite (nicht hinter einem Aufzug) für den Rest nehmen – nur
+--- wenn der Umweg höchstens „utl-multi-pickup-detour“ Prozent ausmacht (0 = egal).
 local function second_provider(request, providers, first)
   if not storage.cfg.multi_pickup or first.via or first.amount >= request.need then return nil end
+  local limit = storage.cfg.multi_pickup_detour or 50
+  local a, r = first.station.stop.position, request.station.stop.position
   for _, other in ipairs(providers) do
-    if other ~= first and not other.via then return other end
+    if other ~= first and not other.via
+      and (limit <= 0 or detour_percent(a, other.station.stop.position, r) <= limit) then
+      return other
+    end
   end
   return nil
 end
@@ -62,7 +76,10 @@ local function try_request(request)
     local pickup = nil
     if record and second and amount > provider.amount then
       -- Rest beim zweiten Anbieter, wenn der Zug ihn erreicht; sonst nur der erste (falls das lohnt)
-      if Reach.check(record.train, record.stop, second.station.stop) then
+      -- Weg Depot → zweiter Anbieter, erster → zweiter und zweiter → Abnehmer (je gecacht)
+      local p2 = second.station.stop
+      if Reach.check(record.train, record.stop, p2) and Reach.between(record.train, provider.station.stop, p2)
+        and Reach.between(record.train, p2, request.station.stop) then
         pickup = { station = second.station, manifest = { [request.key] = amount - provider.amount } }
       elseif provider.amount >= request.minimum then
         amount = provider.amount

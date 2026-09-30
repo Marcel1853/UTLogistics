@@ -148,6 +148,17 @@ data:extend({
     default_value = false,
     order = "e-da",
   },
+  -- Zweiter Anbieter nur, wenn der Umweg (Luftlinie) höchstens so viel Prozent der direkten
+  -- Strecke Anbieter → Abnehmer ausmacht (0 = jeder Umweg erlaubt)
+  {
+    type = "int-setting",
+    name = "utl-multi-pickup-detour",
+    setting_type = "runtime-global",
+    default_value = 50,
+    minimum_value = 0,
+    maximum_value = 1000,
+    order = "e-db",
+  },
   -- Cleanup darf seinen Inhalt wieder anbieten (je Station zusätzlich ein Häkchen, Standard aus).
   -- Hier für die ganze Karte abschaltbar.
   {
