@@ -150,9 +150,11 @@ function Statistics.goods(place)
 end
 
 --- Auslastung eines Zugs (0 … 1): Zeit mit Auftrag / Zeit seit der ersten Lieferung; eine laufende
---- Lieferung zählt bis jetzt mit.
+--- Lieferung zählt bis jetzt mit. nil, solange der Zug noch keine Lieferung abgeschlossen hat (sonst
+--- stünde er mit seiner ersten Fahrt sofort bei 100 %).
 function Statistics.utilization(train_id, running_since)
   local entry = Statistics.data().trains[train_id]
+  if not (entry and (entry.deliveries or 0) > 0) then return nil, entry end
   local busy = entry and entry.busy or 0
   local first = entry and entry.first or running_since
   if running_since then busy = busy + (game.tick - running_since) end

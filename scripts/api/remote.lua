@@ -46,7 +46,8 @@ local interface = {
   end,
 
   --- Statistik (Manager-Reiter „Statistik“): { since, deliveries, goods = { [key] = { ten, hour } },
-  --- trains = { [zug] = { deliveries, utilization } }, stations = { [station] = { sent_ten, sent_hour,
+  --- trains = { [zug] = { deliveries, utilization (nil bis zur ersten fertigen Lieferung) } },
+  --- stations = { [station] = { sent_ten, sent_hour,
   --- received_ten, received_hour } } } über alle Oberflächen und Teams.
   get_statistics = function()
     local stats = Statistics.data()

@@ -18,7 +18,7 @@ on:
 
 jobs:
   images:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Bilder hochladen und Reihenfolge setzen
         env:
