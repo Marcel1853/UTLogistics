@@ -83,6 +83,16 @@ data:extend({
     maximum_value = 120,
     order = "d-a",
   },
+  -- Hänger-Erkennung: Lieferzug so viele Minuten ohne Fortschritt → Warnung (0 = aus)
+  {
+    type = "int-setting",
+    name = "utl-stuck-minutes",
+    setting_type = "runtime-global",
+    default_value = 5,
+    minimum_value = 0,
+    maximum_value = 120,
+    order = "d-aa",
+  },
   {
     type = "int-setting",
     name = "utl-default-provide-threshold",

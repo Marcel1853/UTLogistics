@@ -20,6 +20,7 @@ Config.KEYS = {
   ["utl-station-output"] = "station_output",
   ["utl-research-required"] = "research_required",
   ["utl-alert-no-train-minutes"] = "alert_no_train_minutes",
+  ["utl-stuck-minutes"] = "stuck_minutes",
   ["utl-default-provide-threshold"] = "default_provide_threshold",
   ["utl-default-request-threshold"] = "default_request_threshold",
   ["utl-load-timeout"] = "load_timeout",

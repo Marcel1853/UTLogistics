@@ -79,6 +79,7 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop, via
     manifest = manifest,
     state = "to_provider",
     started = game.tick,
+    progress = game.tick, -- Hänger-Erkennung (deliveries/stuck.lua)
     -- Namen für Manager und Verlauf (Haltestellen können später umbenannt/abgerissen werden)
     depot = record.depot_name or (record.stop and record.stop.valid and record.stop.backer_name) or "",
     from = provider.stop.backer_name .. (second and (" + " .. second.station.stop.backer_name) or ""),

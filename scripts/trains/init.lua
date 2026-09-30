@@ -11,6 +11,7 @@ local Filters = require("scripts.trains.wagon-filters")
 local Output = require("scripts.stations.output")
 local Rekey = require("scripts.trains.rekey")
 local Home = require("scripts.compat.se-home")
+local Stuck = require("scripts.deliveries.stuck")
 local Alerts = require("scripts.alerts.alerts")
 local Heartbeat = require("scripts.core.heartbeat")
 local Perf = require("scripts.core.perf")
@@ -28,6 +29,7 @@ local function on_state(event)
   local id = train.id
   local delivery = Deliveries.of_train(id)
   local state = train.state
+  if delivery then Stuck.progress(delivery) end -- Hänger-Erkennung: Zustandswechsel = Fortschritt
 
   if MANUAL[state] then
     -- SE schaltet Züge beim Durchfahren des Aufzugs kurz auf Handbetrieb: kein Abbruch
@@ -155,6 +157,9 @@ end)
 
 -- Wiederholsperren der Warnungen gelegentlich aufräumen (alle 60 Heartbeats).
 Heartbeat.add_task("alerts-cleanup", 60, Alerts.cleanup)
+
+-- Hänger-Erkennung: alle 30 Heartbeats (Standard 5 s) einige Lieferungen prüfen
+Heartbeat.add_task("stuck", 30, Stuck.check)
 
 -- Freie Züge, die knapp an Treibstoff sind, alle 60 Heartbeats (Standard 10 s) zum Tanken
 -- schicken – z. B. wenn beim Einparken gerade keine Tankstelle frei war.

@@ -2,7 +2,7 @@
 --- pro Spieler in drei Gruppen abschaltbar (Einstellungen → Mod-Einstellungen → Spieler):
 ---   no_train  – Bedarf und Anbieter da, aber kein passender freier Zug
 ---   cargo     – Restladung, Fehlmenge beim Anbieter
----   train     – kein Weg, kein freies Depot, Tanken fehlgeschlagen, Lieferung abgebrochen
+---   train     – kein Weg, kein freies Depot, Tanken fehlgeschlagen, Lieferung abgebrochen, Zug steckt fest
 --- Gleiche Warnung (Schlüssel) höchstens alle REPEAT_TICKS, damit nichts flackert oder spammt.
 local Alerts = {}
 
@@ -21,6 +21,7 @@ local ICONS = {
   no_path = { type = "virtual", name = "signal-no-entry" },
   fuel = { type = "virtual", name = "signal-fuel" },
   canceled = { type = "virtual", name = "signal-deny" },
+  stuck = { type = "virtual", name = "signal-alert" },
 }
 
 --- Warnung an alle verbundenen Spieler der Force von `entity`, die diese Gruppe nicht
