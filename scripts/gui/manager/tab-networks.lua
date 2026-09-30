@@ -259,7 +259,11 @@ function Tab.refresh(refs, manager)
     if a.network ~= b.network then return a.network < b.network end
     return a.station.unit < b.station.unit
   end)
-  List.sync(refs.rows, entries, fill, COLUMNS)
+  List.sync(refs.rows, entries, fill, COLUMNS, function(entry)
+    local stop = entry.station.stop
+    return table.concat({ entry.station.unit, stop and stop.valid and stop.backer_name or "", entry.network,
+      tostring(entry.own), List.map_sig(entry.station.config.roles) }, "|")
+  end)
 end
 
 --- Auswahl in der linken Liste.

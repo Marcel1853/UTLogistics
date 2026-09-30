@@ -271,4 +271,4 @@ end)
 -- Nach einem Mod-Update schließen; beim nächsten Öffnen wird es neu gebaut.
 Events.on_configuration_changed(Manager.close_all)
 
-Heartbeat.add_task("manager-refresh", C.gui_refresh_every, Manager.refresh_all)
+Heartbeat.add_task("manager-refresh", C.gui_refresh_every, Manager.refresh_all, 2)

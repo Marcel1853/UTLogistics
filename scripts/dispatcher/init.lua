@@ -27,7 +27,7 @@ end
 -- Alle 3 Heartbeats (Standard-Takt 10 → alle 30 Ticks).
 Heartbeat.add_task("dispatch", 3, Dispatch.run)
 -- Sammelwarnung „kein freier Zug“ je Netzwerk (alle 60 Heartbeats, Standard 10 s)
-Heartbeat.add_task("starving-alerts", 60, Dispatch.starving_alerts)
+Heartbeat.add_task("starving-alerts", 60, Dispatch.starving_alerts, 11)
 
 -- Nach Mod-Update: alle Stationen neu indizieren und schon geparkte Depot-Züge erfassen.
 Events.on_configuration_changed(function()

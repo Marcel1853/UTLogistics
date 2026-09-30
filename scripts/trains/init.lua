@@ -168,11 +168,11 @@ end)
 Heartbeat.add_task("alerts-cleanup", 60, Alerts.cleanup)
 
 -- Hänger-Erkennung und Aufräumen verschwundener Lieferzüge: alle 30 Heartbeats (Standard 5 s)
-Heartbeat.add_task("stuck", 30, Stuck.check)
+Heartbeat.add_task("stuck", 30, Stuck.check, 7)
 
 -- Freie Züge, die knapp an Treibstoff sind, alle 60 Heartbeats (Standard 10 s) zum Tanken
 -- schicken – z. B. wenn beim Einparken gerade keine Tankstelle frei war.
-Heartbeat.add_task("refuel-idle", 60, function() Depot.refuel_idle(3) end)
+Heartbeat.add_task("refuel-idle", 60, function() Depot.refuel_idle(3) end, 23)
 
 -- Vorgemerkte Fahrten aufräumen, die nie angekommen sind (Ziel abgerissen, Zug zerstört, kein
 -- Weg): alle 600 Heartbeats (Standard 100 s), Vormerkungen älter als 10 Minuten fallen weg.
@@ -189,7 +189,7 @@ Heartbeat.add_task("pending-sweep", 600, function()
 end)
 
 -- Freie Züge, die jemand von Hand beladen hat: alle 60 Heartbeats einen Blick darauf.
-Heartbeat.add_task("cleanup-idle", 60, function() Depot.cleanup_idle(3, 20) end)
+Heartbeat.add_task("cleanup-idle", 60, function() Depot.cleanup_idle(3, 20) end, 35)
 
 -- Züge mit Restladung, für die kein Cleanup frei war: alle 60 Heartbeats erneut versuchen.
-Heartbeat.add_task("cleanup-retry", 60, function() Depot.retry_cargo(3) end)
+Heartbeat.add_task("cleanup-retry", 60, function() Depot.retry_cargo(3) end, 47)

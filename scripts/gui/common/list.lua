@@ -182,6 +182,15 @@ function List.sync(rows, items, fill, columns, sig)
   for i = #children, count + 1, -1 do children[i].destroy() end
 end
 
+--- Kennung einer Tabelle { [Schlüssel] = Wert } für `List.sync` (Reihenfolge egal: im
+--- ungünstigsten Fall wird eine Zeile einmal zu oft neu gebaut).
+function List.map_sig(map)
+  if not map then return "" end
+  local parts = {}
+  for key, value in pairs(map) do parts[#parts + 1] = tostring(key) .. "=" .. tostring(value) end
+  return table.concat(parts, ",")
+end
+
 --- Feste Breite für eine Zelle setzen und zurückgeben.
 function List.cell(row, width, element)
   local cell = row.add(element)

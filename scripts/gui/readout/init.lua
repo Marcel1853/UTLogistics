@@ -65,4 +65,4 @@ Events.on(defines.events.on_gui_checked_state_changed, function(event)
   end
 end)
 
-Heartbeat.add_task("network-combinator-gui", C.gui_refresh_every, Window.refresh_all)
+Heartbeat.add_task("network-combinator-gui", C.gui_refresh_every, Window.refresh_all, 4)
