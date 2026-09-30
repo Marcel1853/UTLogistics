@@ -1,6 +1,8 @@
 local W = defines.wire_connector_id
 local Builder = require("__UTLogistics__/scenarios/UTL-Lasttest/builder")
 local Rounds = require("rounds")
+script.on_init(Rounds.listen) -- R36: UTL-Ereignisse
+script.on_load(Rounds.listen)
 local results = {}
 local function check(name, ok, info) results[#results+1] = (ok and "PASS " or "FAIL ") .. name .. (info and (" -- " .. info) or "") end
 local st = {}

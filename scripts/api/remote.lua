@@ -24,6 +24,7 @@ local Water = require("scripts.compat.cargo-ships")
 local RecipeNotice = require("scripts.gui.notice.recipe-notice")
 local Rekey = require("scripts.trains.rekey")
 local Elevators = require("scripts.compat.se-elevators")
+local PublicEvents = require("scripts.api.public-events")
 local util = require("util")
 
 local function copy(t)
@@ -158,14 +159,12 @@ local interface = {
   --- Laufende Lieferungen als Liste (ohne Entity-Referenzen).
   get_deliveries = function()
     local list = {}
-    for id, d in pairs(storage.deliveries.active) do
-      list[#list + 1] = {
-        id = id, train_id = d.train_id, provider = d.provider, requester = d.requester,
-        second = d.second and d.second.unit or nil, leg = d.leg, -- zweiter Anbieter (utl-multi-pickup)
-        from = d.from, to = d.to, network = d.network, -- Namen der Haltestellen und das Netzwerk
-        manifest = util.table.deepcopy(d.manifest), state = d.state, started = d.started, chained = d.chained,
-      }
+    for _, d in pairs(storage.deliveries.active) do
+      local info = PublicEvents.info(d) -- gleiche Sicht wie die Ereignisse, ohne Entity-Referenz
+      info.train = nil
+      list[#list + 1] = info
     end
+    table.sort(list, function(a, b) return a.id < b.id end)
     return list
   end,
 
@@ -363,6 +362,9 @@ local interface = {
     ReadoutWindow.close(player_index)
   end,
 }
+
+-- Weitere Funktionen (0.0.10): Ereignisse, einzelne Lieferung/Zug, Listen, Abbrechen
+for name, fn in pairs(require("scripts.api.remote-more")) do interface[name] = fn end
 
 -- Jede Funktion kann vor UTLs on_init aufgerufen werden (Szenario-Script startet zuerst).
 local State = require("scripts.core.state")

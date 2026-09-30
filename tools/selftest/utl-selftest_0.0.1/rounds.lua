@@ -5,6 +5,19 @@
 -- Laden und Entladen übernimmt der Test per Script.
 local Rounds = {}
 
+--- R36: UTL-Ereignisse mitzählen (Anmeldung in on_init und on_load, siehe control.lua).
+function Rounds.listen()
+  local ids = remote.call("utl", "get_event_ids")
+  for name, id in pairs(ids) do
+    script.on_event(id, function(event) ---@param event table
+      storage.r36 = storage.r36 or {}
+      local key = name .. (event.reason and ("-" .. event.reason) or "")
+      storage.r36[key] = (storage.r36[key] or 0) + 1
+      if name == "on_delivery_created" and not (event.train and event.train.valid) then storage.r36.bad = true end
+    end)
+  end
+end
+
 local W = defines.wire_connector_id
 local CARGO = defines.inventory.cargo_wagon
 local LINE = 1
@@ -240,6 +253,25 @@ function Rounds.watch(r, check)
     remote.call("utl", "set_map_config", "utl-stuck-minutes", 5)
     check("R35 hänger-erkennung: warnung nach 1 min, lieferung läuft weiter", alerted and running,
       "warnung " .. tostring(alerted) .. ", lieferung " .. tostring(running) .. ", zug " .. tostring(r.train5.valid and r.train5.state))
+    -- R36: neue Schnittstelle an der hängenden R35-Lieferung
+    local id = r.r35.delivery
+    local d = remote.call("utl", "get_delivery", id) --[[@as table?]]
+    check("R36 get_delivery", d ~= nil and d.id == id and d.to == "R35-Abnehmer", serpent.line(d and { d.id, d.to }))
+    local t = d and remote.call("utl", "get_train", d.train_id) --[[@as table?]]
+    check("R36 get_train", t ~= nil and t.delivery == id and t.depot == "R35-Depot", serpent.line(t))
+    local st = remote.call("utl", "get_stations", { network = "R35", role = "requester" })
+    check("R36 get_stations (netz + rolle)", #st == 1 and st[1].stop_name == "R35-Abnehmer", #st)
+    local nets = remote.call("utl", "get_networks", r.surface.index)
+    local has = false
+    for _, n in ipairs(nets) do has = has or n == "R35" end
+    check("R36 get_networks", has, table.concat(nets, ","))
+    check("R36 get_idle_trains (filter)", #remote.call("utl", "get_idle_trains", { network = "gibt-es-nicht" }) == 0)
+    check("R36 cancel_delivery", remote.call("utl", "cancel_delivery", id) == true
+      and remote.call("utl", "get_delivery", id) == nil)
+    local ev = storage.r36 or {}
+    check("R36 ereignisse", (ev.on_delivery_created or 0) > 0 and (ev.on_delivery_state_changed or 0) > 0
+      and (ev.on_delivery_completed or 0) > 0 and (ev["on_delivery_canceled-remote"] or 0) == 1 and not ev.bad,
+      serpent.line(ev))
   end
   -- R34: nach 20 s die Umweg-Grenze von 10 % auf 50 % heben
   if not r.r34.opened and game.tick - r.start > 1200 then

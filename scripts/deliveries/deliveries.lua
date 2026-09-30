@@ -21,6 +21,7 @@ local Output = require("scripts.stations.output")
 local Statistics = require("scripts.deliveries.statistics")
 local Home = require("scripts.compat.se-home")
 local Reservations = require("scripts.deliveries.reservations")
+local PublicEvents = require("scripts.api.public-events")
 
 local Deliveries = {}
 
@@ -100,6 +101,7 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop, via
   end
   Heartbeat.update_registration()
   Log.debug("Lieferung " .. id .. " mit Zug " .. train.id .. ": " .. serpent.line(manifest))
+  PublicEvents.raise("on_delivery_created", delivery)
   return delivery
 end
 
@@ -198,9 +200,11 @@ function Deliveries.on_arrive(delivery, stop)
     delivery.state = "loading"
     Filters.repair(delivery) -- Slots, die beim Losschicken noch belegt waren
     train_at(pickup, delivery.train, "load")
+    PublicEvents.raise("on_delivery_state_changed", delivery)
   elseif delivery.state == "to_requester" and unit == stop_unit_of(delivery.requester) then
     delivery.state = "unloading"
     train_at(delivery.requester, delivery.train, "unload")
+    PublicEvents.raise("on_delivery_state_changed", delivery)
   end
 end
 
@@ -237,6 +241,7 @@ function Deliveries.on_depart(delivery)
         end
       end
     end
+    PublicEvents.raise("on_delivery_state_changed", delivery) -- weiter zum zweiten Anbieter
   elseif delivery.state == "loading" then
     delivery.state = "to_requester"
     train_at(Reservations.pickup_unit(delivery), nil)
@@ -276,11 +281,13 @@ function Deliveries.on_depart(delivery)
           "missing:" .. delivery.id)
       end
     end
+    PublicEvents.raise("on_delivery_state_changed", delivery)
   elseif delivery.state == "unloading" then
     train_at(delivery.requester, nil)
     remove(delivery)
     reread(delivery.requester)
     Log.debug("Lieferung " .. delivery.id .. " fertig")
+    PublicEvents.raise("on_delivery_completed", delivery)
     -- Nicht alles losgeworden (z. B. Interrupt, Wartebedingung geändert): zur Cleanup-Station.
     local train = delivery.train
     -- Nach dem Entladen knapp an Treibstoff: gleich tanken statt erst ins Depot.
@@ -353,6 +360,7 @@ function Deliveries.cancel(delivery, reason)
   local text = { "utl-alert.reason-" .. reason }
   remove(delivery, text)
   Log.info("Lieferung " .. delivery.id .. " abgebrochen: " .. reason)
+  PublicEvents.raise("on_delivery_canceled", delivery, { reason = reason })
   if train.valid and reason ~= "manual" then
     Alerts.raise("train", "canceled", train.front_stock,
       { "utl-alert.canceled", Alerts.train_name(train), delivery.from or "?", delivery.to or "?", text },
