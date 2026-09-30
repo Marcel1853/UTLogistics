@@ -54,7 +54,7 @@ if [ "${1:-}" = "--tips" ]; then
   if grep -q "Error" "$OUT/tipstest.txt"; then
     echo "tipstest: FEHLER"; grep "Error" "$OUT/tipstest.txt" | head -5 | sed 's/^/    /'; failed=1
   else
-    echo "tipstest: $(grep -c 'MANIFEST' "$OUT/tipstest.txt") Szenen ohne Fehler"
+    echo "tipstest: alle Szenen ohne Fehler"
   fi
 fi
 exit $failed

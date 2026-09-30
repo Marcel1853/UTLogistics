@@ -26,6 +26,10 @@ end
 local function handle(event)
   local action, tags, player, element = context(event)
   if not (action and player) then return end
+  -- Klick nur bei Knöpfen: ein Klick in ein Textfeld oder eine Auswahl übernähme sonst den
+  -- angezeigten (geerbten) Wert als eigenen Team-Wert. Werte kommen über ihre eigenen Ereignisse.
+  if event.name == defines.events.on_gui_click and element
+    and element.type ~= "button" and element.type ~= "sprite-button" then return end
   -- Textfelder: Wert übernehmen, aber das Feld beim Tippen nicht neu schreiben
   local typing = event.name == defines.events.on_gui_text_changed
   if Admin.handle(player, action, tags, element) and not typing then Admin.refresh(player.index) end

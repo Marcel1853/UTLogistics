@@ -241,6 +241,14 @@ end)
 Events.on(defines.events.on_player_created, Teams.on_player_created)
 Events.on(defines.events.on_player_changed_force, Teams.on_player_changed_force)
 Events.on(defines.events.on_player_removed, Teams.on_player_removed)
+-- Entfernte Spieler: ihre Fenster-Einträge wegräumen (die Fenster selbst sind mit dem Spieler weg)
+Events.on(defines.events.on_player_removed, function(event)
+  local index = event.player_index
+  for _, name in pairs({ "guis", "managers", "manager_prefs", "admin_windows", "readout_guis" }) do
+    local tbl = storage[name]
+    if tbl then tbl[index] = nil end
+  end
+end)
 Events.on(defines.events.on_player_joined_game, Teams.on_player_joined)
 Events.on(defines.events.on_forces_merged, function(event)
   TeamConfig.forget(event.source_index) -- Team-Werte der aufgelösten Force verwerfen

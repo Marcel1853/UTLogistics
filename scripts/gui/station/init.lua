@@ -25,12 +25,17 @@ end
 local function changed(event, station, rebuild)
   Reader.read(station)
   Registry.config_changed(station)
-  if rebuild then
-    local player = game.get_player(event.player_index)
-    local gui = Window.get(event.player_index)
-    if player then Window.open(player, station, gui and gui.standalone) end
-  else
-    Window.refresh(event.player_index)
+  -- auch bei anderen Spielern, die dieselbe Station offen haben – sonst überschreiben sie mit
+  -- einem veralteten Fenster die Änderung (z. B. denselben Anforderungs-Slot)
+  for player_index, gui in pairs(storage.guis) do
+    if gui.unit == station.unit then
+      local player = game.get_player(player_index)
+      if player and rebuild then
+        Window.open(player, station, gui.standalone)
+      elseif player then
+        Window.refresh(player_index)
+      end
+    end
   end
 end
 

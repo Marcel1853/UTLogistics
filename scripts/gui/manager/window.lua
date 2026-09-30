@@ -76,7 +76,11 @@ function Manager.refresh(player_index, auto)
 end
 
 function Manager.refresh_all()
-  for player_index in pairs(storage.managers) do Manager.refresh(player_index, true) end
+  for player_index in pairs(storage.managers) do
+    -- angeheftete Manager von Spielern, die nicht verbunden sind, nicht auffrischen
+    local player = game.get_player(player_index)
+    if player and player.connected then Manager.refresh(player_index, true) end
+  end
 end
 
 function Manager.open(player)

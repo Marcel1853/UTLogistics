@@ -164,8 +164,9 @@ end
 
 --- Verbindungsleiste für das gewählte Netz auffrischen.
 local function refresh_links(refs, net, force)
-  refs.chips.clear()
   if not (net and force) then
+    refs.chips.clear()
+    refs.links_sig = nil
     refs.caption.caption = { "utl-gui.links" }
     refs.add.items, refs.add.enabled, refs.field.enabled, refs.confirm.enabled = {}, false, false, false
     if refs.elevator and refs.elevator.valid then refs.elevator.enabled = false end
@@ -181,6 +182,18 @@ local function refresh_links(refs, net, force)
       or { "", { "utl-gui.elevator-network-tooltip", net.name }, "\n\n", { "utl-gui.elevator-none-here" } }
   end
   local star = Networks.star(place, net.name)
+  local items = {}
+  for _, name in ipairs(Networks.known()) do
+    if name ~= net.name and Networks.can_link(place, net.name, name, math.max(limit, 1)) == true then
+      items[#items + 1] = name
+    end
+  end
+  -- Nur bei Änderungen neu bauen: sonst klappt eine offene Auswahl bei jedem Auffrischen zu
+  local sig = table.concat({ place, net.name, star.role or "", star.center or "", table.concat(star.partners, "\1"),
+    table.concat(items, "\1"), limit }, "\2")
+  if refs.links_sig == sig then return end
+  refs.links_sig = sig
+  refs.chips.clear()
   refs.caption.caption = star.role == "partner" and { "utl-gui.links" }
     or { "utl-gui.links-count", #star.partners, limit }
   local names = star.role == "partner" and { star.center } or star.partners
@@ -194,12 +207,6 @@ local function refresh_links(refs, net, force)
       mouse_button_filter = { "left" },
       tags = { utl_mgr = "link_chip", network = name },
     })
-  end
-  local items = {}
-  for _, name in ipairs(Networks.known()) do
-    if name ~= net.name and Networks.can_link(place, net.name, name, math.max(limit, 1)) == true then
-      items[#items + 1] = name
-    end
   end
   refs.add.items = items
   if #refs.add.items > 0 then refs.add.selected_index = 0 end

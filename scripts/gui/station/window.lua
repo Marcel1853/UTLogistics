@@ -91,6 +91,14 @@ local function box(parent, width)
 end
 
 function Window.open(player, station, standalone)
+  -- Neuaufbau derselben Station (Enter, ⟲, Rolle …): Reiter und verschobene Position behalten
+  local previous = storage.guis[player.index]
+  local keep_tab, keep_location = nil, nil
+  if previous and previous.unit == station.unit then
+    if previous.tabs and previous.tabs.valid then keep_tab = previous.tabs.selected_tab_index end
+    local old = previous.frame
+    if old and old.valid and old.parent == player.gui.screen then keep_location = old.location end
+  end
   Window.close(player.index)
   -- Reste alter Fenster/Panels ohne storage-Eintrag (z. B. aus älteren Spielständen).
   for _, root in ipairs({ player.gui.screen, player.gui.relative }) do
@@ -101,6 +109,7 @@ function Window.open(player, station, standalone)
   Fields.fill(station.config) -- fehlende Werte älterer Stationen ergänzen
   local is_stop = station.kind == "stop"
   local frame = create_frame(player, station, standalone)
+  if keep_location and frame.parent == player.gui.screen then frame.location = keep_location end
   local left_parent, right_parent, tabs
   if is_stop then
     -- Panel an der Haltestelle: zwei Reiter statt alles untereinander (passt auf den Bildschirm).
@@ -111,7 +120,7 @@ function Window.open(player, station, standalone)
     right_parent = tabs.add({ type = "flow", direction = "vertical" })
     tabs.add_tab(tab_station, left_parent)
     tabs.add_tab(tab_values, right_parent)
-    tabs.selected_tab_index = 1
+    tabs.selected_tab_index = keep_tab or 1
   else
     local boxes = frame.add({ type = "flow", direction = "horizontal" })
     boxes.style.horizontal_spacing = 12
@@ -159,7 +168,8 @@ end
 --- Heartbeat-Aufgabe: nur offene Fenster auffrischen.
 function Window.refresh_all()
   for player_index in pairs(storage.guis) do
-    Window.refresh(player_index)
+    local player = game.get_player(player_index)
+    if player and player.connected then Window.refresh(player_index) end
   end
 end
 
@@ -175,10 +185,5 @@ function Window.get(player_index)
   return nil
 end
 
---- Station des offenen Fensters eines Spielers.
-function Window.station_of(player_index)
-  local gui = Window.get(player_index)
-  return gui and Registry.get(gui.unit)
-end
 
 return Window
