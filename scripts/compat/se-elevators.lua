@@ -115,6 +115,35 @@ function Elevators.links(place, network)
   return list
 end
 
+--- Orte, die `network` von `place` aus über einen Aufzug erreicht: { [anderer Ort] = true } oder nil.
+--- Billig für den Normalfall ohne Aufzug (kein SE, Schalter aus).
+function Elevators.linked_places(place, network)
+  if not (storage.elevators and storage.elevator_networks) then return nil end
+  local set = nil
+  for _, link in ipairs(Elevators.links(place, network)) do
+    set = set or {}
+    set[link.there.place] = true
+  end
+  return set
+end
+
+--- Nächster fertiger Aufzug von `place` nach `other` für `network`, gemessen ab `position`:
+--- { here = Haltestelle auf dieser Seite, there = Haltestelle drüben } oder nil.
+function Elevators.route(place, other, network, position)
+  local best, best_distance = nil, nil
+  for _, link in ipairs(Elevators.links(place, network)) do
+    local here, there = link.here.stop, link.there.stop
+    if link.there.place == other and here and here.valid and there and there.valid then
+      local dx, dy = here.position.x - position.x, here.position.y - position.y
+      local distance = dx * dx + dy * dy
+      if not best_distance or distance < best_distance then
+        best, best_distance = { here = here, there = there }, distance
+      end
+    end
+  end
+  return best
+end
+
 --- Gibt es auf `place` überhaupt einen Aufzug (egal ob fertig)? Für die Anzeige des Schalters.
 function Elevators.at(place)
   local d = storage.elevators

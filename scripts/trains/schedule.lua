@@ -37,6 +37,19 @@ local function cleanup_conditions(wares)
   return conditions
 end
 
+--- Nur der Stations-Eintrag, ohne Schienen-Wegpunkt: für den Aufzug-Halt und Halte hinter dem
+--- Aufzug. SE löscht beim Durchfahren alle Schienen-Einträge; der Wegpunkt vor dem Abnehmer kommt
+--- nach der Ankunft drüben dazu (compat/space-exploration.lua).
+local function add_station(schedule, index, stop, wait_conditions)
+  schedule.add_record({
+    station = stop.backer_name,
+    temporary = true,
+    wait_conditions = wait_conditions,
+    index = { schedule_index = index },
+  })
+  return index + 1
+end
+
 local function add_stop(schedule, index, stop, wait_conditions)
   local rail = stop.connected_rail
   if rail then
@@ -85,8 +98,10 @@ end
 
 --- (Optional Tankstelle →) Anbieter → Abnehmer hinter dem aktuellen Halt einfügen und
 --- losschicken. `timeouts` = { load = s, unload = s, mode = "and" | "or" } (0 = keine Zeit).
+--- `via` (Space Exploration): { here, there } = Aufzug-Halte; dann Anbieter → Aufzug → Abnehmer.
+--- Den Rückweg durch den Aufzug setzt compat/se-home.lua bei der Abfahrt drüben.
 --- Liefert true bei Erfolg.
-function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop, timeouts)
+function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop, timeouts, via)
   local schedule = train.get_schedule()
   if not schedule then return false end
   local first = (schedule.current or 0) + 1
@@ -94,7 +109,13 @@ function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop
   if fuel_stop then index = add_stop(schedule, index, fuel_stop, FUEL_WAIT) end
   timeouts = timeouts or {}
   index = add_stop(schedule, index, provider_stop, with_timeout(loading_conditions(manifest), timeouts.load, timeouts.mode))
-  add_stop(schedule, index, requester_stop, with_timeout({ { type = "empty" } }, timeouts.unload, timeouts.mode))
+  local unload = with_timeout({ { type = "empty" } }, timeouts.unload, timeouts.mode)
+  if via then
+    index = add_station(schedule, index, via.here, {})
+    add_station(schedule, index, requester_stop, unload)
+  else
+    add_stop(schedule, index, requester_stop, unload)
+  end
   schedule.go_to_station(first)
   return true
 end

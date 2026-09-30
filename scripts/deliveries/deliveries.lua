@@ -19,6 +19,7 @@ local TeamConfig = require("scripts.core.team-config")
 local Pending = require("scripts.trains.pending")
 local Output = require("scripts.stations.output")
 local Statistics = require("scripts.deliveries.statistics")
+local Home = require("scripts.compat.se-home")
 
 local Deliveries = {}
 
@@ -73,13 +74,15 @@ end
 --- möglich (Items), bei Flüssigkeiten genau eine.
 --- `fuel_stop` (optional): auf dem Weg zum Anbieter zuerst tanken (für den Ablauf unsichtbar,
 --- die Lieferung bleibt bis zum Anbieter im Zustand to_provider). Der Dispatcher sucht sie aus.
-function Deliveries.create(record, provider, requester, manifest, fuel_stop)
+--- `via` (Space Exploration): { here, there } = Aufzug-Halte, wenn der Abnehmer hinter einem
+--- Weltraumaufzug liegt (Anbieter-Seite = Seite des Zugs).
+function Deliveries.create(record, provider, requester, manifest, fuel_stop, via)
   local train = record.train
   -- Zeitlimits des Teams, dem der Zug gehört (sonst Kartenwert)
   local force = train.front_stock and train.front_stock.force
   local timeouts = { load = TeamConfig.get(force, "load_timeout"), unload = TeamConfig.get(force, "unload_timeout"),
     mode = TeamConfig.get(force, "timeout_mode") }
-  if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop, timeouts) then return nil end
+  if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop, timeouts, via) then return nil end
   -- Tankhalt vormerken: bis zur Ankunft zählt ihn das Zuglimit der Tankstelle sonst nicht mit
   if fuel_stop then Pending.reserve(train.id, { fuel_stop }) end
   Depot.remove(record.id)
@@ -101,6 +104,7 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop)
     depot = record.depot_name or (record.stop and record.stop.valid and record.stop.backer_name) or "",
     from = provider.stop.backer_name,
     to = requester.stop.backer_name,
+    via = via,
   }
   deliveries.active[id] = delivery
   deliveries.by_train[train.id] = id
@@ -359,6 +363,8 @@ function Deliveries.cancel(delivery, reason)
   end
   -- Mit Ladung (bzw. knapp an Treibstoff) direkt zur Cleanup-/Tankstelle statt ins Depot.
   if train.valid and not train.manual_mode then Depot.send_service(train, delivery.network or "default") end
+  -- über den Aufzug und schon drüben: zurück durch den Aufzug (dort steht sein Depot)
+  if delivery.via then Home.ensure(train) end
 end
 
 --- Station entfernt oder ohne Haltestelle: alle Lieferungen von/zu ihr abbrechen.

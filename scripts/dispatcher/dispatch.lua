@@ -49,7 +49,7 @@ local function try_request(request)
     if later then return false, true end -- im nächsten Lauf weiter, keine Warnung
     if record then
       local manifest = Select.manifest(request, provider, record, amount)
-      local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop) ~= nil
+      local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop, provider.via) ~= nil
       if created then Warn.waiting_since(request.station.unit, request.key, true) end
       return created
     end
@@ -98,7 +98,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
         local provider = providers[i]
         local p_cfg, r_cfg = provider.station.config, request.station.config
         local capacity = Select.capacity_of(record, request.key, p_cfg.locked_slots)
-        if capacity > 0 and Select.length_ok(p_cfg, record.length) and Select.length_ok(r_cfg, record.length) then
+        if capacity > 0 and not provider.via and Select.length_ok(p_cfg, record.length) and Select.length_ok(r_cfg, record.length) then
           local amount = math.min(provider.amount, capacity)
           if amount >= request.minimum or amount == capacity then
             local distance = dist2(record.position, provider.station.stop.position)

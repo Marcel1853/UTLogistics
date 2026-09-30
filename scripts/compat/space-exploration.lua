@@ -6,6 +6,9 @@
 local Events = require("scripts.core.events")
 local Rekey = require("scripts.trains.rekey")
 local Elevators = require("scripts.compat.se-elevators")
+local Deliveries = require("scripts.deliveries.deliveries")
+local Schedule = require("scripts.trains.schedule")
+local DepotRoute = require("scripts.trains.depot-route")
 
 local SE = {}
 
@@ -25,8 +28,36 @@ local function on_started(event)
   if event.old_train_id_1 then Rekey.start(event.old_train_id_1) end
 end
 
+--- Nach dem Aufzug: den Schienen-Wegpunkt vor dem Abnehmer wieder einsetzen (SE löscht Schienen-
+--- Einträge beim Durchfahren, UTL plant hinter dem Aufzug nur Stations-Einträge).
+local function waypoint_to_requester(train, delivery)
+  local requester = storage.stations.by_unit[delivery.requester]
+  local stop = requester and requester.stop
+  local front = train.front_stock
+  if not (stop and stop.valid and front and stop.surface_index == front.surface_index) then return end
+  local schedule = train.get_schedule()
+  local current = schedule and schedule.current
+  local record = current and schedule.get_record({ schedule_index = current })
+  if record and record.temporary and record.station == stop.backer_name then
+    Schedule.waypoint_before(train, stop, current)
+  end
+end
+
 local function on_finished(event)
-  if event.old_train_id_1 then Rekey.move(event.old_train_id_1, event.train) end
+  local train = event.train
+  if not (event.old_train_id_1 and train and train.valid) then return end
+  Rekey.move(event.old_train_id_1, train)
+  local delivery = Deliveries.of_train(train.id)
+  if event.stranded then
+    -- Zug im Aufzug zerrissen (z. B. Strom weg): SE schaltet beide Teile auf Handbetrieb
+    if delivery then Deliveries.cancel(delivery, "rebuilt") end
+    return
+  end
+  if delivery then
+    if delivery.state == "to_requester" then waypoint_to_requester(train, delivery) end
+  else
+    DepotRoute.send_home(train) -- zurück auf der Depot-Seite: freies Depot wie sonst auch
+  end
 end
 
 --- Aufzug fertig gebaut, kaputt, mit/ohne Strom: beide Seiten neu einlesen.

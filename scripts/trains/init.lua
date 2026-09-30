@@ -10,6 +10,7 @@ local ServiceStops = require("scripts.trains.service-stops")
 local Filters = require("scripts.trains.wagon-filters")
 local Output = require("scripts.stations.output")
 local Rekey = require("scripts.trains.rekey")
+local Home = require("scripts.compat.se-home")
 local Alerts = require("scripts.alerts.alerts")
 local Heartbeat = require("scripts.core.heartbeat")
 local Perf = require("scripts.core.perf")
@@ -29,6 +30,8 @@ local function on_state(event)
   local state = train.state
 
   if MANUAL[state] then
+    -- SE schaltet Züge beim Durchfahren des Aufzugs kurz auf Handbetrieb: kein Abbruch
+    if Rekey.in_transfer(id) then return end
     Depot.remove(id)
     storage.trains.service[id] = nil
     Pending.release(id)
@@ -36,8 +39,10 @@ local function on_state(event)
     return
   end
 
-  -- Lieferzug findet keinen Weg (Gleis abgerissen, Signal falsch …): warnen.
-  if state == S.no_path and delivery then
+  -- Lieferzug findet keinen Weg (Gleis abgerissen, Signal falsch …): warnen. Nicht direkt bei der
+  -- Abfahrt: dann erst die Abfahrt verbuchen (sonst hinge die Lieferung, z. B. wenn das Depot hinter
+  -- einem Weltraumaufzug liegt und der Aufzug-Halt erst bei der Abfahrt dazukommt).
+  if state == S.no_path and delivery and event.old_state ~= S.wait_station then
     local target = delivery.state == "to_provider" and delivery.from or delivery.to
     Alerts.raise("train", "no_path", train.front_stock, { "utl-alert.no-path", Alerts.train_name(train), target or "?" },
       "no-path:" .. id)
@@ -74,6 +79,8 @@ local function on_state(event)
           DepotRoute.send_home(train)
         end
       end
+      -- nach einer Lieferung über den Weltraumaufzug: zurück auf die Seite des Depots
+      if not Deliveries.of_train(id) then Home.ensure(train) end
     else
       -- Abfahrt aus dem Depot: dessen Ausgabe neu schreiben
       local home = storage.trains.home[id]
@@ -92,6 +99,7 @@ local function on_state(event)
           storage.trains.service[id] = nil
         else
           DepotRoute.send_home(train) -- nur, wenn der nächste Halt das Depot ist
+          Home.ensure(train)
         end
       end
     end
