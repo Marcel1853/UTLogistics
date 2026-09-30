@@ -54,12 +54,7 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop, via
     mode = TeamConfig.get(force, "timeout_mode") }
   local pickup2 = nil
   if second then
-    local share = {}
-    for key, amount in pairs(manifest) do
-      local rest = amount - (second.manifest[key] or 0)
-      if rest > 0 then share[key] = rest end
-    end
-    pickup2 = { stop = second.station.stop, first = share }
+    pickup2 = { stop = second.station.stop, first = Reservations.first_share({ manifest = manifest, second = second }) }
   end
   if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop, timeouts, via, pickup2) then return nil end
   -- Tankhalt vormerken: bis zur Ankunft zählt ihn das Zuglimit der Tankstelle sonst nicht mit
@@ -220,6 +215,28 @@ function Deliveries.on_depart(delivery)
     release_provider(delivery)
     reread(delivery.provider)
     Output.mark(delivery.second.unit)
+    -- Hat der erste weniger geladen (Zeitlimit)? Dann am zweiten nur bis „Geladenes + sein Anteil“
+    -- warten – sonst wartet der Zug dort auf Ware, die für ihn nicht reserviert ist.
+    local train = delivery.train
+    if train.valid then
+      local changed = false
+      for key, amount in pairs(delivery.manifest) do
+        local target = math.min(amount, Deliveries.loaded(train, key) + (delivery.second.manifest[key] or 0))
+        if target < amount then
+          add(storage.deliveries.incoming, delivery.requester, key, target - amount)
+          delivery.manifest[key] = target > 0 and target or nil
+          changed = true
+        end
+      end
+      if changed then
+        local force = train.front_stock and train.front_stock.force
+        local stop = Registry.get(delivery.second.unit)
+        if stop and stop.stop and stop.stop.valid then
+          Schedule.update_loading(train, stop.stop, delivery.manifest, { load = TeamConfig.get(force, "load_timeout"),
+            unload = TeamConfig.get(force, "unload_timeout"), mode = TeamConfig.get(force, "timeout_mode") })
+        end
+      end
+    end
   elseif delivery.state == "loading" then
     delivery.state = "to_requester"
     train_at(Reservations.pickup_unit(delivery), nil)

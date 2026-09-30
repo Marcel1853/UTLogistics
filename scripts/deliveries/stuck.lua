@@ -6,6 +6,8 @@
 --- Fortschritt = jeder Zustandswechsel des Zugs (on_train_changed_state, kein Polling):
 --- `delivery.progress` = Tick. Geprüft wird reihum im Heartbeat mit festem Budget (Regel 5).
 local Alerts = require("scripts.alerts.alerts")
+local Deliveries = require("scripts.deliveries.deliveries")
+local Rekey = require("scripts.trains.rekey")
 
 local Stuck = {}
 
@@ -21,11 +23,12 @@ function Stuck.progress(delivery)
   delivery.stuck = nil
 end
 
---- Heartbeat-Aufgabe: einige Lieferungen prüfen (reihum).
+--- Heartbeat-Aufgabe: einige Lieferungen prüfen (reihum). Nebenbei (immer, auch mit Warnung aus):
+--- Lieferungen, deren Zug ohne Umbau-Ereignis verschwunden ist (Oberfläche gelöscht, Script-
+--- `destroy`), abbrechen – sonst blieben ihre Reservierungen für immer stehen.
 function Stuck.check()
   local minutes = storage.cfg.stuck_minutes or 0
-  if minutes <= 0 then return end
-  local limit = minutes * 3600
+  local limit = minutes > 0 and minutes * 3600 or nil
   local deliveries = storage.deliveries
   local active = deliveries.active
   local id = deliveries.stuck_cursor
@@ -37,7 +40,9 @@ function Stuck.check()
     local train = delivery.train
     -- Lieferungen aus älteren Spielständen haben noch keine Uhr: ab jetzt zählen
     if not delivery.progress then delivery.progress = game.tick end
-    if train and train.valid and WAITING[train.state] and game.tick - delivery.progress >= limit then
+    if not (train and train.valid) then
+      if not Rekey.in_transfer(delivery.train_id) then Deliveries.cancel(delivery, "rebuilt") end
+    elseif limit and WAITING[train.state] and game.tick - delivery.progress >= limit then
       delivery.stuck = true
       local loading = delivery.state == "to_provider" or delivery.state == "loading"
       Alerts.raise("train", "stuck", train.front_stock, { "utl-alert.stuck", Alerts.train_name(train),

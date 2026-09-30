@@ -63,7 +63,9 @@ local function blocked(provider, requester_unit, key)
 end
 
 --- Offene Anfragen einsammeln (reihum über die Abnehmer).
-local function collect_requests()
+--- `peek` = true: Reihum-Zeiger nicht weiterschieben (Anschlussfahrt, sonst überspränge der
+--- nächste Dispatcher-Lauf diese Abnehmer).
+local function collect_requests(peek)
   local dispatch = storage.dispatch
   local requesters = dispatch.requesters
   local unit = dispatch.cursor
@@ -93,7 +95,7 @@ local function collect_requests()
       end
     end
   end
-  dispatch.cursor = unit
+  if not peek then dispatch.cursor = unit end
   -- höhere Priorität zuerst; bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer),
   -- dann die älteste Anfrage (sonst gewinnt bei knappen Zügen immer derselbe – Reihenfolge von pairs)
   table.sort(list, function(a, b)
@@ -118,10 +120,18 @@ local function find_providers(request)
   -- Space Exploration: Orte hinter einem Weltraumaufzug (gleichnamiges Netz, Schalter an)
   local linked = Elevators.linked_places(place, network)
   local found = {}
-  local scanned = 0
-  for unit in pairs(set) do
-    scanned = scanned + 1
-    if scanned > PROVIDER_SCAN then break end
+  -- Reihum je Ware höchstens PROVIDER_SCAN Anbieter (die Menge gilt für die ganze Karte): mit festem
+  -- Anfang kämen Anbieter ab Platz 51 nie dran, auch nicht die nächsten oder vollsten.
+  local cursors = storage.dispatch.provider_cursor or {}
+  storage.dispatch.provider_cursor = cursors
+  local unit = cursors[request.key]
+  if unit ~= nil and set[unit] == nil then unit = nil end
+  local first = nil
+  for _ = 1, PROVIDER_SCAN do
+    unit = next(set, unit)
+    if unit == nil then unit = next(set) end -- am Ende vorne weiter
+    if unit == nil or unit == first then break end
+    first = first or unit
     local provider = Registry.get(unit)
     if not provider then
       set[unit] = nil
@@ -152,6 +162,7 @@ local function find_providers(request)
       end
     end
   end
+  cursors[request.key] = unit
   table.sort(found, function(a, b)
     if a.rank ~= b.rank then return a.rank > b.rank end
     if a.priority ~= b.priority then return a.priority > b.priority end

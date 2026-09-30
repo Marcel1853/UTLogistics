@@ -78,8 +78,13 @@ local function try_request(request)
       -- Rest beim zweiten Anbieter, wenn der Zug ihn erreicht; sonst nur der erste (falls das lohnt)
       -- Weg Depot → zweiter Anbieter, erster → zweiter und zweiter → Abnehmer (je gecacht)
       local p2 = second.station.stop
-      if Reach.check(record.train, record.stop, p2) and Reach.between(record.train, provider.station.stop, p2)
-        and Reach.between(record.train, p2, request.station.stop) then
+      local ok ---@type boolean?
+      ok = Select.length_ok(second.station.config, record.length) -- Zuglänge auch am zweiten Halt
+      if ok then ok = Reach.check(record.train, record.stop, p2) end
+      if ok then ok = Reach.between(record.train, provider.station.stop, p2) end
+      if ok then ok = Reach.between(record.train, p2, request.station.stop) end
+      if ok == nil then return false, true end -- Such-Budget aufgebraucht: im nächsten Lauf weiter
+      if ok then
         pickup = { station = second.station, manifest = { [request.key] = amount - provider.amount } }
       elseif provider.amount >= request.minimum then
         amount = provider.amount
@@ -129,7 +134,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   }
   Index.update()
   local best
-  for _, request in ipairs(Select.requests()) do
+  for _, request in ipairs(Select.requests(true)) do
     local r_stop = request.station.stop
     if Select.has_room(request.station) -- Anfragen kommen jetzt auch ohne freien Platz herein
       and r_stop.surface_index == record.surface_index and r_stop.force_index == record.force_index

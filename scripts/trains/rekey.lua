@@ -27,6 +27,16 @@ function Rekey.start(train_id)
   trains.transfer[train_id] = game.tick
 end
 
+--- Aufzug-Fahrten vergessen, deren Ende nie gemeldet wurde (Zug im Aufzug zerstört, fremde Mod
+--- meldet nur den Beginn) – sonst verhinderte `in_transfer` dauerhaft Abbruch und Aufräumen.
+function Rekey.sweep(max_age)
+  local transfer = storage.trains.transfer
+  if not transfer then return end
+  for id, tick in pairs(transfer) do
+    if game.tick - tick > max_age then transfer[id] = nil end
+  end
+end
+
 --- Umzug `old_id` → `train` (fertiger neuer Zug).
 function Rekey.move(old_id, train)
   local trains, deliveries = storage.trains, storage.deliveries
