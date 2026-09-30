@@ -1,8 +1,60 @@
 -- Sortiert alle Zug-Items in die UTL-Registerkarte – auch die anderer Mods.
 -- Erkannt wird über den Typ der platzierten Entity, nicht über Namen.
-if not settings.startup["utl-own-item-group"].value then return end
+-- Einstellung „utl-item-group“: auto (Standard) | utl | off – siehe settings/startup.lua.
+local mode = settings.startup["utl-item-group"].value
+if mode == "off" then return end
 
 local C = require("prototypes.constants")
+local GROUP = "utl-trains"
+local ITEM_TYPES = { "item", "item-with-entity-data", "rail-planner" }
+
+--- Reiter und Zeile, in der ein Item gerade liegt.
+local function place_of(item)
+  local subgroup = item and data.raw["item-subgroup"][item.subgroup or ""]
+  return subgroup and subgroup.group, subgroup and subgroup.name
+end
+
+-- Automatisch: Liegt die Lok schon in einem fremden Reiter (weder „Logistik“ noch UTL), hat eine
+-- andere Mod einen eigenen Zug-Reiter (z. B. Train Construction Site). Dann nichts umsortieren und
+-- die UTL-Sachen dort zu den Haltestellen legen – ein Reiter statt zwei, die sich streiten.
+if mode == "auto" then
+  local loco = data.raw["item-with-entity-data"]["locomotive"] or data.raw["item"]["locomotive"]
+  local foreign = place_of(loco)
+  if foreign and foreign ~= "logistics" and foreign ~= GROUP then
+    local stop_group, stop_subgroup = place_of(data.raw["item"]["train-stop"])
+    local _, loco_subgroup = place_of(loco)
+    local target = stop_group == foreign and stop_subgroup or loco_subgroup
+    local ours = {}
+    for name, subgroup in pairs(data.raw["item-subgroup"]) do
+      if subgroup.group == GROUP then ours[name] = true end
+    end
+    -- alles in UTL-Zeilen und alle eigenen UTL-Items (Kombinatoren, Hafen …) mitnehmen
+    for _, item_type in ipairs(ITEM_TYPES) do
+      for name, item in pairs(data.raw[item_type] or {}) do
+        if (item.subgroup and ours[item.subgroup]) or (string.sub(name, 1, 4) == "utl-" and not item.hidden) then
+          item.subgroup = target
+        end
+      end
+    end
+    for _, recipe in pairs(data.raw["recipe"]) do
+      if recipe.subgroup and ours[recipe.subgroup] then recipe.subgroup = target end
+    end
+    -- UTL-Reiter entfernen, wenn nichts mehr darin liegt
+    local used = false
+    for _, prototypes in pairs(data.raw) do
+      for _, prototype in pairs(prototypes) do
+        if type(prototype) == "table" and prototype.subgroup and ours[prototype.subgroup] then used = true end
+      end
+    end
+    if not used then
+      for name in pairs(ours) do data.raw["item-subgroup"][name] = nil end
+      data.raw["item-group"][GROUP] = nil
+    end
+    log("UTL: fremder Zug-Reiter „" .. foreign .. "“ erkannt – UTL-Sachen nach „" .. tostring(target)
+      .. "“, UTL-Reiter " .. (used and "bleibt" or "entfernt"))
+    return
+  end
+end
 
 -- Entity-Typ → Zeile in der Registerkarte.
 local SUBGROUP_BY_ENTITY_TYPE = {
@@ -46,8 +98,6 @@ for _, name in ipairs(TRAIN_CIRCUITS) do
   subgroup_by_entity[name] = "utl-train-circuits"
 end
 
-local ITEM_TYPES = { "item", "item-with-entity-data", "rail-planner" }
-
 local moved = {} -- [item-name] = subgroup
 for _, item_type in ipairs(ITEM_TYPES) do
   for name, item in pairs(data.raw[item_type] or {}) do
@@ -77,11 +127,11 @@ for _, item_type in ipairs(ITEM_TYPES) do
     end
   end
 end
-local KEEP_GROUPS = { signals = true, environment = true, effects = true, other = true, ["utl-trains"] = true }
+local KEEP_GROUPS = { signals = true, environment = true, effects = true, other = true, [GROUP] = true }
 for name, subgroup in pairs(data.raw["item-subgroup"]) do
   local total, trains = in_subgroup[name] or 0, train_in_subgroup[name] or 0
   if total > 0 and trains == total and not KEEP_GROUPS[subgroup.group] then
-    subgroup.group = "utl-trains"
+    subgroup.group = GROUP
     subgroup.order = "z-" .. (subgroup.order or name)
   end
 end
