@@ -15,7 +15,7 @@ cleanup and an overview window in one mod**, built for high UPS.
   (storage stations). The map
   setting “UTL features need research” turns this off – then everything is available right away.
 
-> **Testing status.** UTL runs through an automated self test (126 checks) and a headless load
+> **Testing status.** UTL runs through an automated self test (161 checks) and a headless load
 > test with 384 trains on 12 × 12 city blocks; updates are checked by loading a save from the
 > previous version. The main features are shown in the scenarios. In real games it has so far been
 > played on small networks. Newest: **storage** and **cleanup gives back** (0.0.8), **topping up** (0.0.7, off by default) and **team separation** (0.0.6, not yet tried in a
@@ -34,7 +34,7 @@ UTL is written with the help of AI (Claude by Anthropic): the code and most text
 the wiki and the in-game help. I (Marcel) decide what UTL should do, open every scenario and my own
 saves and test by hand before anything is released, so that as little as possible can break.
 
-- **Automated tests** (run headless by the AI): self test with 126 checks, every tips & tricks
+- **Automated tests** (run headless by the AI): self test with 161 checks, every tips & tricks
   scene, the load test with 384 trains and an update test with a save from the previous version.
 - **How often so far** (counted from the development logs, 18 to 27 September 2026): the self test
   ran about 270 times, the tips & tricks test about 85 times, the load test about 90 times, plus
@@ -213,6 +213,18 @@ The **“Blueprint: rail ↔ waterway”** button in the shortcut bar swaps, in 
 (library blueprints too), rails ↔ waterways, signals ↔ buoys and train stops ↔ ports – a second
 click swaps back. Waterways can still only be built on water.
 
+## Space Exploration (space elevator)
+
+*Only with the [Space Exploration](https://mods.factorio.com/mod/space-exploration) mod (which runs
+without Space Age). New in 0.0.10.*
+
+UTL delivers through a finished, powered **space elevator** between a planet and its orbit, in both
+directions. Switch it on per network with **“Deliver via space elevator”** (station window, network
+section, or manager tab “Networks”, off by default); it applies to the network with the same name on
+both sides. The train loads at the provider, goes through the elevator to the requester and comes back
+through the elevator to its depot – fuel and cleanup stops on the side where it currently is.
+Details: [wiki – Space elevator](https://github.com/Marcel1853/UTLogistics/wiki/Space-elevator).
+
 ## Depots and train length
 
 Free trains wait **empty** at stops with the **Depot** role – **every** depot stop needs the
@@ -240,7 +252,10 @@ More: [wiki – UTL Manager and alerts](https://github.com/Marcel1853/UTLogistic
 The most important ones: **next job right away** (on), **load only the current job** (on),
 **job output** (on), **UTL features need research** (on), **refuel below** (40 %), **loading /
 unloading inactivity** (30 s each, combined with the cargo by **or** or **and**), **top up while
-loading** (off), **cleanup may offer its contents again** (on), **allow storage stations** (on).
+loading** (off), **second provider** (off, with a **maximum detour** of 50 %), **“train stuck”
+alert after** (5 minutes), **cleanup may offer its contents again** (on), **allow storage stations** (on).
+Startup setting **“Trains” tab**: automatic – UTL's own tab, unless another mod already has a train
+tab; then the UTL items go there.
 The loading values can also be set in the **UTL Manager, tab “Settings”** – per team with teams;
 admins use **`/utl-admin`**.
 
@@ -296,7 +311,8 @@ Questions and troubleshooting step by step: [wiki – FAQ and troubleshooting](h
 **Teams (forces)** and **surfaces** are kept apart: trains, depots, fuel and cleanup stations only
 work within their own team and surface, network links count per team, and the manager shows only
 your team. Two teams may use the same names. Trains cannot change planet, so every surface needs its
-own depots and trains. Try it: scenario “UTL teams”.
+own depots and trains (with Space Exploration, trains travel through the space elevator between a
+planet and its orbit). Try it: scenario “UTL teams”.
 
 ## Topping up while loading (optional, off by default)
 
@@ -306,11 +322,23 @@ the train, fluids only of the same kind). It keeps the train longer at the provi
 by default** – map setting or manager “Settings”: *Top up while loading*. Scenario “UTL top up”
 shows it.
 
-## Not yet included
+## Second provider (optional, off by default)
 
-Collecting from a second provider on the way (one trip still picks up at exactly one provider).
+*New in 0.0.10.* If the best provider does not have enough, the train picks up the rest at a
+**second provider** in the same network – one trip with two loading stops instead of two trips. Only
+on the same surface, only if the detour (straight line) is at most the **maximum detour** (default
+50 % of the direct way) and the train can drive first → second → requester. Map setting or manager
+“Settings”: *Second provider*.
+
+## Train stuck alert
+
+*New in 0.0.10.* If a delivery train stands too long without progress – waiting at a signal, no path,
+destination full – the alert **“train stuck”** appears and the manager shows it at the train. UTL does
+not cancel anything. Map setting in minutes, default 5, 0 = off.
 
 ## For mod authors
 
 Remote interface `utl` (station data, deliveries, alerts, configuring stations and requests, network
-links, team and map values, tagging script-made blueprints): [wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
+links, team and map values, tagging script-made blueprints, trains and stations by filter, cancelling
+a delivery) and **events** for created, changed, completed and cancelled deliveries:
+[wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
