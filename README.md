@@ -54,8 +54,8 @@ UTL lives from the ideas and bug reports of other players – the more come in, 
 Post them in the [discussion](https://mods.factorio.com/mod/UTLogistics/discussion).
 
 Along the way, a **Factorio modding skill** for Claude came out of UTL: checked knowledge and test
-tools that help the AI write Factorio mods. I am still working on it and would like to
-publish it later.
+tools that help the AI write Factorio mods – not only train mods. It is public now:
+[factorio-modding-skill](https://github.com/Marcel1853/MySkillsAi-s/tree/main/factorio-modding-skill).
 
 ## Quick start
 
