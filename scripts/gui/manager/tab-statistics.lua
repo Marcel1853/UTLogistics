@@ -35,7 +35,7 @@ local TRAINS = {
   { caption = { "utl-manager.col-stat-deliveries" }, width = 70, desc_first = true,
     sort = function(item) return item.deliveries end },
   { caption = { "utl-manager.col-stat-utilization" }, width = 140, desc_first = true,
-    sort = function(item) return item.utilization end },
+    sort = function(item) return item.utilization or -1 end }, -- „–“ (noch keine Lieferung) zuletzt
 }
 
 function Tab.build(parent)
@@ -89,9 +89,11 @@ local function fill_train(row, item)
   List.cell(row, TRAINS[2].width, { type = "label", caption = tostring(item.deliveries) })
   local cell = List.cell(row, TRAINS[3].width, { type = "flow", direction = "horizontal" })
   cell.style.vertical_align = "center"
-  local bar = cell.add({ type = "progressbar", value = item.utilization })
+  local bar = cell.add({ type = "progressbar", value = item.utilization or 0 })
   bar.style.width = 90
-  cell.add({ type = "label", caption = { "", tostring(math.floor(item.utilization * 100 + 0.5)), " %" } })
+  -- „–“, bis der Zug seine erste Lieferung abgeschlossen hat
+  cell.add({ type = "label", caption = item.utilization and { "", tostring(math.floor(item.utilization * 100 + 0.5)), " %" }
+    or "–", tooltip = not item.utilization and { "utl-manager.utilization-none" } or nil })
 end
 
 function Tab.refresh(refs, manager)
@@ -152,7 +154,7 @@ function Tab.refresh(refs, manager)
     end
   end
   table.sort(trains, function(a, b)
-    if a.utilization ~= b.utilization then return a.utilization > b.utilization end
+    if a.utilization ~= b.utilization then return (a.utilization or -1) > (b.utilization or -1) end
     return a.train.id < b.train.id
   end)
   refs.summary.caption = { "utl-manager.stat-summary", deliveries, Widgets.duration(game.tick - stats.since) }

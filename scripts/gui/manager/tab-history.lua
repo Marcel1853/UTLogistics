@@ -76,7 +76,10 @@ function Tab.refresh(refs, manager)
   end
   refs.count.caption = { "utl-manager.history-count", #items }
   current = manager
-  List.sync(refs.rows, items, fill, COLUMNS)
+  List.sync(refs.rows, items, fill, COLUMNS, function(entry)
+    -- Verlaufseinträge ändern sich nicht mehr
+    return (entry.started or 0) .. ":" .. (entry.finished or 0) .. ":" .. (entry.train_id or 0)
+  end)
   current = nil
 end
 

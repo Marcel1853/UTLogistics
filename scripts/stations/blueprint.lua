@@ -29,12 +29,13 @@ local function blueprint_of(event, player)
   return nil
 end
 
---- Echte Entity zu einem Blaupausen-Eintrag: über die Zuordnung, sonst über Name und
---- Position auf der Oberfläche (wie LTN Combinator Modernized).
-local function real_entity(surface, mapping, index, entry)
+--- Echte Entity zu einem Blaupausen-Eintrag – nur über die Zuordnung. (Eine Suche über
+--- `entry.position` ginge fehl: das sind Koordinaten relativ zur Blaupausen-Mitte, keine
+--- Weltkoordinaten.)
+local function real_entity(_, mapping, index)
   local entity = mapping and mapping[index]
   if entity and entity.valid then return entity end
-  return surface and surface.find_entity(entry.name, entry.position)
+  return nil
 end
 
 --- Einstellungen aller UTL-Stationen als Tag in die Blaupause schreiben.

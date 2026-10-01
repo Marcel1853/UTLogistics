@@ -15,7 +15,7 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
   (Lager-Stationen). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
-> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (126 Prüfungen) und einen
+> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (161 Prüfungen) und einen
 > headless-Lasttest mit 384 Zügen auf 12 × 12 City Blocks; Updates werden geprüft, indem ein
 > Spielstand der Vorversion geladen wird. Die wichtigsten Funktionen zeigen die Szenarien. Im
 > echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Lager** und **Cleanup gibt
@@ -39,7 +39,7 @@ README, das Wiki und die Hilfe im Spiel. Ich (Marcel) lege fest, was UTL können
 Szenario und meine eigenen Spielstände auf und teste selbst, bevor etwas veröffentlicht wird –
 damit so wenig wie möglich kaputtgehen kann.
 
-- **Automatische Tests** (von der KI headless ausgeführt): Selbsttest mit 126 Prüfungen, alle
+- **Automatische Tests** (von der KI headless ausgeführt): Selbsttest mit 161 Prüfungen, alle
   Szenen aus Tipps & Tricks, der Lasttest mit 384 Zügen und ein Update-Test mit einem Spielstand der
   Vorversion.
 - **Wie oft bisher** (gezählt aus den Entwicklungsprotokollen, 18. bis 27. September 2026): der
@@ -253,6 +253,18 @@ Der Knopf **„Blaupause: Gleis ↔ Wasserweg“** in der Shortcut-Leiste tausch
 Hand (auch aus der Bibliothek) Gleise ↔ Wasserwege, Signale ↔ Bojen und Haltestellen ↔ Häfen – ein
 zweiter Klick tauscht zurück. Gebaut werden Wasserwege weiterhin nur auf Wasser.
 
+## Space Exploration (Weltraumaufzug)
+
+*Nur mit der Mod [Space Exploration](https://mods.factorio.com/mod/space-exploration) (läuft ohne
+Space Age). Neu in 0.0.10.*
+
+UTL liefert durch einen fertigen **Weltraumaufzug** mit Strom zwischen einem Planeten und seinem
+Orbit, in beide Richtungen. Einschalten je Netz mit **„Über den Weltraumaufzug liefern“**
+(Stationsfenster, Abschnitt Netzwerk, oder Manager-Reiter „Netzwerke“, Standard aus); es gilt für das
+gleichnamige Netz auf beiden Seiten. Der Zug lädt beim Anbieter, fährt durch den Aufzug zum Abnehmer
+und durch den Aufzug zurück in sein Depot – Tanken und Cleanup auf der Seite, auf der er gerade ist.
+Mehr: [Wiki – Weltraumaufzug](https://github.com/Marcel1853/UTLogistics/wiki/Weltraumaufzug).
+
 ## Depots und Zuglänge
 
 Freie Züge warten **leer** an Haltestellen mit der Rolle **Depot**. **Jede** Depot-Haltestelle
@@ -285,7 +297,10 @@ Mehr: [Wiki – UTL-Manager und Warnungen](https://github.com/Marcel1853/UTLogis
 Die wichtigsten: **Direkt der nächste Auftrag** (an), **Nur den Auftrag laden** (an),
 **Auftrags-Ausgabe** (an), **UTL-Funktionen brauchen Forschung** (an), **Tanken unter** (40 %), **Mindest-Treibstoff** (10 %),
 **Inaktivität beim Laden / Entladen** (je 30 s, mit der Fracht per **oder** bzw. **und** verknüpft),
-**Nachladen** (aus), **Cleanup darf Inhalt wieder anbieten** (an), **Lager-Stationen erlauben** (an).
+**Nachladen** (aus), **Zweiter Anbieter** (aus, mit **höchstem Umweg** 50 %), **Warnung „Zug steckt
+fest“ nach** (5 Minuten), **Cleanup darf Inhalt wieder anbieten** (an), **Lager-Stationen erlauben** (an).
+Start-Einstellung **Registerkarte „Züge“**: automatisch – eigene UTL-Registerkarte, außer eine andere
+Mod hat schon eine Zug-Registerkarte; dann kommen die UTL-Sachen dort hinein.
 Die Lade-Werte gehen auch im **UTL-Manager, Reiter „Einstellungen“** – mit Teams je Team; Admins
 nutzen **`/utl-admin`**.
 
@@ -343,7 +358,8 @@ Fragen und Fehlersuche Schritt für Schritt: [Wiki – Häufige Fragen und Fehle
 **Teams (Forces)** und **Oberflächen** trennt UTL sauber: Züge, Depots, Tankstellen und Cleanups
 arbeiten nur im eigenen Team und auf der eigenen Oberfläche, Netzverbindungen gelten je Team, der
 Manager zeigt nur dein Team. Zwei Teams dürfen dieselben Namen benutzen. Züge können den Planeten
-nicht wechseln – jede Oberfläche braucht eigene Depots und Züge. Ausprobieren: Szenario „UTL-Teams“.
+nicht wechseln – jede Oberfläche braucht eigene Depots und Züge (mit Space Exploration fahren Züge
+durch den Weltraumaufzug zwischen Planet und Orbit). Ausprobieren: Szenario „UTL-Teams“.
 
 ## Nachladen (abschaltbar, Standard aus)
 
@@ -353,13 +369,24 @@ bei Flüssigkeiten nur dieselbe Sorte). Der Zug steht dafür länger am Anbieter
 Haus aus aus** – Map-Einstellung oder Manager „Einstellungen“: *Nachladen, während der Zug lädt*.
 Szenario „UTL-Nachladen“ zeigt es.
 
-## Noch nicht enthalten
+## Zweiter Anbieter (abschaltbar, Standard aus)
 
-Einsammeln bei einem zweiten Anbieter auf dem Weg (eine Fahrt holt bisher bei genau einem
-Anbieter ab).
+*Neu in 0.0.10.* Hat der beste Anbieter nicht genug, holt der Zug den Rest bei einem **zweiten
+Anbieter** im selben Netz – eine Fahrt mit zwei Ladehalten statt zwei Fahrten. Nur auf derselben
+Oberfläche, nur wenn der Umweg (Luftlinie) höchstens der **höchste Umweg** ist (Standard 50 % der
+direkten Strecke) und der Zug erster → zweiter → Abnehmer fahren kann. Map-Einstellung oder Manager
+„Einstellungen“: *Zweiter Anbieter*.
+
+## Warnung „Zug steckt fest“
+
+*Neu in 0.0.10.* Steht ein Lieferzug zu lange ohne Fortschritt – wartet an einem Signal, kein Weg,
+Ziel voll –, kommt die Warnung **„Zug steckt fest“**, und der Manager zeigt es beim Zug an. UTL bricht
+nichts ab. Map-Einstellung in Minuten, Standard 5, 0 = aus.
 
 ## Für Mod-Autoren
 
 Remote-Schnittstelle `utl` (Stationsdaten, Lieferungen, Warnungen, Stationen und Anforderungen
-einstellen, Netzverbindungen, Team- und Kartenwerte, per Script erstellte Blaupausen taggen):
+einstellen, Netzverbindungen, Team- und Kartenwerte, per Script erstellte Blaupausen taggen, Züge und
+Stationen nach Filter, Lieferung abbrechen) und **Ereignisse** für angelegte, geänderte, fertige und
+abgebrochene Lieferungen:
 [Wiki – Für Mod-Autoren](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren).

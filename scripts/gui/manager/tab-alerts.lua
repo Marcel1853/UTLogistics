@@ -55,7 +55,10 @@ function Tab.refresh(refs, manager)
     if Filter.match(manager, entry.surface, entry.force) then list[#list + 1] = entry end
   end
   refs.count.caption = { "utl-manager.alerts-count", #list }
-  List.sync(refs.rows, list, fill, COLUMNS)
+  List.sync(refs.rows, list, fill, COLUMNS, function(entry)
+    -- gleiche Warnung wird hochgezählt; Minute dazu, falls die Zeile eine Zeitangabe zeigt
+    return (entry.key or "") .. ":" .. (entry.count or 1) .. ":" .. (entry.tick or 0) .. ":" .. math.floor(game.tick / 3600)
+  end)
 end
 
 return Tab

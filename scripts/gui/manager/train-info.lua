@@ -1,5 +1,6 @@
 --- Anzeige-Helfer für Züge: Zusammensetzung „<L CC L>“, Zustand, Ladung.
 local Deliveries = require("scripts.deliveries.deliveries")
+local Stuck = require("scripts.deliveries.stuck")
 local Util = require("scripts.lib.util")
 
 local Info = {}
@@ -28,6 +29,11 @@ function Info.status(train)
   local delivery = Deliveries.of_train(id)
   if delivery then
     local state = delivery.state
+    local stuck = Stuck.minutes(delivery)
+    if stuck then
+      local loading = state == "to_provider" or state == "loading"
+      return { "utl-manager.status-stuck", stuck }, loading and delivery.from or delivery.to
+    end
     if state == "to_provider" then return { "utl-manager.status-to-provider" }, delivery.from end
     if state == "loading" then return { "utl-manager.status-loading" }, delivery.from end
     if state == "to_requester" then return { "utl-manager.status-to-requester" }, delivery.to end

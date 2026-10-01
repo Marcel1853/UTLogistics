@@ -9,6 +9,7 @@ local Events = {}
 local handlers = {} -- [event_id] = { fn, ... }
 local config_changed = {} -- zusätzliche Handler für on_configuration_changed
 local filters = {}  -- [event_id] = Filter-Liste (optional)
+local starters = {} -- laufen am Ende von on_init und on_load (z. B. Ereignisse anderer Mods anmelden)
 
 --- Meldet einen Handler an. Filter werden zusammengeführt.
 function Events.on(event_id, fn, filter)
@@ -25,6 +26,12 @@ function Events.on(event_id, fn, filter)
   end
 end
 
+--- Läuft am Ende von on_init und on_load: für Anmeldungen, die erst zur Laufzeit gehen – etwa
+--- Ereignis-IDs, die eine andere Mod per remote.call liefert. Darf `storage` nicht ändern (on_load).
+function Events.on_start(fn)
+  starters[#starters + 1] = fn
+end
+
 --- Modul-Handler für on_configuration_changed (laufen nach State/Config).
 function Events.on_configuration_changed(fn)
   config_changed[#config_changed + 1] = fn
@@ -34,10 +41,12 @@ local function on_init()
   State.init()
   Config.refresh()
   Heartbeat.update_registration()
+  for i = 1, #starters do starters[i]() end
 end
 
 local function on_load()
   Heartbeat.update_registration()
+  for i = 1, #starters do starters[i]() end
 end
 
 -- Einmalige Datenänderungen stehen als Lua-Migrationen in migrations/ (laufen vorher).

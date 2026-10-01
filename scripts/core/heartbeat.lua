@@ -9,9 +9,10 @@ local Heartbeat = {}
 local tasks = {}
 local registered_interval = nil -- nur lokal, wird aus storage abgeleitet
 
---- Meldet eine Aufgabe an. `every` = alle wie viele Heartbeats sie läuft.
-function Heartbeat.add_task(name, every, fn)
-  tasks[#tasks + 1] = { name = name, every = every, fn = fn }
+--- Meldet eine Aufgabe an. `every` = alle wie viele Heartbeats sie läuft; `offset` (optional)
+--- verschiebt sie, damit Aufgaben mit gleichem Takt nicht alle im selben Durchlauf landen.
+function Heartbeat.add_task(name, every, fn, offset)
+  tasks[#tasks + 1] = { name = name, every = every, fn = fn, offset = offset or 0 }
 end
 
 local function tick()
@@ -20,7 +21,7 @@ local function tick()
   hb.count = count
   for i = 1, #tasks do
     local task = tasks[i]
-    if count % task.every == 0 then
+    if (count + task.offset) % task.every == 0 then
       Perf.measure(task.name, task.fn)
     end
   end

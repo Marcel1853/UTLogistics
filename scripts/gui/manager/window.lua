@@ -18,7 +18,8 @@ local Manager = {}
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 11 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
+local GUI_VERSION = 12 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
+-- 12: Aufzug-Häkchen im Reiter „Netzwerke“
 local ORDER = { "depots", "stations", "networks", "inventory", "history", "statistics", "alerts", "settings" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste;
 -- Einstellungen nie, sonst überschriebe der Takt das Feld beim Tippen).
@@ -75,7 +76,11 @@ function Manager.refresh(player_index, auto)
 end
 
 function Manager.refresh_all()
-  for player_index in pairs(storage.managers) do Manager.refresh(player_index, true) end
+  for player_index in pairs(storage.managers) do
+    -- angeheftete Manager von Spielern, die nicht verbunden sind, nicht auffrischen
+    local player = game.get_player(player_index)
+    if player and player.connected then Manager.refresh(player_index, true) end
+  end
 end
 
 function Manager.open(player)

@@ -62,8 +62,17 @@ function Output.ensure(station)
   local output
   for _, position in ipairs(place_for(stop)) do
     local area = { { position.x - 0.6, position.y - 0.6 }, { position.x + 0.6, position.y + 0.6 } }
-    -- Schon vorhanden (Spielstand, Klon) oder als Geist aus einer Blaupause?
+    -- Schon vorhanden (Spielstand, Klon) oder als Geist aus einer Blaupause? Nicht die Ausgabe
+    -- einer Nachbarstation übernehmen (dichte Haltestellenreihen) – selten, deshalb ohne Index.
     output = surface.find_entities_filtered({ area = area, name = name })[1]
+    if output then
+      for _, other in pairs(storage.stations.by_unit) do
+        if other ~= station and other.output == output then
+          output = nil
+          break
+        end
+      end
+    end
     if not output then
       for _, ghost in pairs(surface.find_entities_filtered({ area = area, ghost_name = { name, other } })) do
         if ghost.ghost_name == name then
@@ -100,7 +109,9 @@ end
 local function heading_counts()
   local counts = {}
   for _, delivery in pairs(storage.deliveries.active) do
-    local unit = delivery.state == "to_provider" and delivery.provider
+    -- zum zweiten Anbieter: dort zählen (deliveries/reservations.lua, pickup_unit)
+    local pickup = delivery.leg == 2 and delivery.second and delivery.second.unit or delivery.provider
+    local unit = delivery.state == "to_provider" and pickup
       or delivery.state == "to_requester" and delivery.requester
     if unit then counts[unit] = (counts[unit] or 0) + 1 end
   end
@@ -112,26 +123,20 @@ end
 function Output.write(station, heading, depots)
   local output = Output.ensure(station)
   if not output then return end
-  local behavior = output.get_or_create_control_behavior()
-  local section = behavior.get_section(1) or behavior.add_section()
-  if not section then return end
-  section.filters = {}
 
-  local slot = 0
+  -- erst sammeln, dann nur bei Änderung schreiben (Depots werden alle 2 s neu vorgemerkt)
+  local slots, parts = {}, {}
   local function put(key, amount)
     if amount == 0 then return end
     local kind, name, quality = Util.split_key(key)
-    slot = slot + 1
-    section.set_slot(slot, {
-      value = { type = kind, name = name, quality = quality, comparator = "=" },
-      min = amount,
-    })
+    slots[#slots + 1] = { value = { type = kind, name = name, quality = quality, comparator = "=" }, min = amount }
+    parts[#parts + 1] = key .. "=" .. amount
   end
   --- Eigenes Signal (Zug-Nummer, Länge, Wagen) setzen.
   local function put_signal(name, amount)
     if amount == 0 then return end
-    slot = slot + 1
-    section.set_slot(slot, { value = { type = "virtual", name = name, quality = "normal", comparator = "=" }, min = amount })
+    slots[#slots + 1] = { value = { type = "virtual", name = name, quality = "normal", comparator = "=" }, min = amount }
+    parts[#parts + 1] = name .. "=" .. amount
   end
 
   local deliveries = storage.deliveries
@@ -139,22 +144,30 @@ function Output.write(station, heading, depots)
   for key, amount in pairs(deliveries.incoming[station.unit] or {}) do put(key, -amount) end
   if station.config.roles.depot then
     DepotOutput.write(station, put_signal, depots)
-    return
+  else
+    put_signal("utl-trains-incoming", (heading or heading_counts())[station.unit] or 0)
+    -- Solange ein Lieferzug hier steht: seine Kennzahlen dazu (wie bei LTN).
+    local train = deliveries.at_station[station.unit]
+    if train then
+      put_signal("utl-train-id", train.id)
+      put_signal("utl-train-length", train.length)
+      put_signal("utl-train-locos", train.locos)
+      put_signal("utl-train-wagons", train.wagons)
+      -- für eigene Schaltungen (z. B. Lade- und Entlade-Greifarme an einem Lager): wird hier gerade
+      -- geladen oder entladen?
+      put_signal("utl-loading", train.mode == "load" and 1 or 0)
+      put_signal("utl-unloading", train.mode == "unload" and 1 or 0)
+    end
   end
-  put_signal("utl-trains-incoming", (heading or heading_counts())[station.unit] or 0)
 
-  -- Solange ein Lieferzug hier steht: seine Kennzahlen dazu (wie bei LTN).
-  local train = deliveries.at_station[station.unit]
-  if train then
-    put_signal("utl-train-id", train.id)
-    put_signal("utl-train-length", train.length)
-    put_signal("utl-train-locos", train.locos)
-    put_signal("utl-train-wagons", train.wagons)
-    -- für eigene Schaltungen (z. B. Lade- und Entlade-Greifarme an einem Lager): wird hier gerade
-    -- geladen oder entladen?
-    put_signal("utl-loading", train.mode == "load" and 1 or 0)
-    put_signal("utl-unloading", train.mode == "unload" and 1 or 0)
-  end
+  local sig = output.unit_number .. "|" .. table.concat(parts, ";")
+  if station.output_sig == sig then return end
+  local behavior = output.get_or_create_control_behavior()
+  local section = behavior.get_section(1) or behavior.add_section()
+  if not section then return end
+  section.filters = {}
+  for i, slot in ipairs(slots) do section.set_slot(i, slot) end
+  station.output_sig = sig
 end
 
 --- Eine Station zum Neuschreiben vormerken (aus deliveries.lua bei jeder Reservierung).
@@ -169,14 +182,19 @@ function Output.step()
   local dirty = storage.deliveries.output_dirty
   DepotOutput.scan(Output.mark)
   if next(dirty) == nil then return end
-  local heading = heading_counts()
-  local depots = nil -- erst zählen, wenn ein Depot dran ist
+  -- beides erst zählen, wenn es gebraucht wird (Depots brauchen kein `heading`, andere kein `depots`;
+  -- die Depot-Ausgabe markiert alle 2 s alle Depots)
+  local heading, depots = nil, nil
   local done = 0
   for unit in pairs(dirty) do
     dirty[unit] = nil
     local station = Registry.get(unit)
     if station and Unlocks.loading(Unlocks.force_of(station)) then
-      if station.config.roles.depot and not depots then depots = DepotOutput.cache() end
+      if station.config.roles.depot then
+        depots = depots or DepotOutput.cache()
+      else
+        heading = heading or heading_counts()
+      end
       Output.write(station, heading, depots)
     end
     done = done + 1

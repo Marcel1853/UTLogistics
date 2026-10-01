@@ -3,6 +3,7 @@
 --- Hinzufügen und Lösen, darunter die Stationen des Netzes und seiner verbundenen Netze.
 local List = require("scripts.gui.common.list")
 local Networks = require("scripts.stations.networks")
+local Elevators = require("scripts.compat.se-elevators")
 local Unlocks = require("scripts.core.unlocks")
 local Filter = require("scripts.gui.manager.surface-filter")
 
@@ -68,10 +69,14 @@ function Tab.build(parent)
   field.style.width = 180
   local confirm = row.add({ type = "sprite-button", style = "utl_confirm_button", sprite = "utility/check_mark",
     tooltip = { "utl-gui.networks-new-tooltip" }, tags = { utl_mgr = "link_confirm" } })
+  -- Nur mit Space Exploration: Netz darf über den Weltraumaufzug liefern
+  local elevator = bar.add({ type = "checkbox", state = false, caption = { "utl-gui.elevator-network" },
+    visible = Elevators.available(), tags = { utl_mgr = "elevator_network" } })
+  elevator.style.top_margin = 4
 
   return {
     list = list, keys = {}, rows = List.build(right, COLUMNS),
-    caption = caption, chips = chips, add = add, field = field, confirm = confirm,
+    caption = caption, chips = chips, add = add, field = field, confirm = confirm, elevator = elevator,
   }
 end
 
@@ -159,15 +164,36 @@ end
 
 --- Verbindungsleiste für das gewählte Netz auffrischen.
 local function refresh_links(refs, net, force)
-  refs.chips.clear()
   if not (net and force) then
+    refs.chips.clear()
+    refs.links_sig = nil
     refs.caption.caption = { "utl-gui.links" }
     refs.add.items, refs.add.enabled, refs.field.enabled, refs.confirm.enabled = {}, false, false, false
+    if refs.elevator and refs.elevator.valid then refs.elevator.enabled = false end
     return
   end
   local limit = Unlocks.networks_limit(force)
   local place = Networks.place(net.surface, force.index)
+  local elevator = refs.elevator
+  if elevator and elevator.valid and elevator.visible then
+    elevator.enabled = true
+    elevator.state = Elevators.enabled(force.index, net.name)
+    elevator.tooltip = Elevators.at(place) and { "utl-gui.elevator-network-tooltip", net.name }
+      or { "", { "utl-gui.elevator-network-tooltip", net.name }, "\n\n", { "utl-gui.elevator-none-here" } }
+  end
   local star = Networks.star(place, net.name)
+  local items = {}
+  for _, name in ipairs(Networks.known()) do
+    if name ~= net.name and Networks.can_link(place, net.name, name, math.max(limit, 1)) == true then
+      items[#items + 1] = name
+    end
+  end
+  -- Nur bei Änderungen neu bauen: sonst klappt eine offene Auswahl bei jedem Auffrischen zu
+  local sig = table.concat({ place, net.name, star.role or "", star.center or "", table.concat(star.partners, "\1"),
+    table.concat(items, "\1"), limit }, "\2")
+  if refs.links_sig == sig then return end
+  refs.links_sig = sig
+  refs.chips.clear()
   refs.caption.caption = star.role == "partner" and { "utl-gui.links" }
     or { "utl-gui.links-count", #star.partners, limit }
   local names = star.role == "partner" and { star.center } or star.partners
@@ -181,12 +207,6 @@ local function refresh_links(refs, net, force)
       mouse_button_filter = { "left" },
       tags = { utl_mgr = "link_chip", network = name },
     })
-  end
-  local items = {}
-  for _, name in ipairs(Networks.known()) do
-    if name ~= net.name and Networks.can_link(place, net.name, name, math.max(limit, 1)) == true then
-      items[#items + 1] = name
-    end
   end
   refs.add.items = items
   if #refs.add.items > 0 then refs.add.selected_index = 0 end
@@ -239,7 +259,11 @@ function Tab.refresh(refs, manager)
     if a.network ~= b.network then return a.network < b.network end
     return a.station.unit < b.station.unit
   end)
-  List.sync(refs.rows, entries, fill, COLUMNS)
+  List.sync(refs.rows, entries, fill, COLUMNS, function(entry)
+    local stop = entry.station.stop
+    return table.concat({ entry.station.unit, stop and stop.valid and stop.backer_name or "", entry.network,
+      tostring(entry.own), List.map_sig(entry.station.config.roles) }, "|")
+  end)
 end
 
 --- Auswahl in der linken Liste.

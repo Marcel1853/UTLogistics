@@ -9,6 +9,10 @@ local Pending = require("scripts.trains.pending")
 local ServiceStops = require("scripts.trains.service-stops")
 local Filters = require("scripts.trains.wagon-filters")
 local Output = require("scripts.stations.output")
+local Rekey = require("scripts.trains.rekey")
+local Home = require("scripts.compat.se-home")
+local Schedule = require("scripts.trains.schedule")
+local Stuck = require("scripts.deliveries.stuck")
 local Alerts = require("scripts.alerts.alerts")
 local Heartbeat = require("scripts.core.heartbeat")
 local Perf = require("scripts.core.perf")
@@ -26,8 +30,11 @@ local function on_state(event)
   local id = train.id
   local delivery = Deliveries.of_train(id)
   local state = train.state
+  if delivery then Stuck.progress(delivery) end -- Hänger-Erkennung: Zustandswechsel = Fortschritt
 
   if MANUAL[state] then
+    -- SE schaltet Züge beim Durchfahren des Aufzugs kurz auf Handbetrieb: kein Abbruch
+    if Rekey.in_transfer(id) then return end
     Depot.remove(id)
     storage.trains.service[id] = nil
     Pending.release(id)
@@ -35,8 +42,10 @@ local function on_state(event)
     return
   end
 
-  -- Lieferzug findet keinen Weg (Gleis abgerissen, Signal falsch …): warnen.
-  if state == S.no_path and delivery then
+  -- Lieferzug findet keinen Weg (Gleis abgerissen, Signal falsch …): warnen. Nicht direkt bei der
+  -- Abfahrt: dann erst die Abfahrt verbuchen (sonst hinge die Lieferung, z. B. wenn das Depot hinter
+  -- einem Weltraumaufzug liegt und der Aufzug-Halt erst bei der Abfahrt dazukommt).
+  if state == S.no_path and delivery and event.old_state ~= S.wait_station then
     local target = delivery.state == "to_provider" and delivery.from or delivery.to
     Alerts.raise("train", "no_path", train.front_stock, { "utl-alert.no-path", Alerts.train_name(train), target or "?" },
       "no-path:" .. id)
@@ -47,6 +56,7 @@ local function on_state(event)
     local stop = train.station -- nil am Schienen-Wegpunkt
     if not stop then return end
     if delivery then
+      Pending.release(id, stop.unit_number) -- z. B. Tankhalt auf dem Weg: zählt jetzt das Vanilla-Zuglimit
       Deliveries.on_arrive(delivery, stop)
     else
       local unit = storage.stations.by_stop[stop.unit_number]
@@ -73,6 +83,8 @@ local function on_state(event)
           DepotRoute.send_home(train)
         end
       end
+      -- nach einer Lieferung über den Weltraumaufzug: zurück auf die Seite des Depots
+      if not Deliveries.of_train(id) then Home.ensure(train) end
     else
       -- Abfahrt aus dem Depot: dessen Ausgabe neu schreiben
       local home = storage.trains.home[id]
@@ -91,6 +103,7 @@ local function on_state(event)
           storage.trains.service[id] = nil
         else
           DepotRoute.send_home(train) -- nur, wenn der nächste Halt das Depot ist
+          Home.ensure(train)
         end
       end
     end
@@ -107,6 +120,8 @@ Events.on(defines.events.on_train_created, function(event)
   State.ensure()
   local function retire(old)
     if not old then return end
+    -- fährt durch einen Weltraumaufzug (SE): kein Umbau, die Einträge ziehen am Ende um (rekey.lua)
+    if Rekey.in_transfer(old) then return end
     Filters.reset(old) -- die Wagen gehören jetzt zu einer anderen Zug-ID
     Depot.remove(old)
     storage.trains.service[old] = nil
@@ -115,10 +130,17 @@ Events.on(defines.events.on_train_created, function(event)
     storage.trains.home[old] = nil
     Pending.release(old) -- vorgemerkte Fahrten der alten Zug-ID
     local delivery = Deliveries.of_train(old)
-    if delivery then Deliveries.cancel(delivery, "rebuilt") end
+    if delivery then
+      Deliveries.cancel(delivery, "rebuilt")
+      return true
+    end
   end
-  retire(event.old_train_id_1)
-  retire(event.old_train_id_2)
+  local canceled = retire(event.old_train_id_1)
+  canceled = retire(event.old_train_id_2) or canceled
+  -- Der alte Zug ist schon ungültig (cancel konnte seine Halte nicht löschen): der neue Zug erbt
+  -- sonst die temporären UTL-Halte und führe die Tour ohne Lieferung weiter.
+  local train = event.train
+  if canceled and train.valid then Schedule.clear(train) end
 end)
 
 -- Umbenannte Haltestelle: Depot-Namen neu ermitteln.
@@ -145,16 +167,29 @@ end)
 -- Wiederholsperren der Warnungen gelegentlich aufräumen (alle 60 Heartbeats).
 Heartbeat.add_task("alerts-cleanup", 60, Alerts.cleanup)
 
+-- Hänger-Erkennung und Aufräumen verschwundener Lieferzüge: alle 30 Heartbeats (Standard 5 s)
+Heartbeat.add_task("stuck", 30, Stuck.check, 7)
+
 -- Freie Züge, die knapp an Treibstoff sind, alle 60 Heartbeats (Standard 10 s) zum Tanken
 -- schicken – z. B. wenn beim Einparken gerade keine Tankstelle frei war.
-Heartbeat.add_task("refuel-idle", 60, function() Depot.refuel_idle(3) end)
+Heartbeat.add_task("refuel-idle", 60, function() Depot.refuel_idle(3) end, 23)
 
 -- Vorgemerkte Fahrten aufräumen, die nie angekommen sind (Ziel abgerissen, Zug zerstört, kein
 -- Weg): alle 600 Heartbeats (Standard 100 s), Vormerkungen älter als 10 Minuten fallen weg.
-Heartbeat.add_task("pending-sweep", 600, function() Pending.sweep(10 * 60 * 60) end)
+Heartbeat.add_task("pending-sweep", 600, function()
+  Pending.sweep(10 * 60 * 60)
+  Rekey.sweep(10 * 60 * 60) -- Aufzug-Fahrten, deren Ende nie gemeldet wurde
+  -- Einträge zerstörter Züge (jeder Umbau erzeugt eine neue ID)
+  local manager = game.train_manager
+  for _, tbl in pairs({ storage.trains.home, storage.statistics and storage.statistics.trains }) do
+    for id in pairs(tbl) do
+      if not (manager.get_train_by_id(id) or Rekey.in_transfer(id)) then tbl[id] = nil end
+    end
+  end
+end)
 
 -- Freie Züge, die jemand von Hand beladen hat: alle 60 Heartbeats einen Blick darauf.
-Heartbeat.add_task("cleanup-idle", 60, function() Depot.cleanup_idle(3, 20) end)
+Heartbeat.add_task("cleanup-idle", 60, function() Depot.cleanup_idle(3, 20) end, 35)
 
 -- Züge mit Restladung, für die kein Cleanup frei war: alle 60 Heartbeats erneut versuchen.
-Heartbeat.add_task("cleanup-retry", 60, function() Depot.retry_cargo(3) end)
+Heartbeat.add_task("cleanup-retry", 60, function() Depot.retry_cargo(3) end, 47)

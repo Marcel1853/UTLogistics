@@ -106,7 +106,17 @@ function Tab.refresh(refs, manager)
     if names[a] ~= names[b] then return names[a] < names[b] end
     return a.unit < b.unit
   end)
-  List.sync(refs.rows, items, fill, COLUMNS)
+  local deliveries = storage.deliveries
+  List.sync(refs.rows, items, fill, COLUMNS, function(station)
+    -- Angebot/Bedarf über `version` (steigt nur bei Änderung), dazu Name, Netz, Rollen, Transit
+    local stop = station.stop
+    local cfg = station.config
+    return table.concat({ station.unit, station.version or 0, stop and stop.valid and stop.backer_name or "",
+      cfg.network, stop and stop.valid and Networks.link_text(Networks.place_of(stop), cfg.network) or "",
+      List.map_sig(cfg.roles), List.map_sig(deliveries.incoming[station.unit]),
+      List.map_sig(deliveries.outgoing[station.unit]), deliveries.trains_at[station.unit] or 0,
+      tostring(manager.several) }, "|")
+  end)
   current = nil
 end
 

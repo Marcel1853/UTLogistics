@@ -122,7 +122,6 @@ function Networks.link(surface_index, center, partner, limit)
   links.partners[center] = links.partners[center] or {}
   links.partners[center][partner] = true
   links.center_of[partner] = center
-  Networks.invalidate()
   return true
 end
 
@@ -139,7 +138,6 @@ function Networks.unlink(surface_index, a, b)
     set[partner] = nil
     if next(set) == nil then links.partners[center] = nil end
   end
-  Networks.invalidate()
   return true
 end
 
@@ -152,16 +150,11 @@ function Networks.link_text(surface_index, name)
   return ""
 end
 
--- Alle im Spielstand vorhandenen Netznamen; nur ein Lua-Zwischenspeicher, aus storage abgeleitet.
-local known = nil
-
-function Networks.invalidate()
-  known = nil
-end
-
 --- Sortierte Liste aller Netznamen: Heimatnetze der Stationen und alle verbundenen Netze.
+--- Bewusst ohne Lua-Zwischenspeicher: der wäre nach dem Beitreten eines Spielers ein anderer als
+--- beim Server, und Auswahllisten, die daraus gebaut werden, liefen im Mehrspieler auseinander.
+--- Aufgerufen wird es nur beim Öffnen/Auffrischen von Fenstern.
 function Networks.known()
-  if known then return known end
   local set = { default = true }
   for _, station in pairs(storage.stations.by_unit) do
     local cfg = station.config
@@ -173,7 +166,7 @@ function Networks.known()
       for partner in pairs(partners) do set[partner] = true end
     end
   end
-  known = {}
+  local known = {}
   for name in pairs(set) do known[#known + 1] = name end
   table.sort(known)
   return known

@@ -69,8 +69,9 @@ data:extend({
   },
 })
 
--- Freigeschaltet mit „Unified Train Logistics“, wie die UTL-Haltestelle
-local tech = data.raw["technology"]["utl-train-logistics"]
+-- Freigeschaltet mit der Forschung, die auch den Hafen von Cargo Ships bringt (vorher fehlt die
+-- Zutat „port“); ohne sie mit „Unified Train Logistics“ wie die UTL-Haltestelle
+local tech = data.raw["technology"]["automated_water_transport"] or data.raw["technology"]["utl-train-logistics"]
 if tech then
   tech.effects = tech.effects or {}
   table.insert(tech.effects, { type = "unlock-recipe", recipe = C.utl_port })

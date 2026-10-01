@@ -69,13 +69,17 @@ local function box(parent, width)
 end
 
 function Window.open(player, entry)
+  -- Neuaufbau desselben Kombinators (Modus gewechselt …): verschobene Position behalten
+  local previous = guis()[player.index]
+  local keep = previous and previous.unit == entry.unit and previous.frame and previous.frame.valid
+    and previous.frame.location or nil
   Window.close(player.index)
   local old = player.gui.screen[NAME]
   if old then old.destroy() end
   local cfg = entry.config
 
   local frame = player.gui.screen.add({ type = "frame", name = NAME, direction = "vertical" })
-  frame.auto_center = true
+  if keep then frame.location = keep else frame.auto_center = true end
   Builder.titlebar(frame, { "entity-name.utl-network-combinator" }, "readout_close")
   local boxes = frame.add({ type = "flow", direction = "horizontal" })
   boxes.style.horizontal_spacing = 12
@@ -165,7 +169,10 @@ end
 
 --- Heartbeat-Aufgabe: nur offene Fenster auffrischen.
 function Window.refresh_all()
-  for player_index in pairs(guis()) do Window.refresh(player_index) end
+  for player_index in pairs(guis()) do
+    local player = game.get_player(player_index)
+    if player and player.connected then Window.refresh(player_index) end
+  end
 end
 
 return Window

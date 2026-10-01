@@ -20,7 +20,9 @@ local TopUp = {}
 
 --- Lieferungen, die noch beladen werden können.
 local function open_state(delivery)
+  -- nicht mit zwei Anbietern (die Anteile je Halt stehen fest)
   return (delivery.state == "to_provider" or delivery.state == "loading") and not delivery.provider_released
+    and not delivery.second
 end
 
 --- Belegter Platz der bisherigen Ladeliste: Slots für Items, Menge für Flüssigkeiten.

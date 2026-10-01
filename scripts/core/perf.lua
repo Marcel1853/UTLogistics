@@ -15,7 +15,10 @@ end
 
 --- `fn(...)` ausführen und – wenn die Messung läuft – die Dauer protokollieren.
 function Perf.measure(name, fn, ...)
-  if not Perf.active() then return fn(...) end
+  if not Perf.active() then
+    fn(...)
+    return
+  end
   local profiler = helpers.create_profiler()
   fn(...)
   profiler.stop()

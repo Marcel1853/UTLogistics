@@ -1,6 +1,7 @@
 --- Remote-Schnittstelle „utl“ für andere Mods, Tests und die Konsole.
 --- Beispiel: /c game.print(serpent.line(remote.call("utl", "get_station", 123)))
 local Registry = require("scripts.stations.registry")
+local C = require("scripts.core.constants")
 local Networks = require("scripts.stations.networks")
 local Unlocks = require("scripts.core.unlocks")
 local TeamConfig = require("scripts.core.team-config")
@@ -21,6 +22,9 @@ local ReadoutWindow = require("scripts.gui.readout.window")
 local Statistics = require("scripts.deliveries.statistics")
 local Water = require("scripts.compat.cargo-ships")
 local RecipeNotice = require("scripts.gui.notice.recipe-notice")
+local Rekey = require("scripts.trains.rekey")
+local Elevators = require("scripts.compat.se-elevators")
+local PublicEvents = require("scripts.api.public-events")
 local util = require("util")
 
 local function copy(t)
@@ -42,7 +46,8 @@ local interface = {
   end,
 
   --- Statistik (Manager-Reiter „Statistik“): { since, deliveries, goods = { [key] = { ten, hour } },
-  --- trains = { [zug] = { deliveries, utilization } }, stations = { [station] = { sent_ten, sent_hour,
+  --- trains = { [zug] = { deliveries, utilization (nil bis zur ersten fertigen Lieferung) } },
+  --- stations = { [station] = { sent_ten, sent_hour,
   --- received_ten, received_hour } } } über alle Oberflächen und Teams.
   get_statistics = function()
     local stats = Statistics.data()
@@ -96,6 +101,36 @@ local interface = {
     RecipeNotice.show(game.get_player(player_index))
   end,
 
+  --- Für Mods, die Züge versetzen und dabei neu bauen (wie der SE-Weltraumaufzug, den UTL selbst
+  --- erkennt): vorher `train_transfer_started(alte_id)`, danach `train_transfer_finished(alte_id, zug)`.
+  --- Dazwischen bricht UTL die Lieferung nicht als „Zug umgebaut“ ab; am Ende ziehen alle Einträge
+  --- auf die neue ID um.
+  train_transfer_started = function(old_id)
+    Rekey.start(old_id)
+  end,
+  train_transfer_finished = function(old_id, train)
+    Rekey.move(old_id, train)
+  end,
+
+  --- Schalter „über den Weltraumaufzug liefern“ für ein Netz eines Teams (nur mit SE wirksam).
+  set_elevator_network = function(force_name, network, on)
+    local force = game.forces[force_name or "player"]
+    if not (force and network) then return false end
+    Elevators.set_enabled(force.index, network, on ~= false)
+    return true
+  end,
+  --- Bekannte Aufzug-Seiten: Liste { unit, stop, opposite, surface, ok }.
+  get_elevators = function()
+    local list = {}
+    for unit, entry in pairs(storage.elevators and storage.elevators.by_unit or {}) do
+      if entry.main.valid then
+        list[#list + 1] = { unit = unit, stop = entry.stop, opposite = entry.opposite,
+          surface = entry.main.surface_index, ok = entry.ok }
+      end
+    end
+    return list
+  end,
+
   --- Anzahl freier Züge im Depot und laufender Lieferungen.
   idle_train_count = function()
     return storage.trains.count
@@ -110,7 +145,7 @@ local interface = {
 
   --- Zeitmessung für die nächsten `heartbeats` Heartbeats (Ergebnis in factorio-current.log).
   perf = function(heartbeats)
-    Perf.start(heartbeats or 60)
+    Perf.start(tonumber(heartbeats) or 60)
   end,
 
   --- Letzte Warnungen (neueste zuerst): { key, group, icon, count, tick }.
@@ -125,13 +160,12 @@ local interface = {
   --- Laufende Lieferungen als Liste (ohne Entity-Referenzen).
   get_deliveries = function()
     local list = {}
-    for id, d in pairs(storage.deliveries.active) do
-      list[#list + 1] = {
-        id = id, train_id = d.train_id, provider = d.provider, requester = d.requester,
-        from = d.from, to = d.to, network = d.network, -- Namen der Haltestellen und das Netzwerk
-        manifest = util.table.deepcopy(d.manifest), state = d.state, started = d.started, chained = d.chained,
-      }
+    for _, d in pairs(storage.deliveries.active) do
+      local info = PublicEvents.info(d) -- gleiche Sicht wie die Ereignisse, ohne Entity-Referenz
+      info.train = nil
+      list[#list + 1] = info
     end
+    table.sort(list, function(a, b) return a.id < b.id end)
     return list
   end,
 
@@ -155,7 +189,14 @@ local interface = {
   --- Einstellungen übernehmen, z. B. { mode = "station", provide = true, request = false, priority = 5 }.
   configure_station = function(unit, changes)
     local station = Registry.get(unit)
-    if not station then return false end
+    if not station or type(changes) ~= "table" then return false end
+    -- unbekannter Modus nähme der Station still alle Rollen
+    local mode = changes.mode
+    if mode ~= nil and mode ~= "storage" then
+      local ok = false
+      for _, known in ipairs(C.modes) do ok = ok or known == mode end
+      if not ok then return false end
+    end
     local cfg = station.config
     for key, value in pairs(changes) do
       if key ~= "roles" and cfg[key] ~= nil and type(cfg[key]) == type(value) then
@@ -188,6 +229,23 @@ local interface = {
   set_team_config = function(force_name, key, value)
     local force = game.forces[force_name]
     if not force then return false end
+    -- nur bekannte Team-Werte, Typ wie der zugehörige Kartenwert (sonst stürzte später der
+    -- Zeitlimit-Code über einen Text statt einer Zahl); nil = wieder der Kartenwert
+    local setting = nil
+    for _, entry in ipairs(TeamConfig.KEYS) do
+      if entry.key == key then setting = entry.setting end
+    end
+    local proto = setting and prototypes.mod_setting[setting]
+    if not proto then return false end
+    if value ~= nil then
+      if proto.allowed_values then
+        local ok = false
+        for _, allowed in ipairs(proto.allowed_values) do ok = ok or allowed == value end
+        if not ok then return false end
+      elseif type(value) ~= "number" then
+        return false
+      end
+    end
     TeamConfig.set(force, key, value)
     return true
   end,
@@ -235,7 +293,8 @@ local interface = {
   --- Stern eines Netzes: { role, center, partners } (`force` wie bei link_networks).
   get_network_star = function(surface_index, name, force)
     local f = game.forces[force or "player"]
-    return Networks.star(Networks.place(surface_index, f and f.index or 1), name)
+    if not f then return nil end
+    return Networks.star(Networks.place(surface_index, f.index), name)
   end,
 
   --- Alle Einstellungen einer Station auf eine andere kopieren (wie Shift-Klick).
@@ -255,7 +314,7 @@ local interface = {
   --- signal = nil leert den Slot.
   set_request = function(unit, slot, signal, count)
     local station = Registry.get(unit)
-    if not station or slot < 1 or slot > Requests.slot_count then return false end
+    if not station or type(slot) ~= "number" or slot < 1 or slot > Requests.slot_count then return false end
     Requests.set(station.config, slot, signal, count or 0)
     Reader.read(station)
     return true
@@ -304,6 +363,9 @@ local interface = {
     ReadoutWindow.close(player_index)
   end,
 }
+
+-- Weitere Funktionen (0.0.10): Ereignisse, einzelne Lieferung/Zug, Listen, Abbrechen
+for name, fn in pairs(require("scripts.api.remote-more")) do interface[name] = fn end
 
 -- Jede Funktion kann vor UTLs on_init aufgerufen werden (Szenario-Script startet zuerst).
 local State = require("scripts.core.state")

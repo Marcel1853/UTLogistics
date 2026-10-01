@@ -1,6 +1,6 @@
 {
     "name": "UTLogistics",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "factorio_version": "2.1",
     "title": "Unified Train Logistics",
     "author": "Marcel171297",
@@ -11,6 +11,7 @@
         "base >= 2.1",
         "flib >= 0.17.2",
         "? space-age",
-        "? cargo-ships"
+        "? cargo-ships",
+        "? space-exploration"
     ]
 }

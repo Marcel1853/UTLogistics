@@ -50,8 +50,14 @@ end
 --- Such-Budget dieses Laufs aufgebraucht ist (dann im nächsten Lauf erneut).
 function Reach.check(train, depot_stop, stop, ignore_budget)
   local from = cache()
-  -- Schlüssel mit Team: zwei Teams können gleichnamige Depots auf derselben Oberfläche haben
-  local key = depot_stop.surface_index .. ":" .. depot_stop.force_index .. "|" .. depot_stop.backer_name
+  -- Schlüssel mit Team: zwei Teams können gleichnamige Depots auf derselben Oberfläche haben.
+  -- Nur Depots teilen sich den Eintrag über den Namen; andere Start-Halte (Anschlussfahrt ab dem
+  -- Abnehmer, Tank-/Cleanup-Station) können gleichnamig auf getrennten Gleisnetzen liegen.
+  local unit_of = storage.stations.by_stop[depot_stop.unit_number]
+  local station = unit_of and storage.stations.by_unit[unit_of]
+  local key = (station and station.config.roles.depot)
+    and (depot_stop.surface_index .. ":" .. depot_stop.force_index .. "|" .. depot_stop.backer_name)
+    or ("from|" .. depot_stop.unit_number)
   local by_stop = from[key]
   if not by_stop then
     by_stop = {}
@@ -71,6 +77,40 @@ function Reach.check(train, depot_stop, stop, ignore_budget)
   })
   known = result.found_path == true
   by_stop[unit] = known
+  return known
+end
+
+--- Erreicht `train` von der Haltestelle `from` aus die Haltestelle `to`? Für Fahrten mit mehreren
+--- Halten (zweiter Anbieter): der Zug fährt an `from` in Haltestellen-Richtung ab, mit Loks an beiden
+--- Enden auch rückwärts. Gecacht je Start-Haltestelle wie `check`, gleiches Such-Budget.
+function Reach.between(train, from, to, ignore_budget)
+  local rail = from.connected_rail
+  if not rail then return false end
+  local both = #train.locomotives.front_movers > 0 and #train.locomotives.back_movers > 0
+  local cached = cache()
+  local key = "stop|" .. from.unit_number .. (both and "|2" or "|1")
+  local by_stop = cached[key]
+  if not by_stop then
+    by_stop = {}
+    cached[key] = by_stop
+  end
+  local known = by_stop[to.unit_number]
+  if known ~= nil then return known end
+  if not ignore_budget then
+    if searches_left <= 0 then return nil end
+    searches_left = searches_left - 1
+  end
+  local forward = from.connected_rail_direction
+  local starts = { { rail = rail, direction = forward, is_front = true } }
+  if both then
+    local backward = forward == defines.rail_direction.front and defines.rail_direction.back or defines.rail_direction.front
+    starts[2] = { rail = rail, direction = backward, is_front = true }
+  end
+  local result = game.train_manager.request_train_path({
+    train = train, starts = starts, goals = { { train_stop = to } }, steps_limit = PATH_STEPS,
+  })
+  known = result.found_path == true
+  by_stop[to.unit_number] = known
   return known
 end
 

@@ -1,4 +1,26 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.10
+Date: 2026-10-01
+  Features:
+    - Space Exploration (optional): deliveries through a finished, powered space elevator between a planet and its orbit, in both directions. Switch per network "Deliver via space elevator" (station window, network section, or manager tab "Networks"; off by default); applies to the network with the same name on both sides. Trains come back through the elevator to their depot; fuel and cleanup on the side where they are.
+    - Second provider (map setting, off by default): if one provider does not have enough, the train picks up the rest at a second provider in the same network – one trip with two loading stops. Only on the same surface and only if the detour (straight line) is at most the new map setting "Second provider: maximum detour" (default 50 %).
+    - Alert "train stuck" (map setting in minutes, default 5, 0 = off): a delivery train standing too long without progress (signal, no path, destination full) raises an alert; the manager shows it at the train. Nothing is cancelled.
+    - Interface for mod authors: events for created, changed, completed and cancelled deliveries (get_event_ids), new functions get_delivery, get_train, get_idle_trains, get_stations, get_networks, cancel_delivery, set_elevator_network, get_elevators, train_transfer_started/finished.
+  Changes:
+    - Startup setting "Trains" tab (automatic / always UTL tab / off) replaces "Own trains tab": automatic keeps the UTL tab, unless another mod already has its own train tab – then the UTL items go there. The old switch no longer counts.
+    - The UTL port (Cargo Ships) is unlocked with "Automated water transport" (its ingredient comes from there).
+    - Statistics: utilization shows "–" until a train has completed its first delivery (before it jumped to 100 %).
+    - Faster: the job output is only rewritten when it changes, heartbeat tasks are spread over different ticks, manager rows are only rebuilt when they change.
+  Bugfixes:
+    - Multiplayer: two values were kept outside the save (a cursor and the network list for drop-downs) and could desync after a player joined.
+    - A delivery hung at "unloading" forever when the train went straight from the station to "no path".
+    - Deliveries whose train vanished without a rebuild event (surface deleted, script) kept their reservations forever; now cancelled.
+    - After a train was rebuilt, the new train kept the UTL stops of the cancelled delivery and drove the tour without a job.
+    - A fuel stop on the way to the provider stayed reserved until the delivery ended and blocked the fuel station for other trains.
+    - Providers beyond the first 50 per good were never chosen; now in turn.
+    - Station window jumped back to the first tab and to the screen centre after pressing Enter; other players with the same station open did not see changes; clicking into a field in the admin window saved a team value; the "add network" list in the manager closed every second.
+    - "Job output" map setting now applies to existing outputs right away.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.9
 Date: 2026-09-29
   Features:

@@ -13,6 +13,7 @@ local StorageSection = require("scripts.gui.station.section-storage")
 local Networks = require("scripts.stations.networks")
 local Nets = require("scripts.gui.station.section-networks")
 local Unlocks = require("scripts.core.unlocks")
+local Elevators = require("scripts.compat.se-elevators")
 
 local function tags_of(element)
   if not (element and element.valid) then return nil end
@@ -24,12 +25,17 @@ end
 local function changed(event, station, rebuild)
   Reader.read(station)
   Registry.config_changed(station)
-  if rebuild then
-    local player = game.get_player(event.player_index)
-    local gui = Window.get(event.player_index)
-    if player then Window.open(player, station, gui and gui.standalone) end
-  else
-    Window.refresh(event.player_index)
+  -- auch bei anderen Spielern, die dieselbe Station offen haben – sonst überschreiben sie mit
+  -- einem veralteten Fenster die Änderung (z. B. denselben Anforderungs-Slot)
+  for player_index, gui in pairs(storage.guis) do
+    if gui.unit == station.unit then
+      local player = game.get_player(player_index)
+      if player and rebuild then
+        Window.open(player, station, gui.standalone)
+      elseif player then
+        Window.refresh(player_index)
+      end
+    end
   end
 end
 
@@ -94,7 +100,6 @@ local function apply_network_name(event, gui, station, target)
   elseif not link_home(event, station, name) then
     return
   end
-  Networks.invalidate()
   changed(event, station, true)
 end
 
@@ -168,6 +173,13 @@ Events.on(defines.events.on_gui_checked_state_changed, function(event)
   elseif tags.utl_action == "cleanup_offer" then
     CleanupSection.set_offer(station.config, event.element.state)
     changed(event, station, true)
+  elseif tags.utl_action == "elevator_network" then
+    -- gilt fürs ganze Netz des Teams, nicht nur für diese Station
+    local stop = station.stop
+    if stop and stop.valid then
+      Elevators.set_enabled(stop.force_index, station.config.network, event.element.state)
+      changed(event, station, true)
+    end
   end
 end)
 
@@ -180,7 +192,6 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
     local name = element.get_item(element.selected_index)
     if type(name) == "string" then
       Nets.apply_home(station.config, name)
-      Networks.invalidate()
       changed(event, station, true)
     end
   elseif action == "cleanup_offer_tier" then

@@ -13,6 +13,7 @@ local Reach = require("scripts.dispatcher.reach")
 local Fuel = require("scripts.trains.fuel")
 local Fields = require("scripts.stations.fields")
 local Warn = require("scripts.dispatcher.no-train-alerts")
+local Elevators = require("scripts.compat.se-elevators")
 
 local Select = {}
 
@@ -62,7 +63,9 @@ local function blocked(provider, requester_unit, key)
 end
 
 --- Offene Anfragen einsammeln (reihum über die Abnehmer).
-local function collect_requests()
+--- `peek` = true: Reihum-Zeiger nicht weiterschieben (Anschlussfahrt, sonst überspränge der
+--- nächste Dispatcher-Lauf diese Abnehmer).
+local function collect_requests(peek)
   local dispatch = storage.dispatch
   local requesters = dispatch.requesters
   local unit = dispatch.cursor
@@ -92,7 +95,7 @@ local function collect_requests()
       end
     end
   end
-  dispatch.cursor = unit
+  if not peek then dispatch.cursor = unit end
   -- höhere Priorität zuerst; bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer),
   -- dann die älteste Anfrage (sonst gewinnt bei knappen Zügen immer derselbe – Reihenfolge von pairs)
   table.sort(list, function(a, b)
@@ -114,32 +117,52 @@ local function find_providers(request)
   local surface, force = requester.stop.surface_index, requester.stop.force_index
   local place = Networks.place(surface, force)
   local position = requester.stop.position
+  -- Space Exploration: Orte hinter einem Weltraumaufzug (gleichnamiges Netz, Schalter an)
+  local linked = Elevators.linked_places(place, network)
   local found = {}
-  local scanned = 0
-  for unit in pairs(set) do
-    scanned = scanned + 1
-    if scanned > PROVIDER_SCAN then break end
+  -- Reihum je Ware höchstens PROVIDER_SCAN Anbieter (die Menge gilt für die ganze Karte): mit festem
+  -- Anfang kämen Anbieter ab Platz 51 nie dran, auch nicht die nächsten oder vollsten.
+  local cursors = storage.dispatch.provider_cursor or {}
+  storage.dispatch.provider_cursor = cursors
+  local unit = cursors[request.key]
+  if unit ~= nil and set[unit] == nil then unit = nil end
+  local first = nil
+  for _ = 1, PROVIDER_SCAN do
+    unit = next(set, unit)
+    if unit == nil then unit = next(set) end -- am Ende vorne weiter
+    if unit == nil or unit == first then break end
+    first = first or unit
     local provider = Registry.get(unit)
     if not provider then
       set[unit] = nil
     elseif unit ~= requester.unit and usable(provider) and provider.config.roles.provider
-      and provider.stop.surface_index == surface and provider.stop.force_index == force
-      and Networks.related(place, provider.config.network, network)
       and has_room(provider) and not blocked(provider, requester.unit, request.key) then
-      local available = (provider.provide[request.key] or 0) - Deliveries.outgoing(unit, request.key)
+      local p_stop = provider.stop
+      local via = nil
+      local ok = p_stop.surface_index == surface and p_stop.force_index == force
+        and Networks.related(place, provider.config.network, network)
+      if not ok and linked and provider.config.network == network then
+        local p_place = Networks.place(p_stop.surface_index, p_stop.force_index)
+        via = linked[p_place] and Elevators.route(p_place, place, network, p_stop.position) or nil
+        ok = via ~= nil
+      end
+      local available = ok and (provider.provide[request.key] or 0) - Deliveries.outgoing(unit, request.key) or 0
       if available > 0 then
         found[#found + 1] = {
+          via = via, -- über den Aufzug: { here = Aufzug-Halt beim Anbieter, there = beim Abnehmer }
           station = provider,
           amount = math.min(available, request.need),
           -- Rang: Cleanup „Reserve“/„zuerst leeren“; Lager normal, nur Restladung ohne Grenzen Reserve
           rank = provider.provide_rank and provider.provide_rank[request.key] or Fields.provider_rank(provider.config),
           storage = provider.config.roles.storage == true,
           priority = provider.config.provide_priority,
-          distance = dist2(provider.stop.position, position),
+          -- über den Aufzug: hinter allen Anbietern auf derselben Seite
+          distance = via and math.huge or dist2(p_stop.position, position),
         }
       end
     end
   end
+  cursors[request.key] = unit
   table.sort(found, function(a, b)
     if a.rank ~= b.rank then return a.rank > b.rank end
     if a.priority ~= b.priority then return a.priority > b.priority end
@@ -222,6 +245,11 @@ local function pools_for(station)
     local pool = idle[place .. "|" .. name]
     if pool and next(pool) ~= nil then pools[#pools + 1] = pool end
   end
+  -- Züge hinter einem Weltraumaufzug (sie holen beim Anbieter auf ihrer Seite ab)
+  for other in pairs(Elevators.linked_places(place, station.config.network) or {}) do
+    local pool = idle[other .. "|" .. station.config.network]
+    if pool and next(pool) ~= nil then pools[#pools + 1] = pool end
+  end
   return pools
 end
 
@@ -277,8 +305,10 @@ local function find_train(request, provider, wanted)
       if usable then
         -- Anbieter UND Abnehmer müssen erreichbar sein: In einem Netz können getrennte Gleis-
         -- bzw. Wassernetze liegen (Cargo Ships: Häfen und Haltestellen im selben UTL-Netz)
+        -- Über den Aufzug: statt des Abnehmers (andere Oberfläche) den Aufzug-Halt dieser Seite prüfen
         local reachable = Reach.check(record.train, record.stop, p_stop)
-        if reachable then reachable = Reach.check(record.train, record.stop, request.station.stop) end
+        local target = provider.via and provider.via.here or request.station.stop
+        if reachable then reachable = Reach.check(record.train, record.stop, target) end
         if reachable then return record, best[i].amount, nil, fuel_stop end
         if reachable == nil then return nil, nil, true end -- Such-Budget aufgebraucht: später
       end

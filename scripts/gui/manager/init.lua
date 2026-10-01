@@ -11,6 +11,7 @@ local Filter = require("scripts.gui.manager.surface-filter")
 local TeamConfig = require("scripts.core.team-config")
 local Teams = require("scripts.core.teams")
 local Config = require("scripts.core.config")
+local Elevators = require("scripts.compat.se-elevators")
 
 -- Spieler, der gerade im Reiter „Einstellungen“ etwas ändert: sein Feld nicht neu schreiben
 local changing = nil
@@ -212,8 +213,14 @@ end)
 -- Häkchen im Reiter „Einstellungen“
 Events.on(defines.events.on_gui_checked_state_changed, function(event)
   local action, tags, manager = context(event)
-  if not (manager and (action == "team_bool" or action == "map_bool")) then return end
   local player = game.get_player(event.player_index)
+  if manager and player and action == "elevator_network" then
+    local net = Manager.tab("networks").selected(manager)
+    if net then Elevators.set_enabled(player.force_index, net.name, event.element.state) end
+    Manager.refresh(event.player_index)
+    return
+  end
+  if not (manager and (action == "team_bool" or action == "map_bool")) then return end
   if player and apply_setting(manager, player, action, tags, event.element) then
     Manager.refresh(event.player_index)
   end
@@ -234,6 +241,14 @@ end)
 Events.on(defines.events.on_player_created, Teams.on_player_created)
 Events.on(defines.events.on_player_changed_force, Teams.on_player_changed_force)
 Events.on(defines.events.on_player_removed, Teams.on_player_removed)
+-- Entfernte Spieler: ihre Fenster-Einträge wegräumen (die Fenster selbst sind mit dem Spieler weg)
+Events.on(defines.events.on_player_removed, function(event)
+  local index = event.player_index
+  for _, name in pairs({ "guis", "managers", "manager_prefs", "admin_windows", "readout_guis" }) do
+    local tbl = storage[name]
+    if tbl then tbl[index] = nil end
+  end
+end)
 Events.on(defines.events.on_player_joined_game, Teams.on_player_joined)
 Events.on(defines.events.on_forces_merged, function(event)
   TeamConfig.forget(event.source_index) -- Team-Werte der aufgelösten Force verwerfen
@@ -256,4 +271,4 @@ end)
 -- Nach einem Mod-Update schließen; beim nächsten Öffnen wird es neu gebaut.
 Events.on_configuration_changed(Manager.close_all)
 
-Heartbeat.add_task("manager-refresh", C.gui_refresh_every, Manager.refresh_all)
+Heartbeat.add_task("manager-refresh", C.gui_refresh_every, Manager.refresh_all, 2)

@@ -139,8 +139,10 @@ end
 
 --- Zeilen befüllen. `fill(row, item)` baut die Zellen einer Zeile (horizontaler Flow).
 --- Überzählige Zeilen werden entfernt, fehlende angehängt. `columns` (wie bei List.build)
---- schaltet das Sortieren per Klick auf die Überschrift ein.
-function List.sync(rows, items, fill, columns)
+--- schaltet das Sortieren per Klick auf die Überschrift ein. `sig(item)` (optional): Kennung
+--- des Zeileninhalts – gleiche Kennung wie beim letzten Mal, dann bleibt die Zeile, wie sie ist
+--- (Regel 5: nur geänderte Zeilen neu bauen).
+function List.sync(rows, items, fill, columns, sig)
   if columns then apply_sort(rows, items, columns) end
   local children = rows.children
   local per = List.MAX_ROWS
@@ -167,12 +169,26 @@ function List.sync(rows, items, fill, columns)
       box.style.padding = 4
       box.add({ type = "flow", direction = "horizontal" }).style.vertical_align = "center"
     end
-    local row = box.children[1]
-    row.clear()
-    row.style.horizontal_spacing = 8
-    fill(row, items[offset + i])
+    local item = items[offset + i]
+    local key = sig and sig(item) or nil
+    if not (key and box.tags.sig == key) then
+      local row = box.children[1]
+      row.clear()
+      row.style.horizontal_spacing = 8
+      fill(row, item)
+      box.tags = key and { sig = key } or {}
+    end
   end
   for i = #children, count + 1, -1 do children[i].destroy() end
+end
+
+--- Kennung einer Tabelle { [Schlüssel] = Wert } für `List.sync` (Reihenfolge egal: im
+--- ungünstigsten Fall wird eine Zeile einmal zu oft neu gebaut).
+function List.map_sig(map)
+  if not map then return "" end
+  local parts = {}
+  for key, value in pairs(map) do parts[#parts + 1] = tostring(key) .. "=" .. tostring(value) end
+  return table.concat(parts, ",")
 end
 
 --- Feste Breite für eine Zelle setzen und zurückgeben.

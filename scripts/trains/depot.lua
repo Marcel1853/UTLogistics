@@ -205,12 +205,21 @@ Depot.relocate = DepotRoute.relocate
 --- einer Tankstelle oder dem Ändern der Grenze).
 --- `limit` (optional): höchstens so viele Tankstellen-Suchen (je eine Pfadsuche) – für den
 --- regelmäßigen Durchlauf, damit viele knappe Züge auf einmal keinen Ruckler auslösen.
+--- Reihum ab dem gespeicherten Zeiger: sonst kämen spätere knappe Züge nie dran, wenn für die
+--- ersten gerade keine Tankstelle frei ist.
 function Depot.refuel_idle(limit)
+  local trains = storage.trains
+  local by_id = trains.by_id
   local tries = 0
-  for id, record in pairs(storage.trains.by_id) do
+  local id = trains.refuel_cursor
+  if id ~= nil and by_id[id] == nil then id = nil end
+  for _ = 1, table_size(by_id) do
+    id = next(by_id, id)
+    if id == nil then break end
+    local record = by_id[id]
     local train = record.train
     if train.valid and Fuel.is_low(train) then
-      if limit and tries >= limit then return end
+      if limit and tries >= limit then break end
       tries = tries + 1
       if Depot.send_service(train, record.network) then
         Depot.remove(id)
@@ -219,18 +228,19 @@ function Depot.refuel_idle(limit)
       end
     end
   end
+  trains.refuel_cursor = id
 end
 
 --- Freie Züge, in die jemand von Hand etwas geladen hat: zum Cleanup schicken. UTL merkt die
 --- Ladung sonst erst, wenn der Zug das nächste Mal etwas tut (es gibt kein Ereignis dafür).
 --- Die Ladung abzufragen kostet API-Aufrufe, deshalb reihum nur `scan` Züge je Durchlauf
 --- (bei vielen Zügen dauert es also etwas, bis es auffällt – dafür bleibt der Takt billig).
-local cleanup_cursor = nil
 function Depot.cleanup_idle(limit, scan)
   local by_id = storage.trains.by_id
   -- reihum höchstens `scan` Züge heraussuchen (die Ladung abzufragen kostet API-Aufrufe)
   local ids = {}
-  local cursor = cleanup_cursor
+  -- Zeiger in storage: eine lokale Variable liefe im Mehrspieler nach dem Beitreten auseinander
+  local cursor = storage.trains.cleanup_cursor
   if cursor ~= nil and by_id[cursor] == nil then cursor = nil end
   for _ = 1, scan or 20 do
     local id = next(by_id, cursor)
@@ -239,7 +249,7 @@ function Depot.cleanup_idle(limit, scan)
     ids[#ids + 1] = id
     cursor = id
   end
-  cleanup_cursor = cursor
+  storage.trains.cleanup_cursor = cursor
 
   local tries = 0
   for _, id in ipairs(ids) do
@@ -304,7 +314,6 @@ end
 --- Einstellungen geändert (Rolle, Netzwerk): Züge dieser Station neu erfassen.
 function Depot.refresh_station(station)
   Depot.invalidate_names()
-  Networks.invalidate()
   if station.stop_unit then Depot.forget(station.stop_unit) end
   if station.config.roles.depot then
     Depot.scan(station)

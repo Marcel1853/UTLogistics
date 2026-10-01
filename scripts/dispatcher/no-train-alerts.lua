@@ -84,8 +84,7 @@ function Warn.starving_alerts()
     local count = 0
     local oldest ---@type { stop: LuaEntity, since: integer, seen: integer }?
     for id, entry in pairs(by_net) do
-      if id == "network" then -- Name des Netzes, kein Eintrag
-        count = count
+      if id == "network" then -- Name des Netzes, kein Eintrag: überspringen
       elseif now - entry.seen > 7200 or not entry.stop.valid then
         by_net[id] = nil
       else

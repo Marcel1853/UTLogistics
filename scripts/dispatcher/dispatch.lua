@@ -26,6 +26,30 @@ local dist2 = Util.dist2
 --- Sammelwarnung je Netz (Heartbeat-Aufgabe).
 Dispatch.starving_alerts = Warn.starving_alerts
 
+--- Umweg über `b` in Prozent der direkten Strecke a → r (Luftlinie, keine Pfadsuche).
+local function detour_percent(a, b, r)
+  local direct = math.sqrt(dist2(a, r))
+  local via = math.sqrt(dist2(a, b)) + math.sqrt(dist2(b, r))
+  if direct < 1 then return via < 1 and 0 or math.huge end
+  return (via - direct) * 100 / direct
+end
+
+--- Zweiter Anbieter (Kartenwert „utl-multi-pickup“): Reicht `first` nicht für den Bedarf, den
+--- nächstbesten Anbieter auf derselben Seite (nicht hinter einem Aufzug) für den Rest nehmen – nur
+--- wenn der Umweg höchstens „utl-multi-pickup-detour“ Prozent ausmacht (0 = egal).
+local function second_provider(request, providers, first)
+  if not storage.cfg.multi_pickup or first.via or first.amount >= request.need then return nil end
+  local limit = storage.cfg.multi_pickup_detour or 50
+  local a, r = first.station.stop.position, request.station.stop.position
+  for _, other in ipairs(providers) do
+    if other ~= first and not other.via
+      and (limit <= 0 or detour_percent(a, other.station.stop.position, r) <= limit) then
+      return other
+    end
+  end
+  return nil
+end
+
 local function try_request(request)
   -- Kein einziger freier Zug im Netzwerk: nicht nach Anbietern suchen (spart im Dauerbetrieb den
   -- Großteil der Zeit). Nur die Wartezeit für die Warnung mitführen; erst wenn gewarnt würde,
@@ -45,11 +69,33 @@ local function try_request(request)
   if not providers or #providers == 0 then return false end
   for i = 1, math.min(#providers, Select.PROVIDER_TRIES) do
     local provider = providers[i]
-    local record, amount, later, fuel_stop = Select.train(request, provider, provider.amount)
+    local second = second_provider(request, providers, provider)
+    local wanted = provider.amount + (second and math.min(second.amount, request.need - provider.amount) or 0)
+    local record, amount, later, fuel_stop = Select.train(request, provider, wanted)
     if later then return false, true end -- im nächsten Lauf weiter, keine Warnung
+    local pickup = nil
+    if record and second and amount > provider.amount then
+      -- Rest beim zweiten Anbieter, wenn der Zug ihn erreicht; sonst nur der erste (falls das lohnt)
+      -- Weg Depot → zweiter Anbieter, erster → zweiter und zweiter → Abnehmer (je gecacht)
+      local p2 = second.station.stop
+      local ok ---@type boolean?
+      ok = Select.length_ok(second.station.config, record.length) -- Zuglänge auch am zweiten Halt
+      if ok then ok = Reach.check(record.train, record.stop, p2) end
+      if ok then ok = Reach.between(record.train, provider.station.stop, p2) end
+      if ok then ok = Reach.between(record.train, p2, request.station.stop) end
+      if ok == nil then return false, true end -- Such-Budget aufgebraucht: im nächsten Lauf weiter
+      if ok then
+        pickup = { station = second.station, manifest = { [request.key] = amount - provider.amount } }
+      elseif provider.amount >= request.minimum then
+        amount = provider.amount
+      else
+        record = nil
+      end
+    end
     if record then
       local manifest = Select.manifest(request, provider, record, amount)
-      local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop) ~= nil
+      local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop, provider.via,
+        pickup) ~= nil
       if created then Warn.waiting_since(request.station.unit, request.key, true) end
       return created
     end
@@ -88,7 +134,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   }
   Index.update()
   local best
-  for _, request in ipairs(Select.requests()) do
+  for _, request in ipairs(Select.requests(true)) do
     local r_stop = request.station.stop
     if Select.has_room(request.station) -- Anfragen kommen jetzt auch ohne freien Platz herein
       and r_stop.surface_index == record.surface_index and r_stop.force_index == record.force_index
@@ -98,7 +144,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
         local provider = providers[i]
         local p_cfg, r_cfg = provider.station.config, request.station.config
         local capacity = Select.capacity_of(record, request.key, p_cfg.locked_slots)
-        if capacity > 0 and Select.length_ok(p_cfg, record.length) and Select.length_ok(r_cfg, record.length) then
+        if capacity > 0 and not provider.via and Select.length_ok(p_cfg, record.length) and Select.length_ok(r_cfg, record.length) then
           local amount = math.min(provider.amount, capacity)
           if amount >= request.minimum or amount == capacity then
             local distance = dist2(record.position, provider.station.stop.position)

@@ -1,0 +1,8 @@
+{
+  "name": "utl-setest",
+  "version": "0.0.1",
+  "title": "UTL Aufzug-Test (Space-Exploration-Nachbildung)",
+  "author": "Marcel1853",
+  "factorio_version": "2.1",
+  "dependencies": ["UTLogistics"]
+}
