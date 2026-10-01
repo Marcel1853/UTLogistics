@@ -60,8 +60,8 @@ UTL lebt von den Ideen und Fehlerberichten anderer Spieler – je mehr kommen, d
 Einfach in die [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion) schreiben.
 
 Nebenbei ist beim Bau von UTL ein **Factorio-Modding-Skill** für Claude entstanden: geprüftes Wissen
-und Test-Werkzeuge, mit denen die KI Factorio-Mods besser schreibt. Ich arbeite noch daran
-und möchte ihn später veröffentlichen.
+und Test-Werkzeuge, mit denen die KI Factorio-Mods besser schreibt – nicht nur Zug-Mods. Er ist jetzt
+öffentlich: [factorio-modding-skill](https://github.com/Marcel1853/MySkillsAi-s/tree/main/factorio-modding-skill).
 
 ## Schnellstart
 
