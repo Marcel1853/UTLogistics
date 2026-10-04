@@ -33,10 +33,15 @@ local function add_limits(grid, key, limits)
   t.add({ type = "label", caption = { "utl-gui.storage-good" } })
   t.add({ type = "label", caption = { "utl-gui.storage-min" } })
   t.add({ type = "label", caption = { "utl-gui.storage-max" } })
-  local by_slot = {}
-  for k, v in pairs(limits) do if tonumber(k) then by_slot[tonumber(k)] = v end end -- auch „3“ aus JSON
+  -- belegte Zeilen der Reihe nach (auch Text-Schlüssel „3“ aus JSON), dazu zwei leere – nicht immer
+  -- alle 8, sonst wird der Reiter (und damit das ganze Fenster) unnötig lang
+  local filled = {}
   for slot = 1, StorageSlots do
-    local limit = by_slot[slot] or {}
+    local limit = limits[slot] or limits[tostring(slot)]
+    if limit and limit.signal then filled[#filled + 1] = limit end
+  end
+  for slot = 1, math.min(StorageSlots, #filled + 2) do
+    local limit = filled[slot] or {}
     t.add({ type = "choose-elem-button", name = "s" .. slot, style = "slot_button", elem_type = "signal",
       signal = limit.signal, elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } } })
     t.add({ type = "textfield", name = "min" .. slot, text = tostring(limit.min or 0), numeric = true, style = "utl_entry_text" }).style.width = 70
@@ -251,9 +256,10 @@ function Windows.answers(player)
     elseif entry and entry.kind == "limits" then
       local limits = {}
       for slot = 1, StorageSlots do
+        if not el["s" .. slot] then break end
         local v = el["s" .. slot].elem_value --[[@as SignalID?]]
         if v and v.name and (v.type == "item" or v.type == "fluid" or v.type == nil) then
-          limits[slot] = { signal = { type = v.type or "item", name = v.name, quality = v.quality },
+          limits[#limits + 1] = { signal = { type = v.type or "item", name = v.name, quality = v.quality },
             min = math.max(0, tonumber(el["min" .. slot].text) or 0), max = math.max(0, tonumber(el["max" .. slot].text) or 0) }
         end
       end
