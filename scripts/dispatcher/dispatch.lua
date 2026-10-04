@@ -94,6 +94,8 @@ local function try_request(request)
     end
     if record then
       local manifest = Select.manifest(request, provider, record, amount)
+      -- Mindestladung je Fahrt (Map-Einstellung): zu wenig für diesen Zug → noch warten
+      if not Select.full_enough(record, manifest, provider.station.config.locked_slots) then return false end
       local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop, provider.via,
         pickup) ~= nil
       if created then Warn.waiting_since(request.station.unit, request.key, true) end
@@ -146,7 +148,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
         local capacity = Select.capacity_of(record, request.key, p_cfg.locked_slots)
         if capacity > 0 and not provider.via and Select.length_ok(p_cfg, record.length) and Select.length_ok(r_cfg, record.length) then
           local amount = math.min(provider.amount, capacity)
-          if amount >= request.minimum or amount == capacity then
+          if Select.worth(amount, capacity, request) then
             local distance = dist2(record.position, provider.station.stop.position)
             local candidate = { request = request, provider = provider, amount = amount, distance = distance }
             if not best or better(candidate, best) then best = candidate end
@@ -159,6 +161,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   if not (Reach.check(train, from_stop, best.provider.station.stop, true)
       and Reach.check(train, from_stop, best.request.station.stop, true)) then return nil end
   local manifest = Select.manifest(best.request, best.provider, record, best.amount)
+  if not Select.full_enough(record, manifest, best.provider.station.config.locked_slots) then return nil end
   local delivery = Deliveries.create(record, best.provider.station, best.request.station, manifest, nil)
   if delivery then
     delivery.chained = true

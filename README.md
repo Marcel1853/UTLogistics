@@ -252,7 +252,7 @@ More: [wiki – UTL Manager and alerts](https://github.com/Marcel1853/UTLogistic
 The most important ones: **next job right away** (on), **load only the current job** (on),
 **job output** (on), **UTL features need research** (on), **refuel below** (40 %), **loading /
 unloading inactivity** (30 s each, combined with the cargo by **or** or **and**), **top up while
-loading** (off), **second provider** (off, with a **maximum detour** of 50 %), **“train stuck”
+loading** (off), **second provider** (off, with a **maximum detour** of 50 %), **minimum load per trip** (0 % = off), **“train stuck”
 alert after** (5 minutes), **cleanup may offer its contents again** (on), **allow storage stations** (on).
 Startup setting **“Trains” tab**: automatic – UTL's own tab, unless another mod already has a train
 tab; then the UTL items go there.

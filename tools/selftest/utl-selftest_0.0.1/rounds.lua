@@ -142,12 +142,26 @@ function Rounds.build(check)
   remote.call("utl", "set_request", req5.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
   remote.call("utl", "set_map_config", "utl-stuck-minutes", 1)
   local r35_train = train(s, force, 4, "R35-Depot")
+  -- R37: Mindestladung 50 % – 400 Eisen (10 % des Wagens) lösen keine Fahrt aus, 3000 schon
+  LINE = 201
+  rails(s, force, -85, 85)
+  local depot7 = stop(s, force, "R37-Depot", 10, true)
+  local prov7 = stop(s, force, "R37-Anbieter", 60, true)
+  local req7 = stop(s, force, "R37-Abnehmer", -60, false)
+  supply(s, force, prov7, 60, { "iron-plate" }, 5000)
+  local function cfg7(e, changes) changes.network = "R37"; remote.call("utl", "configure_station", e.unit_number, changes) end
+  cfg7(depot7, { mode = "depot" })
+  cfg7(prov7, { mode = "station", provide = true, request = false })
+  cfg7(req7, { mode = "station", provide = false, request = true, request_threshold = 100 })
+  remote.call("utl", "set_request", req7.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
+  remote.call("utl", "set_map_config", "utl-min-load-percent", 50)
+  train(s, force, 4, "R37-Depot")
   LINE = 1
   check("R31/R32 strecken gebaut", r31_train ~= nil and r32_train ~= nil)
   return { start = game.tick, train = r31_train, wagon = r31_wagon, train2 = r32_train, wagon2 = r32_wagon,
     train3 = r33_train, wagon3 = r33_wagon, loco3 = r33_train and r33_train.front_stock,
     train4 = r34_train, wagon4 = r34_wagon, r34 = {},
-    train5 = r35_train, surface = s, r35 = {},
+    train5 = r35_train, surface = s, r35 = {}, r37 = { req = req7.unit_number },
     far = far.backer_name, near = near.backer_name, chained = nil, loaded = {}, unloaded = {} }
 end
 
@@ -177,6 +191,13 @@ function Rounds.watch(r, check)
     handle(r, d, r.train2, r.wagon2)
     if r.train3 and r.train3.valid then handle(r, d, r.train3, r.wagon3) end
     if d.to == "R34-Abnehmer" and not r.r34.opened then r.r34.early = true end
+    if d.to == "R37-Abnehmer" then
+      if not r.r37.raised then r.r37.early = true elseif not r.r37.done then
+        r.r37.done = true
+        remote.call("utl", "set_map_config", "utl-min-load-percent", 0)
+        check("R37 mindestladung: 400 warten, 3000 fahren", not r.r37.early, serpent.line(d.manifest))
+      end
+    end
     -- R35: Lieferzug unterwegs zum Anbieter → Gleis davor abreißen
     if d.to == "R35-Abnehmer" and d.state == "to_provider" and not r.r35.cut then
       r.r35.cut = game.tick
@@ -273,14 +294,20 @@ function Rounds.watch(r, check)
       and (ev.on_delivery_completed or 0) > 0 and (ev["on_delivery_canceled-remote"] or 0) == 1 and not ev.bad,
       serpent.line(ev))
   end
+  -- R37: nach 30 s den Bedarf auf 3000 heben
+  if not r.r37.raised and game.tick - r.start > 1800 then
+    r.r37.raised = true
+    remote.call("utl", "set_request", r.r37.req, 1, { type = "item", name = "iron-plate" }, 3000)
+  end
   -- R34: nach 20 s die Umweg-Grenze von 10 % auf 50 % heben
   if not r.r34.opened and game.tick - r.start > 1200 then
     r.r34.opened = true
     check("R34 umweg über der grenze: kein zweiter anbieter", not r.r34.early)
     remote.call("utl", "set_map_config", "utl-multi-pickup-detour", 50)
   end
-  if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done) or game.tick - r.start > 36000 then
+  if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done) or game.tick - r.start > 36000 then
     r.done = true
+    if not r.r37.done then check("R37 mindestladung: 400 warten, 3000 fahren", false, serpent.line(r.r37)) end
     if not r.r35.done then check("R35 hänger-erkennung: warnung nach 1 min, lieferung läuft weiter", false, serpent.line(r.r35)) end
     if not r.r34.done then check("R34 zweiter anbieter: ein zug, zwei ladehalte, volle menge", false, serpent.line(r.r34)) end
     if not (r.moved and r.moved.ok) then

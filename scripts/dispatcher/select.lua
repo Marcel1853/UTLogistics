@@ -211,6 +211,30 @@ local function build_manifest(request, provider, record, amount)
   return manifest
 end
 
+--- Lohnt die Fahrt? Mindestens die Abnehmer-Schwelle oder ein voller Zug. (Die „Mindestladung je
+--- Fahrt“ prüft `Select.full_enough` erst mit der fertigen Ladeliste – andere Waren zählen mit.)
+local function worth(amount, capacity, request)
+  return amount >= request.minimum or amount == capacity
+end
+Select.worth = worth
+
+--- Map-Einstellung „Mindestladung je Fahrt“: Ist die ganze Ladeliste (alle Waren, die der Anbieter
+--- mitgibt) mindestens so viel Prozent des Laderaums? Items nach Slots, Flüssigkeit nach Tankinhalt.
+function Select.full_enough(record, manifest, locked)
+  local percent = storage.cfg.min_load_percent or 0
+  if percent <= 0 then return true end
+  local slots_used, fluid_used = 0, 0
+  for key, amount in pairs(manifest) do
+    local size = stack_size(key)
+    if size then slots_used = slots_used + math.ceil(amount / size) else fluid_used = fluid_used + amount end
+  end
+  local slots = math.max(0, record.slots - record.wagons * (locked or 0))
+  local share = 0
+  if slots > 0 then share = slots_used / slots end
+  if record.fluid and record.fluid > 0 then share = math.max(share, fluid_used / record.fluid) end
+  return share * 100 >= percent
+end
+
 --- Gehört (amount, distance) in die Bestenliste `best` (höchstens TRAIN_TRIES)?
 --- Mehr Ladung zuerst, dann näher am Anbieter.
 local function better(amount, distance, other)
@@ -278,8 +302,8 @@ local function find_train(request, provider, wanted)
         local capacity = capacity_of(record, request.key, locked)
         if capacity > 0 then
           local amount = wanted < capacity and wanted or capacity
-          -- Keine Kleinstfahrten: mindestens die Abnehmer-Schwelle oder ein voller Zug.
-          if amount >= request.minimum or amount == capacity then
+          -- Keine Kleinstfahrten (Schwelle, voller Zug, Mindestladung)
+          if worth(amount, capacity, request) then
             keep_best(best, record, amount, dist2(record.position, position))
           end
         end

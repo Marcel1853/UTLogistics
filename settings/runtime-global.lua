@@ -149,6 +149,16 @@ data:extend({
     default_value = false,
     order = "e-d",
   },
+  -- Mindestladung je Fahrt in Prozent des Laderaums (0 = aus): keine Fahrten für kleine Restmengen
+  {
+    type = "int-setting",
+    name = "utl-min-load-percent",
+    setting_type = "runtime-global",
+    default_value = 0,
+    minimum_value = 0,
+    maximum_value = 100,
+    order = "e-cz",
+  },
   -- Zweiter Anbieter: reicht einer nicht für die Zugladung, holt der Zug den Rest bei einem zweiten
   -- Anbieter im selben Netz (Standard aus)
   {
