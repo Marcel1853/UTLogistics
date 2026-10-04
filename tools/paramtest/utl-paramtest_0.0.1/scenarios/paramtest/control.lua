@@ -33,7 +33,14 @@ local function make_blueprint(s, force)
   remote.call("utl", "tag_blueprint", stack, mapping, s)
   local bp = helpers.json_to_table(helpers.decode_string(stack.export_stack():sub(2))).blueprint
   local names = {}
-  for _, e in ipairs(bp.entities) do if e.name ~= "straight-rail" then names[#names + 1] = e.name end end
+  for _, e in ipairs(bp.entities) do
+    if e.name ~= "straight-rail" then names[#names + 1] = e.name end
+    if e.name == "utl-station-settings" then
+      for _, sec in ipairs(e.control_behavior.sections.sections) do
+        for _, f in ipairs(sec.filters or {}) do names[#names + 1] = "  " .. sec.index .. ":" .. f.name .. "=" .. f.count end
+      end
+    end
+  end
   L("Blaupause: Bauteile " .. table.concat(names, ",") .. " – Parameter " .. helpers.table_to_json(bp.parameters or {}))
   return inv
 end

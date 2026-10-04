@@ -2,7 +2,8 @@
 --- Haltestelle. Er spiegelt die Einstellungen der Station in zwei **ausgeschaltete** Abschnitte
 --- (geben nichts aufs Kabel):
 ---   1. Anforderungs-Slots 1–20 (Ware und Menge),
----   2. Rolle (`utl-role`) und die Zahlenwerte (Signal je Feld aus fields.lua).
+---   2. Rolle (`utl-role`) und die Zahlenwerte, die vom Standard abweichen (Signal je Feld aus
+---      fields.lua) – nur geänderte, damit das Parameter-Menü übersichtlich bleibt (Wunsch Marcel).
 --- Factorio erkennt darin Blaupausen-Parameter und fragt sie beim Platzieren ab (die UTL-Tags
 --- der Haltestelle sieht es nicht). Wird der Kombinator aus einer Blaupause gebaut, liest UTL die
 --- Abschnitte zurück – die gewählten Werte gewinnen gegen die Tags.
@@ -78,8 +79,11 @@ local function wanted(cfg)
     end
   end
   local values = { { value = virtual(ROLE_SIGNAL), min = role_code(cfg) } }
-  for i, field in ipairs(FIELD_ORDER) do
-    values[i + 1] = { value = virtual(field.signal), min = cfg[field.key] or 0 }
+  for _, field in ipairs(FIELD_ORDER) do
+    local value = cfg[field.key]
+    if value ~= nil and value ~= Fields.default(field) then
+      values[#values + 1] = { value = virtual(field.signal), min = value }
+    end
   end
   return requests, values
 end
@@ -90,7 +94,7 @@ local function signature(requests, values)
     local f = requests[slot]
     parts[#parts + 1] = f and (f.value.type .. f.value.name .. f.value.quality .. f.min) or "-"
   end
-  for _, f in ipairs(values) do parts[#parts + 1] = f.min end
+  for _, f in ipairs(values) do parts[#parts + 1] = f.value.name .. "=" .. f.min end
   return table.concat(parts, "|")
 end
 
