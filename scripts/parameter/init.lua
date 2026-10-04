@@ -168,6 +168,27 @@ local function apply(player)
   player.create_local_flying_text({ text = { "utl-param.applied", #list.entries }, create_at_cursor = true })
 end
 
+--- Abfrage-Fenster mit den bisherigen Eingaben neu aufbauen; `add_key` = dort eine leere Zeile mehr.
+--- Leere Zeilen (ohne Ware) bleiben erhalten, damit „+“ mehrfach hintereinander geht.
+local function rebuild(player, list, add_key)
+  local answers = Windows.answers(player)
+  local extra = {}
+  for _, key in ipairs({ "request", "storage_limits" }) do
+    local rows = answers[key]
+    local empty = 0
+    if key == "request" and rows then
+      for _, row in ipairs(rows) do if not row.signal then empty = empty + 1 end end
+    elseif rows then
+      empty = (answers.storage_rows or #rows) - #rows
+    end
+    extra[key] = math.max(0, empty) + (add_key == key and 1 or 0)
+  end
+  answers.storage_rows = nil
+  local cfg = util.table.deepcopy(list.cfg)
+  Ask.apply(cfg, answers)
+  Windows.ask(player, list.keys, cfg, #list.entries, extra)
+end
+
 -- Rolle im Abfrage-Fenster gewechselt: nur die dazu passenden Felder zeigen, Eingaben behalten
 Events.on(defines.events.on_gui_selection_state_changed, function(event)
   local element = event.element
@@ -175,9 +196,7 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
   local player = game.get_player(event.player_index)
   local list = player and pending().ask[player.index]
   if not (player and list) then return end
-  local cfg = util.table.deepcopy(list.cfg)
-  Ask.apply(cfg, Windows.answers(player))
-  Windows.ask(player, list.keys, cfg, #list.entries)
+  rebuild(player, list, nil)
 end)
 
 Events.on(defines.events.on_gui_click, function(event)
@@ -190,6 +209,9 @@ Events.on(defines.events.on_gui_click, function(event)
     make(player)
   elseif action == "apply" then
     apply(player)
+  elseif action == "add_row" then
+    local list = pending().ask[player.index]
+    if list then rebuild(player, list, element.tags.key --[[@as string]]) end
   elseif action == "close" then
     Windows.close(player, element.tags.window --[[@as string]])
   end

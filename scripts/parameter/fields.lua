@@ -40,6 +40,7 @@ Ask.list = {
   { key = "cleanup_all_fluids", kind = "toggle", roles = CLEANUP, tab = "goods" },
   { key = "cleanup_offer", kind = "offer", roles = CLEANUP, tab = "goods" },
   { key = "storage_limits", kind = "limits", roles = STORAGE, tab = "goods" },
+  { key = "storage_leftover", kind = "toggle", roles = STORAGE, tab = "goods" },
   { key = "output", kind = "toggle", tab = "general" },
 }
 Ask.TABS = { "general", "goods", "values" }
@@ -79,6 +80,7 @@ function Ask.current(cfg, key)
   if key == "cleanup_all_fluids" then return cleanup.all_fluids ~= false end
   if key == "cleanup_offer" then return cleanup.offer or "off" end
   if key == "storage_limits" then return (cfg.storage and cfg.storage.limits) or {} end
+  if key == "storage_leftover" then return not (cfg.storage and cfg.storage.accept_leftover == false) end
   if entry and entry.kind == "toggle" then return cfg[key] == true end
   return cfg[key] or 0
 end
@@ -110,6 +112,9 @@ function Ask.apply(cfg, answers)
       cfg.cleanup = cfg.cleanup or {}
       if value ~= "off" then cfg.cleanup.offer_tier = value end
       cfg.cleanup.offer = value ~= "off" and value or false
+    elseif key == "storage_leftover" then
+      cfg.storage = cfg.storage or {}
+      cfg.storage.accept_leftover = value == true
     elseif key == "storage_limits" then
       cfg.storage = cfg.storage or {}
       cfg.storage.limits = value

@@ -8,7 +8,7 @@ local Ask = require("scripts.parameter.fields")
 local Settings = require("scripts.stations.settings-combinator")
 local More = require("scripts.api.remote-more")
 local Util = require("scripts.lib.util")
-local StorageSlots = require("scripts.stations.fields").storage_slots
+local Unlocks = require("scripts.core.unlocks")
 local RequestSlots = require("scripts.stations.requests").slot_count
 
 local Windows = {}
@@ -20,6 +20,7 @@ local LABELS = {
   cleanup_all_fluids = { "virtual-signal-name.utl-cleanup-all-fluids" },
   cleanup_offer = { "utl-gui.cleanup-offer" },
   storage_limits = { "utl-gui.section-storage" },
+  storage_leftover = { "utl-gui.storage-leftover" },
 }
 
 local function label_of(key)
@@ -28,7 +29,8 @@ local function label_of(key)
 end
 
 --- Lager: je Zeile Ware | Mindest | Höchst.
-local function add_limits(grid, key, limits)
+local function add_limits(grid, key, limits, player, empty)
+  local StorageSlots = Unlocks.storage_slots(player.force)
   local t = grid.add({ type = "table", name = key, column_count = 3 })
   t.add({ type = "label", caption = { "utl-gui.storage-good" } })
   t.add({ type = "label", caption = { "utl-gui.storage-min" } })
@@ -40,7 +42,8 @@ local function add_limits(grid, key, limits)
     local limit = limits[slot] or limits[tostring(slot)]
     if limit and limit.signal then filled[#filled + 1] = limit end
   end
-  for slot = 1, math.min(StorageSlots, #filled + 2) do
+  -- belegte Zeilen + `empty` leere (mindestens eine Zeile); weitere über den Knopf „+“
+  for slot = 1, math.min(StorageSlots, math.max(1, #filled + empty)) do
     local limit = filled[slot] or {}
     t.add({ type = "choose-elem-button", name = "s" .. slot, style = "slot_button", elem_type = "signal",
       signal = limit.signal, elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } } })
@@ -100,7 +103,14 @@ local function role_items()
   return items
 end
 
-local function add_input(grid, player, key, cfg)
+--- Knopf „+“ unter einer mehrzeiligen Eingabe: eine leere Zeile mehr.
+local function add_row_button(parent, key)
+  parent.add({ type = "sprite-button", style = "tool_button", sprite = "utility/add",
+    tooltip = { "utl-param.add-row" }, tags = { utl_param = "add_row", key = key } })
+end
+
+local function add_input(grid, player, key, cfg, extra)
+  extra = extra or {}
   local entry = Ask.by_key[key] or {}
   local current = Ask.current(cfg, key)
   if key == "role" then
@@ -128,7 +138,7 @@ local function add_input(grid, player, key, cfg)
     t.add({ type = "label", caption = { "utl-param.amount" } })
     local rows = current --[[@as table]]
     local fuel_only = cfg.mode == "fuel"
-    for i = 1, math.min(RequestSlots, #rows + 2) do
+    for i = 1, math.min(RequestSlots, math.max(1, #rows + (extra.request or 0))) do
       local row = rows[i] or { count = 0 }
       local pick = t.add({ type = "choose-elem-button", name = "w" .. i, style = "slot_button",
         elem_type = fuel_only and "item-with-quality" or "signal",
@@ -151,7 +161,7 @@ local function add_input(grid, player, key, cfg)
     end
     grid.add({ type = "drop-down", name = key, items = items, selected_index = selected })
   elseif entry.kind == "limits" then
-    add_limits(grid, key, current --[[@as table]])
+    add_limits(grid, key, current --[[@as table]], player, extra.storage_limits or 0)
   else
     grid.add({ type = "textfield", name = key, text = tostring(current), numeric = true, style = "utl_entry_text",
       allow_negative = key:find("priority") ~= nil })
@@ -159,7 +169,8 @@ local function add_input(grid, player, key, cfg)
 end
 
 --- Abfrage-Fenster: nur Punkte aus `keys`, die zur Rolle passen; vorbelegt aus `cfg`.
-function Windows.ask(player, keys, cfg, count)
+--- `extra` = { [key] = Anzahl zusätzlicher leerer Zeilen } (Knopf „+“).
+function Windows.ask(player, keys, cfg, count, extra)
   local f, inner = frame(player, Windows.ASK, { "utl-param.ask-title" }, true)
   -- drei Reiter, damit das Fenster klein bleibt (Wunsch Marcel); leere Reiter fallen weg
   local tabs = inner.add({ type = "tabbed-pane", name = "pages", style = "tabbed_pane_with_no_side_padding" })
@@ -190,7 +201,8 @@ function Windows.ask(player, keys, cfg, count)
         -- mehrzeilig: Überschrift über voller Breite, darunter die Tabelle (nicht neben dem Text)
         local scroll = grid.parent
         scroll.add({ type = "label", style = "utl_header_label", caption = label_of(key) }).style.top_margin = 6
-        add_input(scroll, player, key, cfg)
+        add_input(scroll, player, key, cfg, extra)
+        add_row_button(scroll, key)
       else
         -- Werte-Reiter: Überschrift „Anbieter“ / „Abnehmer“ vor der ersten Zeile der Gruppe
         local group = entry.group
@@ -255,8 +267,10 @@ function Windows.answers(player)
       answers[el.name] = Ask.CLEANUP_OFFER[el.selected_index] or "off"
     elseif entry and entry.kind == "limits" then
       local limits = {}
-      for slot = 1, StorageSlots do
+      local shown = 0
+      for slot = 1, 20 do
         if not el["s" .. slot] then break end
+        shown = slot
         local v = el["s" .. slot].elem_value --[[@as SignalID?]]
         if v and v.name and (v.type == "item" or v.type == "fluid" or v.type == nil) then
           limits[#limits + 1] = { signal = { type = v.type or "item", name = v.name, quality = v.quality },
@@ -264,6 +278,7 @@ function Windows.answers(player)
         end
       end
       answers[el.name] = limits
+      answers.storage_rows = shown -- für „+“: wie viele Zeilen gerade stehen
     elseif entry and el.type == "textfield" then
       answers[el.name] = tonumber(el.text) or 0
     end

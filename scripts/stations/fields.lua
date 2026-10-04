@@ -132,7 +132,7 @@ function Fields.fill(cfg)
   if cfg.storage.accept_leftover == nil then cfg.storage.accept_leftover = true end
 end
 
-Fields.storage_slots = 8
+Fields.storage_slots = 20 -- Höchstzahl; je Force freigeschaltet: Unlocks.storage_slots
 
 --- Rang als Anbieter: 2 = zuerst leeren, 1 = normal (jeder gewöhnliche Anbieter), 0 = Reserve.
 --- Wird vor der Anbieter-Priorität verglichen. Aktiver Anbieter = „zuerst leeren“ (wie Vanilla:

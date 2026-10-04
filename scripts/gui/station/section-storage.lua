@@ -3,6 +3,7 @@
 local Fields = require("scripts.stations.fields")
 local Roles = require("scripts.stations.roles")
 local Util = require("scripts.lib.util")
+local Unlocks = require("scripts.core.unlocks")
 
 local Section = {}
 
@@ -29,14 +30,20 @@ function Section.build(parent, station)
   local inner = frame.add({ type = "flow", direction = "vertical" })
   inner.style.vertical_spacing = 4
 
-  local grid = inner.add({ type = "table", column_count = 3 })
+  -- Waren je Lager hängen an der Forschung (8 … 20); ab mehr als 8 in zwei Spalten nebeneinander,
+  -- damit das Fenster nicht zu lang wird
+  local slots = Unlocks.storage_slots(Unlocks.force_of(station))
+  local pairs_per_row = slots > 8 and 2 or 1
+  local grid = inner.add({ type = "table", column_count = 3 * pairs_per_row })
   grid.style.horizontal_spacing = 8
   grid.style.vertical_spacing = 2
   grid.style.vertical_align = "center"
-  grid.add({ type = "label", caption = { "utl-gui.storage-good" } })
-  grid.add({ type = "label", caption = { "utl-gui.storage-min" }, tooltip = { "utl-gui.storage-min-tooltip" } })
-  grid.add({ type = "label", caption = { "utl-gui.storage-max" }, tooltip = { "utl-gui.storage-max-tooltip" } })
-  for slot = 1, Fields.storage_slots do
+  for _ = 1, pairs_per_row do
+    grid.add({ type = "label", caption = { "utl-gui.storage-good" } })
+    grid.add({ type = "label", caption = { "utl-gui.storage-min" }, tooltip = { "utl-gui.storage-min-tooltip" } })
+    grid.add({ type = "label", caption = { "utl-gui.storage-max" }, tooltip = { "utl-gui.storage-max-tooltip" } })
+  end
+  for slot = 1, slots do
     local limit = st.limits[slot] or {}
     grid.add({
       type = "choose-elem-button", style = "slot_button", elem_type = "signal", signal = limit.signal,

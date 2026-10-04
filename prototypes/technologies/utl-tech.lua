@@ -45,6 +45,7 @@ end
 
 local RED, GREEN = "automation-science-pack", "logistic-science-pack"
 local BLUE, PURPLE = "chemical-science-pack", "production-science-pack"
+local YELLOW = "utility-science-pack"
 local RAIL_ICON = "__base__/graphics/technology/automated-rail-transportation.png"
 local CIRCUIT_ICON = "__base__/graphics/technology/circuit-network.png"
 
@@ -54,6 +55,13 @@ data:extend({
   -- Lager (Fortgeschrittene): Stationsart „Lager“
   upgrade("utl-storage", CIRCUIT_ICON, { "utl-loading-control", "chemical-science-pack" }, 200,
     { RED, GREEN, BLUE }, { "utl-tech-effect.storage" }),
+  -- Mehr Waren je Lager: 8 → 12 → 16 → 20 (Wunsch Marcel; Wirkung in scripts/core/unlocks.lua)
+  upgrade("utl-storage-2", CIRCUIT_ICON, { "utl-storage" }, 250, { RED, GREEN, BLUE },
+    { "utl-tech-effect.storage-slots", "12" }),
+  upgrade("utl-storage-3", CIRCUIT_ICON, { "utl-storage-2", "production-science-pack" }, 400,
+    { RED, GREEN, BLUE, PURPLE }, { "utl-tech-effect.storage-slots", "16" }),
+  upgrade("utl-storage-4", CIRCUIT_ICON, { "utl-storage-3", "utility-science-pack" }, 500,
+    { RED, GREEN, BLUE, PURPLE, YELLOW }, { "utl-tech-effect.storage-slots", "20" }),
   upgrade("utl-networks-1", RAIL_ICON, { "utl-train-logistics" }, 100, { RED, GREEN },
     { "utl-tech-effect.networks", "1" }),
   upgrade("utl-networks-2", RAIL_ICON, { "utl-networks-1", "chemical-science-pack" }, 200, { RED, GREEN, BLUE },
