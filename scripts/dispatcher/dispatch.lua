@@ -146,7 +146,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
         local capacity = Select.capacity_of(record, request.key, p_cfg.locked_slots)
         if capacity > 0 and not provider.via and Select.length_ok(p_cfg, record.length) and Select.length_ok(r_cfg, record.length) then
           local amount = math.min(provider.amount, capacity)
-          if amount >= request.minimum or amount == capacity then
+          if Select.worth(amount, capacity, request) then
             local distance = dist2(record.position, provider.station.stop.position)
             local candidate = { request = request, provider = provider, amount = amount, distance = distance }
             if not best or better(candidate, best) then best = candidate end

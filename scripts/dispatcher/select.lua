@@ -211,6 +211,15 @@ local function build_manifest(request, provider, record, amount)
   return manifest
 end
 
+--- Lohnt die Fahrt? Mindestens die Abnehmer-Schwelle oder ein voller Zug – und, wenn die
+--- Map-Einstellung „Mindestladung je Fahrt“ an ist, mindestens so viel Prozent des Laderaums.
+local function worth(amount, capacity, request)
+  if not (amount >= request.minimum or amount == capacity) then return false end
+  local percent = storage.cfg.min_load_percent or 0
+  return percent <= 0 or amount >= capacity * percent / 100
+end
+Select.worth = worth
+
 --- Gehört (amount, distance) in die Bestenliste `best` (höchstens TRAIN_TRIES)?
 --- Mehr Ladung zuerst, dann näher am Anbieter.
 local function better(amount, distance, other)
@@ -278,8 +287,8 @@ local function find_train(request, provider, wanted)
         local capacity = capacity_of(record, request.key, locked)
         if capacity > 0 then
           local amount = wanted < capacity and wanted or capacity
-          -- Keine Kleinstfahrten: mindestens die Abnehmer-Schwelle oder ein voller Zug.
-          if amount >= request.minimum or amount == capacity then
+          -- Keine Kleinstfahrten (Schwelle, voller Zug, Mindestladung)
+          if worth(amount, capacity, request) then
             keep_best(best, record, amount, dist2(record.position, position))
           end
         end

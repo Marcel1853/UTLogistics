@@ -14,48 +14,6 @@ local function place_of(item)
   return subgroup and subgroup.group, subgroup and subgroup.name
 end
 
--- Automatisch: Liegt die Lok schon in einem fremden Reiter (weder „Logistik“ noch UTL), hat eine
--- andere Mod einen eigenen Zug-Reiter (z. B. Train Construction Site). Dann nichts umsortieren und
--- die UTL-Sachen dort zu den Haltestellen legen – ein Reiter statt zwei, die sich streiten.
-if mode == "auto" then
-  local loco = data.raw["item-with-entity-data"]["locomotive"] or data.raw["item"]["locomotive"]
-  local foreign = place_of(loco)
-  if foreign and foreign ~= "logistics" and foreign ~= GROUP then
-    local stop_group, stop_subgroup = place_of(data.raw["item"]["train-stop"])
-    local _, loco_subgroup = place_of(loco)
-    local target = stop_group == foreign and stop_subgroup or loco_subgroup
-    local ours = {}
-    for name, subgroup in pairs(data.raw["item-subgroup"]) do
-      if subgroup.group == GROUP then ours[name] = true end
-    end
-    -- alles in UTL-Zeilen und alle eigenen UTL-Items (Kombinatoren, Hafen …) mitnehmen
-    for _, item_type in ipairs(ITEM_TYPES) do
-      for name, item in pairs(data.raw[item_type] or {}) do
-        if (item.subgroup and ours[item.subgroup]) or (string.sub(name, 1, 4) == "utl-" and not item.hidden) then
-          item.subgroup = target
-        end
-      end
-    end
-    for _, recipe in pairs(data.raw["recipe"]) do
-      if recipe.subgroup and ours[recipe.subgroup] then recipe.subgroup = target end
-    end
-    -- UTL-Reiter entfernen, wenn nichts mehr darin liegt
-    local used = false
-    for _, prototypes in pairs(data.raw) do
-      for _, prototype in pairs(prototypes) do
-        if type(prototype) == "table" and prototype.subgroup and ours[prototype.subgroup] then used = true end
-      end
-    end
-    if not used then
-      for name in pairs(ours) do data.raw["item-subgroup"][name] = nil end
-      data.raw["item-group"][GROUP] = nil
-    end
-    log("UTL: fremder Zug-Reiter „" .. foreign .. "“ erkannt – UTL-Sachen nach „" .. tostring(target)
-      .. "“, UTL-Reiter " .. (used and "bleibt" or "entfernt"))
-    return
-  end
-end
-
 -- Entity-Typ → Zeile in der Registerkarte.
 local SUBGROUP_BY_ENTITY_TYPE = {
   ["straight-rail"] = "utl-rails",
@@ -87,6 +45,60 @@ for entity_type, subgroup in pairs(SUBGROUP_BY_ENTITY_TYPE) do
     subgroup_by_entity[name] = subgroup
   end
 end
+
+-- Automatisch: Liegt die Lok schon in einem fremden Reiter (weder „Logistik“ noch UTL), hat eine
+-- andere Mod einen eigenen Zug-Reiter (z. B. Train Construction Site). Dann nichts umsortieren und
+-- die UTL-Sachen dort zu den Haltestellen legen – ein Reiter statt zwei, die sich streiten.
+if mode == "auto" then
+  local loco = data.raw["item-with-entity-data"]["locomotive"] or data.raw["item"]["locomotive"]
+  local foreign = place_of(loco)
+  if foreign and foreign ~= "logistics" and foreign ~= GROUP then
+    local stop_group, stop_subgroup = place_of(data.raw["item"]["train-stop"])
+    local _, loco_subgroup = place_of(loco)
+    local target = stop_group == foreign and stop_subgroup or loco_subgroup
+    local ours = {}
+    for name, subgroup in pairs(data.raw["item-subgroup"]) do
+      if subgroup.group == GROUP then ours[name] = true end
+    end
+    -- alles in UTL-Zeilen und alle eigenen UTL-Items (Kombinatoren, Hafen …) mitnehmen
+    for _, item_type in ipairs(ITEM_TYPES) do
+      for name, item in pairs(data.raw[item_type] or {}) do
+        if (item.subgroup and ours[item.subgroup]) or (string.sub(name, 1, 4) == "utl-" and not item.hidden) then
+          item.subgroup = target
+        end
+      end
+    end
+    for _, recipe in pairs(data.raw["recipe"]) do
+      if recipe.subgroup and ours[recipe.subgroup] then recipe.subgroup = target end
+    end
+    -- Zug-Sachen, die der fremde Reiter nicht mitnimmt (z. B. Hochbahn-Rampe und -Stütze), dazulegen:
+    -- Schienen-Artiges zu den Schienen, der Rest zu den Haltestellen
+    local _, rail_subgroup = place_of(data.raw["rail-planner"]["rail"])
+    for _, item_type in ipairs(ITEM_TYPES) do
+      for _, item in pairs(data.raw[item_type] or {}) do
+        local kind = item.place_result and subgroup_by_entity[item.place_result]
+        if kind and not item.hidden and not item.parameter and place_of(item) ~= foreign then
+          item.subgroup = (kind == "utl-rails" and rail_subgroup) or target
+        end
+      end
+    end
+    -- UTL-Reiter entfernen, wenn nichts mehr darin liegt
+    local used = false
+    for _, prototypes in pairs(data.raw) do
+      for _, prototype in pairs(prototypes) do
+        if type(prototype) == "table" and prototype.subgroup and ours[prototype.subgroup] then used = true end
+      end
+    end
+    if not used then
+      for name in pairs(ours) do data.raw["item-subgroup"][name] = nil end
+      data.raw["item-group"][GROUP] = nil
+    end
+    log("UTL: fremder Zug-Reiter „" .. foreign .. "“ erkannt – UTL-Sachen nach „" .. tostring(target)
+      .. "“, UTL-Reiter " .. (used and "bleibt" or "entfernt"))
+    return
+  end
+end
+
 -- Zug-Steuerung, die kein Zug-Typ ist (eigene + bekannte Mods).
 local TRAIN_CIRCUITS = {
   C.station_combinator,
