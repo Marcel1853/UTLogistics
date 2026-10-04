@@ -67,6 +67,55 @@ local SIGNALS = {
   { "utl-trains-lent", arrow("locomotive.png", "signal-output.png") },
 }
 
+-- Stil „Flach“ (Start-Einstellung utl-signal-style): eigene Grundbilder im Stil der Vanilla-Signale
+-- (graphics/icons/signals/flat, gezeichnet mit tools/grafik/signals.py, Mipmaps im Bild) und – falls
+-- angegeben – ein Vanilla-Signal als Zusatzzeichen unten rechts in halber Größe (per Verweis).
+local function flat(base, folder, badge)
+  local icons = { { icon = "__UTLogistics__/graphics/icons/signals/flat/" .. base .. ".png", icon_size = 64 } }
+  if badge then
+    icons[2] = { icon = ICONS .. folder .. "/" .. badge .. ".png", icon_size = 64, scale = 0.25, shift = { 8, 8 } }
+  end
+  return icons
+end
+local FLAT = {
+  ["utl-min-train-length"] = flat("cargo-wagon", "signal", "signal-greater-than-or-equal-to"),
+  ["utl-max-train-length"] = flat("cargo-wagon", "signal", "signal-less-than-or-equal-to"),
+  ["utl-max-trains"] = flat("loco", "signal", "signal-number-sign"),
+  ["utl-provide-threshold"] = flat("provider-chest", "signal", "signal-greater-than-or-equal-to"),
+  ["utl-provide-stack-threshold"] = flat("provider-chest", "signal", "signal-stack-size"),
+  ["utl-provide-priority"] = flat("provider-chest", "signal", "signal-star"),
+  ["utl-locked-slots"] = flat("cargo-wagon", "signal", "signal-lock"),
+  ["utl-filter-load"] = flat("cargo-wagon", "signal", "signal-checked-green"),
+  ["utl-request-threshold"] = flat("requester-chest", "signal", "signal-greater-than-or-equal-to"),
+  ["utl-request-stack-threshold"] = flat("requester-chest", "signal", "signal-stack-size"),
+  ["utl-request-priority"] = flat("requester-chest", "signal", "signal-star"),
+  ["utl-depot-priority"] = flat("depot-garage-flat", "signal", "signal-star"),
+  ["utl-network"] = flat("network"),
+  ["utl-station-output"] = flat("output", "signal", "signal-lightning"),
+  ["utl-depot-output"] = flat("depot-garage-flat", "signal", "signal-lightning"),
+  ["utl-train-id"] = flat("train-id"),
+  ["utl-train-length"] = flat("train-length"),
+  ["utl-train-locos"] = flat("train-locos"),
+  ["utl-train-wagons"] = flat("train-wagons"),
+  ["utl-cleanup-all-items"] = flat("cargo-wagon", "signal", "signal_everything"),
+  ["utl-cleanup-all-fluids"] = flat("fluid-wagon", "signal", "signal_everything"),
+  ["utl-loading"] = flat("cargo-wagon", "arrows", "signal-input"),
+  ["utl-unloading"] = flat("cargo-wagon", "arrows", "signal-output"),
+  ["utl-trains-incoming"] = flat("loco", "signal", "signal-map-marker"),
+  ["utl-trains-total"] = flat("loco", "signal", "signal_everything"),
+  ["utl-trains-free"] = flat("depot-garage-flat"),
+  ["utl-trains-busy"] = flat("loco", "signal", "signal-speed"),
+  ["utl-deliveries"] = flat("cargo-wagon", "signal", "signal-number-sign"),
+  ["utl-trains-low-fuel"] = flat("fuel-pump-flat"),
+  ["utl-trains-no-fuel"] = flat("fuel-pump-flat", "signal", "signal-deny"),
+  ["utl-trains-no-path"] = flat("loco", "signal", "signal-deny"),
+  ["utl-trains-borrowed"] = flat("loco", "arrows", "signal-input"),
+  ["utl-trains-lent"] = flat("loco", "arrows", "signal-output"),
+}
+if settings.startup["utl-signal-style"].value == "flat" then
+  for _, def in ipairs(SIGNALS) do def[2] = FLAT[def[1]] or def[2] end
+end
+
 local prototypes = {
   { type = "item-subgroup", name = "utl-signals", group = "signals", order = "z-utl" },
 }
