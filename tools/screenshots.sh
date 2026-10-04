@@ -4,7 +4,7 @@
 #   SZENARIO z. B. UTL-Beispiele; MOD_ORDNER Standard: dieser Mod (für ältere Versionen einen
 #   git worktree angeben, z. B. von main).
 # Eigener Datenordner, nichts wird gelöscht außer dem eigenen Log. Die Bilder landen in
-# $WORK/data/script-output/utl/. Am Ende wird genau das eigene Factorio (eigene config.ini) beendet.
+# $WORK/data/script-output/utl/ und als Kopie in docs/screenshots/<datum>-<szenario>-<sprache>/. Am Ende wird genau das eigene Factorio (eigene config.ini) beendet.
 set -euo pipefail
 SCENARIO="$1"; LANG_CODE="${2:-de}"
 MOD_DIR="$(cd "${3:-$(dirname "$0")/..}" && pwd)"
@@ -25,4 +25,11 @@ done
 grep -E "SHOTS\] (utl-|nauvis|fertig|Fehler)" "$WORK/data/factorio-current.log" || true
 PID=$(pgrep -f "x64_/factorio -c $WORK/config.ini" || true)
 [ -n "$PID" ] && kill -TERM $PID
-echo "Bilder: $WORK/data/script-output/utl/"
+# Bilder immer auch nach docs/screenshots/ kopieren (Wunsch Marcel: dort gehen sie nicht verloren)
+KEEP="$MOD_DIR/docs/screenshots/$(date +%F)-$SCENARIO-$LANG_CODE"
+if ls "$WORK/data/script-output/utl/"*.png > /dev/null 2>&1; then
+  mkdir -p "$KEEP" && cp "$WORK/data/script-output/utl/"*.png "$KEEP/"
+  echo "Bilder: $KEEP/"
+else
+  echo "Keine Bilder entstanden ($WORK/data/script-output/utl/)"
+fi
