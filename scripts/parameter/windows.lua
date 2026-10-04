@@ -148,7 +148,7 @@ function Windows.ask(player, keys, cfg, count)
   local f, inner = frame(player, Windows.ASK, { "utl-param.ask-title" })
   inner.add({ type = "label", caption = { "utl-param.ask-intro", count } }).style.single_line = false
   -- drei Reiter, damit das Fenster klein bleibt (Wunsch Marcel); leere Reiter fallen weg
-  local tabs = inner.add({ type = "tabbed-pane", name = "tabs" })
+  local tabs = inner.add({ type = "tabbed-pane", name = "pages" })
   local role = Settings.role_code(cfg)
   local grids = {}
   for _, tab in ipairs(Ask.TABS) do
@@ -184,7 +184,7 @@ function Windows.answers(player)
   local answers = {}
   if not f then return answers end
   local elements = {}
-  for _, content in pairs(f.inner.tabs.children) do
+  for _, content in pairs(f.inner.pages.children) do
     if content.type == "scroll-pane" and content.grid then
       for _, el in pairs(content.grid.children) do elements[#elements + 1] = el end
     end
