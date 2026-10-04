@@ -1,5 +1,9 @@
 # Unified Train Logistics (UTL)
 
+[![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
+[![Version](https://img.shields.io/badge/version-0.0.12-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
+
 Automatic train logistics for Factorio 2.1: **providers, requesters, depots, fuel stations,
 cleanup and an overview window in one mod**, built for high UPS.
 
@@ -347,3 +351,9 @@ Remote interface `utl` (station data, deliveries, alerts, configuring stations a
 links, team and map values, tagging script-made blueprints, trains and stations by filter, cancelling
 a delivery) and **events** for created, changed, completed and cancelled deliveries, plus own **icons for UTL signals** via `mod-data` "utl-signal-icons":
 [wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
+
+## License
+
+[Apache License 2.0](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE). You may use, change
+and pass on UTL, also in your own mods – but keep the files `LICENSE` and `NOTICE` and name the
+original: [github.com/Marcel1853/UTLogistics](https://github.com/Marcel1853/UTLogistics).

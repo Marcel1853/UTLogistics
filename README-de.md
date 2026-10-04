@@ -1,5 +1,9 @@
 # Unified Train Logistics (UTL) – Deutsch
 
+[![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
+[![Version](https://img.shields.io/badge/version-0.0.12-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
+
 *English version: [README.md](https://github.com/Marcel1853/UTLogistics/blob/main/README.md).*
 
 > **📖 Wiki mit Bildern:** [github.com/Marcel1853/UTLogistics/wiki](https://github.com/Marcel1853/UTLogistics/wiki) – jede Funktion Schritt für Schritt erklärt,
@@ -396,3 +400,9 @@ einstellen, Netzverbindungen, Team- und Kartenwerte, per Script erstellte Blaupa
 Stationen nach Filter, Lieferung abbrechen) und **Ereignisse** für angelegte, geänderte, fertige und
 abgebrochene Lieferungen, dazu eigene **Symbole für UTL-Signale** über `mod-data` „utl-signal-icons“:
 [Wiki – Für Mod-Autoren](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren).
+
+## Lizenz
+
+[Apache License 2.0](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE). UTL darf benutzt,
+geändert und weitergegeben werden, auch in eigenen Mods – dabei die Dateien `LICENSE` und `NOTICE`
+mitgeben und das Original nennen: [github.com/Marcel1853/UTLogistics](https://github.com/Marcel1853/UTLogistics).
