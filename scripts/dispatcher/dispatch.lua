@@ -55,6 +55,7 @@ local function try_request(request)
   -- Großteil der Zeit). Nur die Wartezeit für die Warnung mitführen; erst wenn gewarnt würde,
   -- wird ein Anbieter für den Text gesucht.
   if #Select.pools_for(request.station) == 0 then
+    if request.only_active then return false end -- Leeren aktiver Anbieter: keine Warnung
     local unit, key = request.station.unit, request.key
     if Deliveries.incoming(unit, key) > 0 then
       Warn.waiting_since(unit, key, true)
@@ -98,11 +99,11 @@ local function try_request(request)
       if not Select.full_enough(record, manifest, provider.station.config.locked_slots) then return false end
       local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop, provider.via,
         pickup) ~= nil
-      if created then Warn.waiting_since(request.station.unit, request.key, true) end
+      if created and not request.only_active then Warn.waiting_since(request.station.unit, request.key, true) end
       return created
     end
   end
-  Warn.no_train(request, providers[1], true)
+  if not request.only_active then Warn.no_train(request, providers[1], true) end
   return false
 end
 
@@ -110,6 +111,7 @@ end
 --- des Anbieters (Cleanup „zuerst leeren“ / „nur Reserve“, Lager-Restladung), Angebots-Priorität,
 --- volle Ladung, zuletzt kurzer Weg vom Zug zum Anbieter.
 local function better(a, b)
+  if a.request.tier ~= b.request.tier then return a.request.tier < b.request.tier end -- echte Anfragen zuerst
   if a.request.priority ~= b.request.priority then return a.request.priority > b.request.priority end
   if a.provider.rank ~= b.provider.rank then return a.provider.rank > b.provider.rank end
   if a.provider.priority ~= b.provider.priority then return a.provider.priority > b.provider.priority end
@@ -166,7 +168,7 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   if delivery then
     delivery.chained = true
     storage.deliveries.chained = (storage.deliveries.chained or 0) + 1
-    Warn.waiting_since(best.request.station.unit, best.request.key, true)
+    if not best.request.only_active then Warn.waiting_since(best.request.station.unit, best.request.key, true) end
   end
   return delivery
 end
@@ -186,7 +188,7 @@ function Dispatch.run()
     local unit = request.station.unit
     -- Nachladen zuerst: der Bedarf kann auf eine laufende Lieferung gehen, auch wenn der
     -- Abnehmer sein Zuglimit schon ausgeschöpft hat (der Zug fährt ja ohnehin dorthin).
-    if not busy[unit] and TopUp.try(request) then
+    if not busy[unit] and not request.only_active and TopUp.try(request) then
       busy[unit] = true
       created = created + 1
     elseif not busy[unit] and Select.has_room(request.station) then

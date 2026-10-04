@@ -9,6 +9,8 @@
 --- * Angebot = Bestand − Mindest, gleichrangig mit normalen Anbietern (Entscheidung Marcel): ein
 ---   Lager ist Puffer für kurze Wege – bei gleicher Menge gewinnt der nähere.
 --- * Waren ohne Grenzen (z. B. angenommene Restladung): ganz anbieten, Rang „Reserve“.
+--- * Zwischen Mindest und Höchst: „Auffüllen“ = Höchst − Bestand – nur aus aktiven Anbietern
+---   (Schalter am Anbieter, wie die aktive Anbieterkiste: der Bahnhof soll leer werden).
 --- Kein Hin- und Herschieben zwischen zwei Lagern: angeboten wird nur, was über dem Mindest liegt,
 --- angefordert nur unter dem Mindest – Ware wandert höchstens einmal von „zu viel“ nach „zu wenig“.
 --- Die allgemeinen Anbieter-/Bedarfs-Schwellen gelten hier nicht: Mindest und Höchst sind die
@@ -22,10 +24,10 @@ local StorageReader = {}
 local signal_key = Util.signal_key
 
 --- Neue Tabellen berechnen. `net` = Bestand je Ware (ohne Anforderungs-Slots), `enabled` =
---- Kartenschalter.
+--- Kartenschalter. Liefert Angebot, Bedarf, Rang und Auffüllen (nur aus aktiven Anbietern).
 function StorageReader.compute(net, cfg, enabled)
-  local provide, request, rank = {}, {}, {}
-  if not enabled then return provide, request, rank end
+  local provide, request, rank, fill = {}, {}, {}, {}
+  if not enabled then return provide, request, rank, fill end
   local limited = {}
   for _, limit in pairs(cfg.storage.limits) do
     local key = limit.signal and signal_key(limit.signal)
@@ -34,7 +36,11 @@ function StorageReader.compute(net, cfg, enabled)
       local stock = math.max(0, net[key] or 0)
       local min = math.max(0, limit.min or 0)
       local max = math.max(min, limit.max or 0)
-      if stock < min and max > stock then request[key] = max - stock end
+      if stock < min and max > stock then
+        request[key] = max - stock
+      elseif max > stock then
+        fill[key] = max - stock
+      end
       local spare = stock - min
       if spare > 0 then
         provide[key] = spare
@@ -48,7 +54,7 @@ function StorageReader.compute(net, cfg, enabled)
       rank[key] = Fields.RANK_RESERVE
     end
   end
-  return provide, request, rank
+  return provide, request, rank, fill
 end
 
 local function same(a, b)
@@ -70,19 +76,20 @@ end
 --- Station neu bewerten; nur bei Änderung Tabellen tauschen und für den Dispatcher markieren.
 function StorageReader.apply(station, net, cfg)
   local enabled = storage.cfg.storage_enabled ~= false
-  local provide, request, rank = StorageReader.compute(net, cfg, enabled)
+  local provide, request, rank, fill = StorageReader.compute(net, cfg, enabled)
   -- Bestand merken (für den Netz-Kombinator, Modus „Lagerbestand“)
   local stock = {}
   for key, n in pairs(net) do
     if n > 0 then stock[key] = n end
   end
   if same(provide, station.provide) and same(request, station.request) and same(rank, station.provide_rank or {})
-    and same(stock, station.stock or {}) then
+    and same(stock, station.stock or {}) and same(fill, station.fill or {}) then
     return
   end
   station.provide, station.provide_count = provide, count(provide)
   station.request, station.request_count = request, count(request)
   station.provide_rank = rank
+  station.fill = fill
   station.stock = stock
   station.version = station.version + 1
   storage.stations.dirty[station.unit] = true

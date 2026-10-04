@@ -18,7 +18,7 @@ local function wanted_slots(manifest)
   local list = {}
   for key, amount in pairs(manifest) do
     local stack = Util.stack_size(key)
-    if stack then
+    if stack and amount > 0 then
       local kind, name, quality = Util.split_key(key)
       list[#list + 1] = {
         key = key,
@@ -48,49 +48,50 @@ end
 --- Filter und Sperre für einen Zug setzen. `locked` = gesperrte Slots je Wagen (Stationswert),
 --- die freibleiben sollen. Liefert die Liste der Wagen mit den gesetzten Slots.
 --- Slots, die wegen Restladung nicht gesetzt werden konnten, stehen in `pending`.
+--- Jede Ware bekommt **in jedem Wagen** Slots (nicht Wagen für Wagen): Steht an jedem Wagenplatz eine
+--- Kiste mit Greifarm, lädt jeder Greifarm mit – sonst bekäme nur der erste Wagen Filter, und die Ware
+--- an den hinteren Wagen käme nie in den Zug. Je Wagen bis zum Doppelten seines Anteils: Hat eine
+--- Kiste weniger, gleichen die anderen Wagen aus. Die Menge begrenzt die Ladebedingung im Fahrplan.
 local function apply_plan(train, manifest, locked)
   local list = wanted_slots(manifest)
   if #list == 0 then return nil end
 
-  local index, done = 1, 0 -- Posten und wie viele seiner Slots schon vergeben sind
-  local result = {}
+  local wagons = {}
   for _, wagon in pairs(train.cargo_wagons) do
     local inventory = wagon.get_inventory(CARGO)
-    if usable(inventory, nil) then
-      local entry = { wagon = wagon, slots = {}, pending = {} }
-      local size = #inventory
-      local free = size - (locked or 0)
-      local used = 0
-      inventory.sort_and_merge()
-      while index <= #list and used < free do
-        local item = list[index]
+    if usable(inventory, nil) then wagons[#wagons + 1] = { wagon = wagon, inventory = inventory } end
+  end
+  if #wagons == 0 then return nil end
+  for _, item in ipairs(list) do
+    item.per_wagon = math.min(item.slots, 2 * math.ceil(item.slots / #wagons))
+  end
+
+  local result = {}
+  for _, w in ipairs(wagons) do
+    local inventory = w.inventory
+    local entry = { wagon = w.wagon, slots = {}, pending = {} }
+    local free = #inventory - (locked or 0)
+    inventory.sort_and_merge()
+    local used = 0
+    for _, item in ipairs(list) do
+      for _ = 1, item.per_wagon do
+        if used >= free then break end
         used = used + 1
-        if item.slots - done <= 0 then
-          index = index + 1
-          used = used - 1
+        if inventory.set_filter(used, item.filter) then
+          entry.slots[used] = true
         else
-          done = done + 1
-          if done >= item.slots then
-            index = index + 1
-            done = 0
-          end
-          local slot = used
-          if inventory.set_filter(slot, item.filter) then
-            entry.slots[slot] = true
-          else
-            entry.pending[slot] = item.filter -- Slot belegt: bei der Ankunft erneut versuchen
-          end
+          entry.pending[used] = item.filter -- Slot belegt: bei der Ankunft erneut versuchen
         end
       end
-      -- Hinter der Ladeliste ist Schluss: so kommt nichts Fremdes in die übrigen Slots.
-      if inventory.supports_bar() then
-        entry.bar = used + 1
-        inventory.set_bar(entry.bar)
-      end
-      result[#result + 1] = entry
     end
+    -- Hinter den Filtern ist Schluss: so kommt nichts Fremdes in die übrigen Slots.
+    if inventory.supports_bar() then
+      entry.bar = used + 1
+      inventory.set_bar(entry.bar)
+    end
+    result[#result + 1] = entry
   end
-  return #result > 0 and result or nil
+  return result
 end
 
 --- Filter für eine Lieferung setzen (beim Losschicken). `locked` kommt vom Anbieter.

@@ -12,4 +12,14 @@ data:extend({
     allowed_values = { "auto", "utl", "off" },
     order = "a-a",
   },
+  -- Aussehen der UTL-Signale: „classic“ = Fahrzeug-/Kisten-Symbole des Spiels mit Zeichen,
+  -- „flat“ = eigene flache Symbole im Stil der Vanilla-Signale
+  {
+    type = "string-setting",
+    name = "utl-signal-style",
+    setting_type = "startup",
+    default_value = "classic",
+    allowed_values = { "classic", "flat" },
+    order = "a-b",
+  },
 })

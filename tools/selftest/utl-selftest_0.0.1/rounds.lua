@@ -156,12 +156,41 @@ function Rounds.build(check)
   remote.call("utl", "set_request", req7.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
   remote.call("utl", "set_map_config", "utl-min-load-percent", 50)
   train(s, force, 4, "R37-Depot")
+  -- R38: aktiver Anbieter – (a) Lager über dem Mindest füllt sich nur aus dem aktiven Anbieter (der
+  -- normale liegt näher), (b) ohne Abnehmer geht die Ware des aktiven Anbieters ins Cleanup
+  LINE = 241
+  rails(s, force, -85, 85)
+  local depot8 = stop(s, force, "R38-Depot", 10, true)
+  local normal8 = stop(s, force, "R38-Normal", 30, true)
+  local active8 = stop(s, force, "R38-Aktiv", 60, true)
+  local lager8 = stop(s, force, "R38-Lager", -60, false)
+  supply(s, force, normal8, 30, { "iron-plate" })
+  supply(s, force, active8, 60, { "iron-plate" })
+  supply(s, force, lager8, -60, { "iron-plate" }, 500) -- Bestand 500: über Mindest 100, unter Höchst 1500
+  local function cfg8(e, changes) changes.network = "R38"; remote.call("utl", "configure_station", e.unit_number, changes) end
+  cfg8(depot8, { mode = "depot" })
+  cfg8(normal8, { mode = "station", provide = true, request = false })
+  cfg8(active8, { mode = "station", provide = true, request = false, active_provider = true })
+  cfg8(lager8, { mode = "storage", storage = { accept_leftover = false, limits = {
+    { signal = { type = "item", name = "iron-plate" }, min = 100, max = 1500 } } } })
+  train(s, force, 4, "R38-Depot")
+  LINE = 281
+  rails(s, force, -85, 85)
+  local depot9 = stop(s, force, "R38b-Depot", 10, true)
+  local active9 = stop(s, force, "R38b-Aktiv", 60, true)
+  local cleanup9 = stop(s, force, "R38b-Cleanup", -60, false)
+  supply(s, force, active9, 60, { "copper-plate" })
+  local function cfg9(e, changes) changes.network = "R38b"; remote.call("utl", "configure_station", e.unit_number, changes) end
+  cfg9(depot9, { mode = "depot" })
+  cfg9(active9, { mode = "station", provide = true, request = false, active_provider = true })
+  cfg9(cleanup9, { mode = "cleanup" })
+  train(s, force, 4, "R38b-Depot")
   LINE = 1
   check("R31/R32 strecken gebaut", r31_train ~= nil and r32_train ~= nil)
   return { start = game.tick, train = r31_train, wagon = r31_wagon, train2 = r32_train, wagon2 = r32_wagon,
     train3 = r33_train, wagon3 = r33_wagon, loco3 = r33_train and r33_train.front_stock,
     train4 = r34_train, wagon4 = r34_wagon, r34 = {},
-    train5 = r35_train, surface = s, r35 = {}, r37 = { req = req7.unit_number },
+    train5 = r35_train, surface = s, r35 = {}, r37 = { req = req7.unit_number }, r38 = {},
     far = far.backer_name, near = near.backer_name, chained = nil, loaded = {}, unloaded = {} }
 end
 
@@ -197,6 +226,15 @@ function Rounds.watch(r, check)
         remote.call("utl", "set_map_config", "utl-min-load-percent", 0)
         check("R37 mindestladung: 400 warten, 3000 fahren", not r.r37.early, serpent.line(d.manifest))
       end
+    end
+    if d.to == "R38-Lager" and not r.r38.fill then
+      r.r38.fill = true
+      check("R38 aktiver anbieter füllt lager über dem mindest", d.from == "R38-Aktiv"
+        and (d.manifest["item|iron-plate|normal"] or 0) == 1000, d.from .. " " .. serpent.line(d.manifest))
+    end
+    if d.to == "R38b-Cleanup" and not r.r38.cleanup then
+      r.r38.cleanup = true
+      check("R38 aktiver anbieter leert ins cleanup", d.from == "R38b-Aktiv", d.from .. " " .. serpent.line(d.manifest))
     end
     -- R35: Lieferzug unterwegs zum Anbieter → Gleis davor abreißen
     if d.to == "R35-Abnehmer" and d.state == "to_provider" and not r.r35.cut then
@@ -305,8 +343,11 @@ function Rounds.watch(r, check)
     check("R34 umweg über der grenze: kein zweiter anbieter", not r.r34.early)
     remote.call("utl", "set_map_config", "utl-multi-pickup-detour", 50)
   end
-  if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done) or game.tick - r.start > 36000 then
+  if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done
+      and r.r38.fill and r.r38.cleanup) or game.tick - r.start > 36000 then
     r.done = true
+    if not r.r38.fill then check("R38 aktiver anbieter füllt lager über dem mindest", false, "keine lieferung") end
+    if not r.r38.cleanup then check("R38 aktiver anbieter leert ins cleanup", false, "keine lieferung") end
     if not r.r37.done then check("R37 mindestladung: 400 warten, 3000 fahren", false, serpent.line(r.r37)) end
     if not r.r35.done then check("R35 hänger-erkennung: warnung nach 1 min, lieferung läuft weiter", false, serpent.line(r.r35)) end
     if not r.r34.done then check("R34 zweiter anbieter: ein zug, zwei ladehalte, volle menge", false, serpent.line(r.r34)) end

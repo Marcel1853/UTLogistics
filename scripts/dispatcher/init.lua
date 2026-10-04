@@ -4,6 +4,7 @@ local Heartbeat = require("scripts.core.heartbeat")
 local Dispatch = require("scripts.dispatcher.dispatch")
 local Depot = require("scripts.trains.depot")
 local Reach = require("scripts.dispatcher.reach")
+local Registry = require("scripts.stations.registry")
 
 -- Gleisnetz geändert (Gleise/Signale gebaut oder abgerissen): Erreichbarkeits-Cache verwerfen.
 local topology_filter = {}
@@ -23,6 +24,10 @@ for _, event in ipairs({
 }) do
   Events.on(event, topology_changed, topology_filter)
 end
+
+-- Einstellung im Fenster geändert (z. B. „Aktiver Anbieter“): neu indizieren, auch wenn sich
+-- Angebot und Bedarf nicht ändern.
+Registry.on_config_changed(function(station) storage.stations.dirty[station.unit] = true end)
 
 -- Alle 3 Heartbeats (Standard-Takt 10 → alle 30 Ticks).
 Heartbeat.add_task("dispatch", 3, Dispatch.run)

@@ -6,15 +6,17 @@ local Unlocks = require("scripts.core.unlocks")
 
 local Main = {}
 
--- Häkchen in zwei Spalten: links Station (Anbieter/Abnehmer), rechts Sonderrollen.
+-- Häkchen in zwei Spalten: links Station (Anbieter/aktiver Anbieter/Abnehmer), rechts Sonderrollen.
 local ROLE_COLUMNS = {
-  { "provider", "requester" },
+  { "provider", "active_provider", "requester" },
   { "depot", "fuel", "cleanup", "storage" },
 }
 
 local function role_checked(cfg, role)
-  if role == "provider" then return cfg.mode == "station" and cfg.provide end
+  -- „Anbieter“ und „Aktiver Anbieter“ schließen sich aus: nur ein Haken (aktiv ist intern auch Anbieter)
+  if role == "provider" then return cfg.mode == "station" and cfg.provide and cfg.active_provider ~= true end
   if role == "requester" then return cfg.mode == "station" and cfg.request end
+  if role == "active_provider" then return cfg.mode == "station" and cfg.provide and cfg.active_provider == true end
   return cfg.mode == role
 end
 
@@ -36,12 +38,15 @@ function Main.build(parent, station, with_preview)
 
   refs.net = Nets.build(parent, station)
 
-  -- Rollen
-  local roles = parent.add({ type = "flow", direction = "horizontal" })
-  roles.style.top_margin = 4
+  -- Rollen (im Rahmen wie die Werte rechts)
+  local box = parent.add({ type = "frame", style = "flib_shallow_frame_in_shallow_frame", direction = "vertical" })
+  box.style.top_margin = 4
+  box.style.padding = 6
+  box.style.horizontally_stretchable = true
+  local roles = box.add({ type = "flow", direction = "horizontal" })
   for _, column in ipairs(ROLE_COLUMNS) do
     local flow = roles.add({ type = "flow", direction = "vertical" })
-    flow.style.width = 190
+    flow.style.width = 184
     flow.style.vertical_spacing = 4
     for _, role in ipairs(column) do
       -- Lager nur mit Forschung „UTL: Lager“ und eingeschaltetem Kartenschalter
@@ -66,9 +71,17 @@ end
 --- Rolle umschalten. Depot/Tankstelle/Cleanup schließen sich gegenseitig und Anbieter/
 --- Abnehmer aus. Rückgabe: true (Fenster neu aufbauen, Abschnitte ändern sich).
 function Main.apply_role(cfg, role, state)
-  if role == "provider" or role == "requester" then
+  if role == "provider" or role == "requester" or role == "active_provider" then
     cfg.mode = "station"
-    if role == "provider" then cfg.provide = state else cfg.request = state end
+    if role == "requester" then
+      cfg.request = state
+    elseif role == "active_provider" then
+      cfg.active_provider = state
+      cfg.provide = state -- aktiver Anbieter ist intern auch Anbieter (Werte, Abschnitt „Anbieter“)
+    else
+      cfg.provide = state
+      cfg.active_provider = false -- „Anbieter“ angehakt = normaler Anbieter
+    end
   elseif state then
     cfg.mode = role
   else

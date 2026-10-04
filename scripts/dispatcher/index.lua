@@ -2,6 +2,8 @@
 --- Nur Stationen, deren Angebot/Bedarf sich geändert hat (stations.dirty), werden neu
 --- eingetragen. LTN baut so etwas jeden Zyklus komplett neu; das sparen wir uns.
 --- Entfernte Stationen fallen beim nächsten Zugriff heraus (lazy).
+local Fields = require("scripts.stations.fields")
+
 local Index = {}
 
 -- Wer geänderte Stationen mitbekommen will (Netz-Kombinator: Summen je Netz), meldet sich hier.
@@ -46,7 +48,9 @@ local function reindex(dispatch, station)
     end
     dispatch.provider_keys[unit] = keys
   end
-  dispatch.requesters[unit] = station.request_count > 0 or nil
+  -- Lager zählen auch mit „Auffüllen“ (nur aus aktiven Anbietern) als Abnehmer
+  dispatch.requesters[unit] = (station.request_count > 0 or next(station.fill or {}) ~= nil) or nil
+  dispatch.active[unit] = (station.provide_count > 0 and Fields.is_active(station.config)) or nil
   -- Wartezeiten für Waren, die nicht mehr gebraucht werden, verwerfen (Warnung „kein Zug“).
   local waiting = dispatch.waiting[unit]
   if waiting then
@@ -71,6 +75,7 @@ function Index.update()
     else
       unindex(dispatch, unit)
       dispatch.requesters[unit] = nil
+      dispatch.active[unit] = nil
       dispatch.waiting[unit] = nil
     end
     dirty[unit] = nil
@@ -83,6 +88,7 @@ function Index.remove(unit)
   local dispatch = storage.dispatch
   unindex(dispatch, unit)
   dispatch.requesters[unit] = nil
+  dispatch.active[unit] = nil
   dispatch.waiting[unit] = nil
   if dispatch.cursor == unit then dispatch.cursor = nil end
   notify(unit, nil)

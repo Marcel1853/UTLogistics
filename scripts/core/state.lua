@@ -62,6 +62,7 @@ function State.init()
   dispatch.providers = dispatch.providers or {}         -- [key] = { [station] = true }
   dispatch.provider_keys = dispatch.provider_keys or {} -- [station] = { [key] = true }
   dispatch.requesters = dispatch.requesters or {}       -- [station] = true
+  dispatch.active = dispatch.active or {}               -- [station] = true: aktiver Anbieter mit Angebot
   dispatch.starving = dispatch.starving or {}           -- [netzwerk][station|key] = Anfrage ohne freien Zug
   dispatch.waiting = dispatch.waiting or {}             -- [station][key] = { since, seen }: unbedient seit
   dispatch.return_block = dispatch.return_block or {}   -- [abnehmer][key] = tick: Rest blieb übrig, Cleanup liefert es ihm vorerst nicht zurück

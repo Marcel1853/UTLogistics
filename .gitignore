@@ -10,3 +10,5 @@ dist/
 
 # Projektregeln für Claude – nur lokal
 CLAUDE.md
+.claude/
+*.blend1

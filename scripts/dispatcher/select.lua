@@ -14,6 +14,7 @@ local Fuel = require("scripts.trains.fuel")
 local Fields = require("scripts.stations.fields")
 local Warn = require("scripts.dispatcher.no-train-alerts")
 local Elevators = require("scripts.compat.se-elevators")
+local ActivePush = require("scripts.dispatcher.active-push")
 
 local Select = {}
 
@@ -90,15 +91,29 @@ local function collect_requests(peek)
           list[#list + 1] = { station = station, key = key, need = need, minimum = minimum,
             priority = cfg.request_priority, storage = cfg.roles.storage,
             -- seit wann offen (dieselbe Uhr wie die Warnung „kein Zug“; beim Beliefern zurückgesetzt)
-            since = Warn.waiting_since(unit, key) }
+            since = Warn.waiting_since(unit, key), tier = ActivePush.TIER_REQUEST }
+        end
+      end
+      -- Lager über dem Mindest: bis Höchst auffüllen, aber nur aus aktiven Anbietern
+      if cfg.roles.storage and station.fill and next(dispatch.active) ~= nil then
+        for key, amount in pairs(station.fill) do
+          local need = amount - Deliveries.incoming(unit, key)
+          if need > 0 then
+            list[#list + 1] = { station = station, key = key, need = need, minimum = need,
+              priority = cfg.request_priority, storage = true, only_active = true,
+              tier = ActivePush.TIER_FILL, since = game.tick }
+          end
         end
       end
     end
   end
   if not peek then dispatch.cursor = unit end
-  -- höhere Priorität zuerst; bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer),
+  ActivePush.collect(list, peek) -- Rest aktiver Anbieter ins Cleanup
+  -- echte Anfragen vor „Auffüllen“ und „ab ins Cleanup“ (aktive Anbieter); dann höhere Priorität;
+  -- bei gleicher Priorität echte Abnehmer vor Lagern (Lager sind Puffer),
   -- dann die älteste Anfrage (sonst gewinnt bei knappen Zügen immer derselbe – Reihenfolge von pairs)
   table.sort(list, function(a, b)
+    if a.tier ~= b.tier then return a.tier < b.tier end
     if a.priority ~= b.priority then return a.priority > b.priority end
     if (a.storage == true) ~= (b.storage == true) then return not a.storage end
     if a.since ~= b.since then return a.since < b.since end
@@ -136,6 +151,7 @@ local function find_providers(request)
     if not provider then
       set[unit] = nil
     elseif unit ~= requester.unit and usable(provider) and provider.config.roles.provider
+      and (not request.only_active or Fields.is_active(provider.config))
       and has_room(provider) and not blocked(provider, requester.unit, request.key) then
       local p_stop = provider.stop
       local via = nil
@@ -181,6 +197,19 @@ local function capacity_of(record, key, locked)
   return record.fluid
 end
 
+--- Weitere Waren, die ein aktiver Anbieter gleich mitgeben darf: beim Lager das, was es auffüllen
+--- will, beim Cleanup alles, was es annimmt (soviel der Anbieter hat).
+local function extra_for_active(request, provider)
+  local r = request.station
+  if r.config.roles.storage then return r.fill or {} end
+  local extra = {}
+  for key, amount in pairs(provider.provide) do
+    local kind, name = Util.split_key(key)
+    if Fields.cleanup_accepts(r.config, kind, name) then extra[key] = amount end
+  end
+  return extra
+end
+
 --- Ladeliste: die angefragte Ware plus – bei Items – weitere Waren, die derselbe Anbieter hat und
 --- derselbe Abnehmer braucht, solange Slots frei sind (wenige Züge, volle Ladungen).
 local function build_manifest(request, provider, record, amount)
@@ -190,16 +219,20 @@ local function build_manifest(request, provider, record, amount)
   local p, r = provider.station, request.station
   local free = (record.slots - record.wagons * p.config.locked_slots) - math.ceil(amount / size)
   local r_cfg = r.config
-  for key, wanted in pairs(r.request) do
+  local wanted_list = r.request
+  if request.only_active then wanted_list = extra_for_active(request, p) end
+  for key, wanted in pairs(wanted_list) do
     if free <= 0 then break end
     local size2 = stack_size(key)
     local offered = p.provide[key]
     if key ~= request.key and size2 and offered and not blocked(p, r.unit, key) then
-      local need = wanted - Deliveries.incoming(r.unit, key)
+      -- Cleanup nimmt alles an: was schon unterwegs ist, zählt dort nicht gegen
+      local push = request.only_active and not r_cfg.roles.storage
+      local need = push and wanted or wanted - Deliveries.incoming(r.unit, key)
       local available = offered - Deliveries.outgoing(p.unit, key)
       -- Lager: Mindest und Höchst sind die Schwellen, die allgemeine Bedarfs-Schwelle gilt nicht
-      -- (sonst käme eine zweite Ware nie mit, solange sie unter 1000 liegt)
-      local minimum = r_cfg.roles.storage and 1
+      -- (sonst käme eine zweite Ware nie mit, solange sie unter 1000 liegt); ebenso beim Leeren
+      local minimum = (r_cfg.roles.storage or push) and 1
         or Reader.threshold(r_cfg.request_threshold, r_cfg.request_stack_threshold, key)
       local take = math.min(need, available, free * size2)
       if take > 0 and (take >= minimum or take == free * size2) and need >= minimum then

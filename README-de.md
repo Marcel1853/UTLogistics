@@ -99,6 +99,7 @@ Gut für bestehende Bahnhöfe: Kombinator danebenstellen, Ausgang mit der Haltes
 | Rolle | Bedeutung |
 |---|---|
 | **Anbieter** | Waren mit **positivem** Wert im Schaltungsnetz werden abgeholt. |
+| **Aktiver Anbieter** | Wie die aktive Anbieterkiste: Die Station wird geleert, auch ohne Anforderung – erst an Abnehmer, dann an Lager bis zum Höchstbestand, der Rest ins Cleanup. |
 | **Abnehmer** | Waren mit **negativem** Wert im Schaltungsnetz oder aus den Anforderungs-Slots werden geliefert. |
 | Anbieter + Abnehmer | Puffer: beides gleichzeitig. |
 | **Depot** | Hier warten freie Züge. |
@@ -106,7 +107,8 @@ Gut für bestehende Bahnhöfe: Kombinator danebenstellen, Ausgang mit der Haltes
 | **Cleanup** | Hier werden Züge mit Restladung geleert. |
 | **Lager** | Nimmt an und gibt ab, zwischen Mindest- und Höchstbestand je Ware (siehe unten). |
 
-Depot, Tankstelle und Cleanup schließen sich gegenseitig und Anbieter/Abnehmer aus.
+Depot, Tankstelle und Cleanup schließen sich gegenseitig und Anbieter/Abnehmer aus; Anbieter und
+aktiver Anbieter ebenso.
 
 ## Anforderungen: Zielbestand, keine Bestellung
 
@@ -300,7 +302,8 @@ Die wichtigsten: **Direkt der nächste Auftrag** (an), **Nur den Auftrag laden**
 **Nachladen** (aus), **Zweiter Anbieter** (aus, mit **höchstem Umweg** 50 %), **Mindestladung je Fahrt** (0 % = aus), **Warnung „Zug steckt
 fest“ nach** (5 Minuten), **Cleanup darf Inhalt wieder anbieten** (an), **Lager-Stationen erlauben** (an).
 Start-Einstellung **Registerkarte „Züge“**: automatisch – eigene UTL-Registerkarte, außer eine andere
-Mod hat schon eine Zug-Registerkarte; dann kommen die UTL-Sachen dort hinein.
+Mod hat schon eine Zug-Registerkarte; dann kommen die UTL-Sachen dort hinein. Start-Einstellung
+**Stil der UTL-Signale**: Klassisch (Standard) oder Flach.
 Die Lade-Werte gehen auch im **UTL-Manager, Reiter „Einstellungen“** – mit Teams je Team; Admins
 nutzen **`/utl-admin`**.
 
@@ -324,13 +327,16 @@ zeigen, was UTL und die Züge brauchen, nicht die UPS einer ganzen Megabase.
 
 ## Szenarien zum Ausprobieren
 
-**Neues Spiel → Szenarien** (alles erforscht, Cheat-Modus an, Anzeigefelder mit Erklärungen):
+**Neues Spiel → Szenarien** (alles erforscht, Cheat-Modus an, Anzeigefelder mit Erklärungen). Alle laufen
+auch ohne Space Age, nur der Planeten-Test braucht es:
 
 - **UTL-Beispiele (gemischter Anbieter)** – gemischter Anbieter mit Auftrags-Ausgabe, zwei Waren in
   einer Fahrt, Öl und Wasser über geschaltete Pumpen.
 - **UTL-Netzverbund** – vier Netze, ein Stern mit einem Partner ohne eigene Züge.
 - **UTL-Teams** – vier Teams mit gleichen Stations- und Netznamen; `/utl-team rot` wechselt.
 - **UTL-Nachladen (zum Anschauen)** – mit und ohne Nachladen, Runde für Runde, mit Erklärfenster.
+- **UTL-Aktiver-Anbieter (zum Anschauen)** – ein aktiver Anbieter wird leer: erst der Abnehmer, dann
+  das Lager bis zum Höchstbestand, der Rest ins Cleanup, mit Erklärfenster.
 - **UTL-Lager (zum Anschauen)** – neu in 0.0.8: Lager, ein Cleanup, der zurückgibt, und vier kleine
   Beispiel-Strecken, mit Erklärfenster.
 - **UTL-Planeten-Test (Space Age)** – dasselbe Netz auf Nauvis, Vulcanus und Gleba.
@@ -388,5 +394,5 @@ nichts ab. Map-Einstellung in Minuten, Standard 5, 0 = aus.
 Remote-Schnittstelle `utl` (Stationsdaten, Lieferungen, Warnungen, Stationen und Anforderungen
 einstellen, Netzverbindungen, Team- und Kartenwerte, per Script erstellte Blaupausen taggen, Züge und
 Stationen nach Filter, Lieferung abbrechen) und **Ereignisse** für angelegte, geänderte, fertige und
-abgebrochene Lieferungen:
+abgebrochene Lieferungen, dazu eigene **Symbole für UTL-Signale** über `mod-data` „utl-signal-icons“:
 [Wiki – Für Mod-Autoren](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren).

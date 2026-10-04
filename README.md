@@ -82,11 +82,13 @@ Ctrl + C / Ctrl + V keep the settings as well.
 
 ## Roles
 
-**Provider** (positive signals are picked up), **Requester** (negative signals or request slots
+**Provider** (positive signals are picked up), **Active provider** (like the active provider chest:
+the station is emptied even without a request – first to requesters, then to storages up to their
+maximum, the rest to the cleanup), **Requester** (negative signals or request slots
 are delivered), both = buffer, **Depot** (free trains wait here), **Fuel station**,
 **Cleanup** (trains with leftover cargo are emptied here), **Storage** (takes in and gives out
 between a minimum and a maximum stock, see below). Depot, fuel station and cleanup exclude each
-other and provider/requester.
+other and provider/requester; so do provider and active provider.
 
 ## Requests are a target stock
 
@@ -255,7 +257,7 @@ unloading inactivity** (30 s each, combined with the cargo by **or** or **and**)
 loading** (off), **second provider** (off, with a **maximum detour** of 50 %), **minimum load per trip** (0 % = off), **“train stuck”
 alert after** (5 minutes), **cleanup may offer its contents again** (on), **allow storage stations** (on).
 Startup setting **“Trains” tab**: automatic – UTL's own tab, unless another mod already has a train
-tab; then the UTL items go there.
+tab; then the UTL items go there. Startup setting **UTL signal style**: classic (default) or flat.
 The loading values can also be set in the **UTL Manager, tab “Settings”** – per team with teams;
 admins use **`/utl-admin`**.
 
@@ -278,13 +280,16 @@ what UTL and the trains need, not the UPS of a whole megabase.
 
 ## Scenarios
 
-**New game → Scenarios** (everything researched, cheat mode on, display panels with explanations):
+**New game → Scenarios** (everything researched, cheat mode on, display panels with explanations). All of them
+also run without Space Age, only the planet test needs it:
 
 - **UTL examples (mixed provider)** – mixed provider with the job output, two goods in one trip,
   oil and water with switched pumps.
 - **UTL network links** – four networks, a star with a partner that has no trains of its own.
 - **UTL teams** – four teams with the same station and network names; `/utl-team rot` switches.
 - **UTL top up (to watch)** – with and without topping up, round by round, with an explanation window.
+- **UTL active provider (to watch)** – an active provider is emptied: first the requester, then the
+  storage up to its maximum, the rest to the cleanup, with an explanation window.
 - **UTL storage (to watch)** – new in 0.0.8: storage, a cleanup that gives back and four small
   example lines, with an explanation window.
 - **UTL planet test (Space Age)** – the same network on Nauvis, Vulcanus and Gleba.
@@ -340,5 +345,5 @@ not cancel anything. Map setting in minutes, default 5, 0 = off.
 
 Remote interface `utl` (station data, deliveries, alerts, configuring stations and requests, network
 links, team and map values, tagging script-made blueprints, trains and stations by filter, cancelling
-a delivery) and **events** for created, changed, completed and cancelled deliveries:
+a delivery) and **events** for created, changed, completed and cancelled deliveries, plus own **icons for UTL signals** via `mod-data` "utl-signal-icons":
 [wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).

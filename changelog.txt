@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.12
+Date: 2026-10-04
+  Features:
+    - New role "Active provider" (like the active provider chest; requested in the discussion "Active Provider Station" – sorry, I had completely forgotten about it): the station is emptied even without a request. Its goods go to requesters first (ahead of all other providers), then to storage stations up to their maximum, the rest to cleanup stations that accept them.
+    - New scenario "UTL active provider (to watch)" showing the new role round by round.
+    - Startup setting "UTL signal style": Classic (previous icons, default) or Flat (new flat icons in the style of the vanilla signals).
+    - Other mods can supply their own icons for UTL signals (mod-data "utl-signal-icons", see wiki "For mod authors").
+  Changes:
+    - Station window: the roles have a frame; "Provider" and "Active provider" exclude each other, one checkbox is enough.
+  Bugfixes:
+    - "Load only the current job": only the first wagon got filters, so goods at the rear wagons never got into the train and it waited for the timeout. Every wagon now gets filters for the goods of the job.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.11
 Date: 2026-10-04
   Features:
