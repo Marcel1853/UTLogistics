@@ -38,6 +38,8 @@ local SIGNALS = {
   { "utl-depot-priority", icon("train-stop.png", "signal-star.png") },
   { "utl-fuel-request", arrow("coal.png", "signal-input.png") },
   { "utl-network", icon("radar.png", "signal_N.png") },
+  -- UTL-Logo als Signal (Schaltungen, Anzeigen, Kartenmarker)
+  { "utl-logo", { { icon = "__UTLogistics__/graphics/icons/utl-logo.png", icon_size = 64 } } },
   -- Rolle als Zahl (Einstellungs-Kombinator, Blaupausen-Parameter): 1 Anbieter … 9 aktiver Anbieter + Abnehmer
   { "utl-role", icon("train-stop.png", "signal_R.png") },
   { "utl-station-output", icon("constant-combinator.png", "signal-lightning.png") },
