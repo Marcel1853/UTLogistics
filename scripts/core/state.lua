@@ -57,6 +57,9 @@ function State.init()
   -- Verbundene Netze (Stern je Oberfläche), siehe scripts/stations/networks.lua
   storage.network_links = storage.network_links or {}
 
+  -- Einstellungs-Kombinatoren aus Blaupausen, deren Haltestelle noch nicht steht: [unit_number] = true
+  storage.settings_pending = storage.settings_pending or {}
+
   -- Dispatcher: Anbieter-Index pro Ware und Menge der Abnehmer.
   local dispatch = storage.dispatch or {}
   dispatch.providers = dispatch.providers or {}         -- [key] = { [station] = true }

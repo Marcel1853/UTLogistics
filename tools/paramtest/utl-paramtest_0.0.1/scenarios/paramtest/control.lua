@@ -1,11 +1,10 @@
---- Versuch: Funktionieren Blaupausen-Parameter (Vanilla, Factorio 2.x) mit UTL?
---- Aufbau: UTL-Haltestelle als Abnehmer, Konstant-Kombinator mit parameter-0 = -1000 (Bedarf über
---- das Kabel) und ein UTL-Anforderungs-Slot mit parameter-1 (steht in den UTL-Tags der Blaupause).
---- Daraus wird eine Blaupause; ihr Inhalt (JSON) kommt ins Log. Spieler bekommen sie ins Inventar.
---- Danach alle 2 s: was jede UTL-Station anfordert und was im Kombinator neben ihr steht.
-local W = defines.wire_connector_id
-
-local function L(text) log("[PARAM] " .. text) end
+--- Versuch: Blaupausen-Parameter mit UTL (Einstellungs-Kombinator, scripts/stations/settings-combinator.lua).
+--- Aufbau: UTL-Haltestelle als Abnehmer mit Anforderungs-Slot parameter-1 = 500. Daraus wird eine
+--- Blaupause; ihr Inhalt (Parameter-Liste) kommt ins Log, Spieler bekommen sie ins Inventar.
+--- Ohne Spieler (headless) wird das Platzieren nachgespielt: in der Blaupause parameter-1 → Eisen,
+--- Menge → 4000, Rolle → 5 (Depot), dann bauen und die Geister beleben.
+--- Danach alle 2 s: Rolle und Anforderungen jeder UTL-Station.
+local L = function(text) log("[PARAM] " .. text) end
 
 local AREA = { { -31, -3 }, { 31, 10 } }
 
@@ -13,45 +12,58 @@ local function build()
   local s = game.create_surface("pt")
   s.generate_with_lab_tiles = true
   s.always_day = true
-  s.request_to_generate_chunks({ 0, 0 }, 4)
+  s.request_to_generate_chunks({ 0, 0 }, 5)
   s.force_generate_chunk_requests()
-  local force = game.forces.player
+  local force = game.forces["player"]
   force.research_all_technologies()
   for x = -29, 29, 2 do s.create_entity({ name = "straight-rail", position = { x, 1 }, direction = 4, force = force }) end
   local stop = s.create_entity({ name = "utl-train-stop", position = { 0, 3 }, direction = 4, force = force, raise_built = true })
+  if not stop then return s, force end
   stop.backer_name = "Param-Test"
-  local cc = s.create_entity({ name = "constant-combinator", position = { 3.5, 6.5 }, force = force })
-  cc.get_or_create_control_behavior().get_section(1).set_slot(1,
-    { value = { type = "item", name = "parameter-0", quality = "normal", comparator = "=" }, min = -1000 })
-  cc.get_wire_connector(W.circuit_green, true).connect_to(stop.get_wire_connector(W.circuit_green, true))
   remote.call("utl", "configure_station", stop.unit_number, { mode = "station", provide = false, request = true })
   remote.call("utl", "set_request", stop.unit_number, 1, { type = "item", name = "parameter-1" }, 500)
-  -- Versuch 2: Parameter in einem (versteckten) Konstant-Kombinator von UTL – findet Factorio sie dort?
-  local out = s.find_entities_filtered({ name = "utl-station-output", position = stop.position, radius = 4 })[1]
-  if out then
-    local section = out.get_or_create_control_behavior().get_section(1) or out.get_control_behavior().add_section()
-    section.set_slot(5, { value = { type = "item", name = "parameter-2", quality = "normal", comparator = "=" }, min = 700 })
-    section.set_slot(6, { value = { type = "virtual", name = "utl-request-priority", quality = "normal", comparator = "=" }, min = 3 })
-    local off = out.get_control_behavior().add_section()
-    off.set_slot(1, { value = { type = "item", name = "parameter-3", quality = "normal", comparator = "=" }, min = 900 })
-    off.active = false
-    L("Ausgabe gefunden, parameter-2 eingetragen, parameter-3 im ausgeschalteten Abschnitt")
-  else
-    L("keine Ausgabe gefunden")
-  end
   return s, force
 end
 
---- Blaupause in einem Skript-Inventar bauen und ihr JSON loggen.
 local function make_blueprint(s, force)
   local inv = game.create_inventory(1)
   inv.insert({ name = "blueprint" })
   local stack = inv[1]
   local mapping = stack.create_blueprint({ surface = s, force = force, area = AREA })
   remote.call("utl", "tag_blueprint", stack, mapping, s)
-  local json = helpers.table_to_json(helpers.json_to_table(helpers.decode_string(stack.export_stack():sub(2))))
-  L("Blaupause: " .. json)
+  local bp = helpers.json_to_table(helpers.decode_string(stack.export_stack():sub(2))).blueprint
+  local names = {}
+  for _, e in ipairs(bp.entities) do if e.name ~= "straight-rail" then names[#names + 1] = e.name end end
+  L("Blaupause: Bauteile " .. table.concat(names, ",") .. " – Parameter " .. helpers.table_to_json(bp.parameters or {}))
   return inv
+end
+
+local function is_settings(e) return (e.ghost_name or e.name) == "utl-station-settings" and 1 or 0 end
+
+--- Platzieren mit gewählten Parametern nachspielen (so wie Factorio es nach dem Dialog tut).
+local function simulate(s, force, stack, y, settings_first)
+  local entities = stack.get_blueprint_entities()
+  for _, e in ipairs(entities) do
+    if e.name == "utl-station-settings" then
+      for _, section in ipairs(e.control_behavior.sections.sections) do
+        for _, f in ipairs(section.filters or {}) do
+          if f.name == "parameter-1" then f.name, f.count = "iron-plate", 4000 end
+          if f.name == "utl-role" then f.count = 5 end
+        end
+      end
+    end
+  end
+  stack.set_blueprint_entities(entities)
+  local ghosts = stack.build_blueprint({ surface = s, force = force, position = { 0, y }, build_mode = defines.build_mode.forced })
+  -- Haltestelle zuerst beleben, den Einstellungs-Kombinator danach (wie beim Bau durch Roboter)
+  table.sort(ghosts, function(a, b)
+    if settings_first then return is_settings(a) > is_settings(b) end
+    return is_settings(a) < is_settings(b)
+  end)
+  for _, ghost in ipairs(ghosts) do
+    if ghost.valid then ghost.revive({ raise_revive = true }) end
+  end
+  L("nachgespielt (" .. (settings_first and "Kombinator zuerst" or "Haltestelle zuerst") .. "): " .. #ghosts .. " Geister gebaut")
 end
 
 local function setup()
@@ -59,6 +71,12 @@ local function setup()
   local s, force = build()
   storage.inv = make_blueprint(s, force)
   storage.surface = s.index
+  if #game.players == 0 then
+    local copy = game.create_inventory(1)
+    copy.insert(storage.inv[1])
+    simulate(s, force, storage.inv[1], 30, false)
+    simulate(s, force, copy[1], 60, true)
+  end
   for _, player in pairs(game.players) do
     player.teleport({ 0, 14 }, s)
     player.get_main_inventory().insert(storage.inv[1])
@@ -67,12 +85,11 @@ local function setup()
   L("aufgebaut")
 end
 
---- Stand aller UTL-Stationen ins Log (nur wenn er sich ändert).
 local function report()
   if not storage.inv then return end
   local lines = {}
-  for _, st in pairs(remote.call("utl", "get_stations", {})) do
-    local info = remote.call("utl", "get_station", st.unit)
+  for _, st in pairs(remote.call("utl", "get_stations", {}) --[[@as table[] ]]) do
+    local info = remote.call("utl", "get_station", st.unit) --[[@as table?]]
     if info then
       local slots = {}
       for i, r in pairs(info.config.requests or {}) do
@@ -81,15 +98,10 @@ local function report()
       local need = {}
       for key, n in pairs(info.request or {}) do need[#need + 1] = key .. "=" .. n end
       table.sort(need)
-      lines[#lines + 1] = ("%s #%d mode=%s slots[%s] bedarf[%s]"):format(info.stop_name or "?", info.unit,
-        tostring(info.config.mode), table.concat(slots, ","), table.concat(need, ","))
+      lines[#lines + 1] = ("%s #%d mode=%s provide=%s request=%s slots[%s] bedarf[%s]"):format(info.stop_name or "?",
+        info.unit, tostring(info.config.mode), tostring(info.config.provide), tostring(info.config.request),
+        table.concat(slots, ","), table.concat(need, ","))
     end
-  end
-  local s = game.get_surface(storage.surface)
-  for _, cc in pairs(s and s.find_entities_filtered({ name = "constant-combinator" }) or {}) do
-    local slot = cc.get_control_behavior().get_section(1).get_slot(1)
-    lines[#lines + 1] = ("kombinator %.1f,%.1f: %s = %s"):format(cc.position.x, cc.position.y,
-      tostring(slot.value and slot.value.name), tostring(slot.min))
   end
   table.sort(lines)
   local text = table.concat(lines, " | ")

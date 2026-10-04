@@ -11,7 +11,9 @@ Requests.slot_count = 20
 function Requests.rebuild_map(cfg)
   local map = {}
   for _, request in pairs(cfg.requests) do
-    local key = Util.signal_key(request.signal)
+    local proto = request.signal.type ~= "fluid" and prototypes.item[request.signal.name]
+    -- Platzhalter (Blaupausen-Parameter parameter-0 … 9) sind keine Ware
+    local key = not (proto and proto.parameter) and Util.signal_key(request.signal)
     if key and request.count > 0 then map[key] = (map[key] or 0) + request.count end
   end
   cfg.request_map = map

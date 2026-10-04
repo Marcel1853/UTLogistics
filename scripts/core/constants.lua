@@ -7,6 +7,7 @@ return {
   utl_stops = { ["utl-train-stop"] = true, ["utl-port"] = true },
   station_output = "utl-station-output",
   depot_output = "utl-depot-output",
+  station_settings = "utl-station-settings", -- versteckter Einstellungs-Kombinator (Blaupausen-Parameter)
   network_combinator = "utl-network-combinator",
 
 

@@ -317,6 +317,7 @@ local interface = {
     if not station or type(slot) ~= "number" or slot < 1 or slot > Requests.slot_count then return false end
     Requests.set(station.config, slot, signal, count or 0)
     Reader.read(station)
+    Registry.config_changed(station) -- u. a. Einstellungs-Kombinator nachziehen
     return true
   end,
 

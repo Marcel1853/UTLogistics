@@ -37,6 +37,8 @@ local SIGNALS = {
   { "utl-request-priority", icon("requester-chest.png", "signal-star.png") },
   { "utl-depot-priority", icon("train-stop.png", "signal-star.png") },
   { "utl-network", icon("radar.png", "signal_N.png") },
+  -- Rolle als Zahl (Einstellungs-Kombinator, Blaupausen-Parameter): 1 Anbieter … 9 aktiver Anbieter + Abnehmer
+  { "utl-role", icon("train-stop.png", "signal_R.png") },
   { "utl-station-output", icon("constant-combinator.png", "signal-lightning.png") },
   -- Depot-Ausgabe: Garage mit Blitz
   { "utl-depot-output", { { icon = "__UTLogistics__/graphics/icons/signals/depot-garage.png", icon_size = 64 },
@@ -91,6 +93,7 @@ local FLAT = {
   ["utl-request-priority"] = flat("requester-chest", "signal", "signal-star"),
   ["utl-depot-priority"] = flat("depot-garage-flat", "signal", "signal-star"),
   ["utl-network"] = flat("network"),
+  ["utl-role"] = flat("train-stop", "signal", "signal_R"),
   ["utl-station-output"] = flat("output", "signal", "signal-lightning"),
   ["utl-depot-output"] = flat("depot-garage-flat", "signal", "signal-lightning"),
   ["utl-train-id"] = flat("train-id"),

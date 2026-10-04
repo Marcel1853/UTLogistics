@@ -5,6 +5,7 @@ return {
   utl_port = "utl-port", -- nur mit Cargo Ships
   station_output = "utl-station-output",
   depot_output = "utl-depot-output",
+  station_settings = "utl-station-settings", -- versteckter Einstellungs-Kombinator (Blaupausen-Parameter)
   network_combinator = "utl-network-combinator",
   -- Netz-Kombinator: bernsteinfarben, damit er sich vom (blauen) Stations-Combinator abhebt
   network_tint = { r = 1.0, g = 0.72, b = 0.3, a = 1.0 },
