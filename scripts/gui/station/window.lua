@@ -86,16 +86,26 @@ function Window.close_all()
   end
 end
 
+--- Pfeile „links / rechts / frei“ in der Titelleiste des Haltestellen-Panels (wie Vanilla
+--- „zurück/weiter“); die aktive Stellung ist gedrückt.
+local function position_buttons(bar, player)
+  local side = Window.position(player.index)
+  local sprites = { left = "utility/backward_arrow", right = "utility/forward_arrow", free = "utility/expand" }
+  for _, p in ipairs(POSITIONS) do
+    bar.add({ type = "sprite-button", style = "frame_action_button", sprite = sprites[p], toggled = p == side,
+      tooltip = { "utl-gui.window-position-" .. p }, tags = { utl_action = "window_pos", side = p } })
+  end
+end
+
 --- `standalone`: Haltestellen-Panel als eigenes Fenster statt am Vanilla-Haltestellenfenster (Tipps-
 --- Szenen: dort schöbe das Schaltungsfenster der Haltestelle das Panel aus dem Bild).
 local function create_frame(player, station, standalone)
   local side = Window.position(player.index)
   if station.kind == "stop" and not standalone and side ~= "free" then
-    return player.gui.relative.add({
+    local panel = player.gui.relative.add({
       type = "frame",
       name = NAME,
       direction = "vertical",
-      caption = { "utl-gui.station-title" },
       anchor = {
         gui = defines.relative_gui_type.train_stop_gui,
         -- Standard links (rechts sitzt das Schaltungs-Panel); wählbar über die Knöpfe oben im Panel
@@ -103,6 +113,12 @@ local function create_frame(player, station, standalone)
         names = anchor_names(), -- UTL-Haltestelle und (mit Cargo Ships) UTL-Hafen
       },
     })
+    -- eigene Titelleiste (statt caption): Platz für die Positions-Pfeile wie bei Vanilla „zurück/weiter“
+    local bar = panel.add({ type = "flow", style = "flib_titlebar_flow" })
+    bar.add({ type = "label", style = "frame_title", caption = { "utl-gui.station-title" }, ignored_by_interaction = true })
+    bar.add({ type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true })
+    position_buttons(bar, player)
+    return panel
   end
   local frame = player.gui.screen.add({ type = "frame", name = NAME, direction = "vertical" })
   local saved = storage.station_window_pos and storage.station_window_pos[player.index]
@@ -111,23 +127,19 @@ local function create_frame(player, station, standalone)
   else
     frame.auto_center = true
   end
-  Builder.titlebar(frame, { "utl-gui.station-title" }, "close")
+  local bar = Builder.titlebar(frame, { "utl-gui.station-title" }, "close")
+  frame.bring_to_front() -- freies Fenster: möglichst vor dem Haltestellen-Fenster
+  if station.kind == "stop" and not standalone then
+    -- Positions-Pfeile vor dem Schließen-Knopf
+    local close = bar.children[#bar.children]
+    position_buttons(bar, player)
+    close.destroy()
+    bar.add({ type = "sprite-button", style = "frame_action_button", sprite = "utility/close",
+      tooltip = { "gui.close-instruction" }, tags = { utl_action = "close" } })
+  end
   return frame
 end
 
---- Knöpfe „links / rechts / frei“ oben im Haltestellen-Panel.
-local function position_buttons(frame, player)
-  local side = Window.position(player.index)
-  local flow = frame.add({ type = "flow", direction = "horizontal" })
-  flow.style.vertical_align = "center"
-  flow.add({ type = "label", caption = { "utl-gui.window-position" } })
-  local sprites = { left = "utility/left_arrow", right = "utility/right_arrow", free = "utility/expand" }
-  for _, p in ipairs(POSITIONS) do
-    flow.add({ type = "sprite-button", style = p == side and "flib_selected_tool_button" or "tool_button",
-      sprite = sprites[p], tooltip = { "utl-gui.window-position-" .. p },
-      tags = { utl_action = "window_pos", side = p } })
-  end
-end
 
 local function box(parent, width)
   local frame = parent.add({ type = "frame", style = "inside_shallow_frame_with_padding", direction = "vertical" })
@@ -158,7 +170,6 @@ function Window.open(player, station, standalone)
   local is_stop = station.kind == "stop"
   local frame = create_frame(player, station, standalone)
   if keep_location and frame.parent == player.gui.screen then frame.location = keep_location end
-  if station.kind == "stop" and not standalone then position_buttons(frame, player) end
   local left_parent, right_parent, tabs
   if is_stop then
     -- Panel an der Haltestelle: zwei Reiter statt alles untereinander (passt auf den Bildschirm).

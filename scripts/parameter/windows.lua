@@ -9,6 +9,7 @@ local Settings = require("scripts.stations.settings-combinator")
 local More = require("scripts.api.remote-more")
 local Util = require("scripts.lib.util")
 local StorageSlots = require("scripts.stations.fields").storage_slots
+local RequestSlots = require("scripts.stations.requests").slot_count
 
 local Windows = {}
 
@@ -63,8 +64,10 @@ end
 function Windows.choose(player, count)
   local f, inner = frame(player, Windows.CHOOSE, { "utl-param.choose-title" })
   inner.add({ type = "label", caption = { "utl-param.choose-intro", count } }).style.single_line = false
+  local columns = inner.add({ type = "table", name = "checks", column_count = 2 })
+  columns.style.horizontal_spacing = 24
   for _, entry in ipairs(Ask.list) do
-    inner.add({ type = "checkbox", name = entry.key, caption = label_of(entry.key), state = true })
+    columns.add({ type = "checkbox", name = entry.key, caption = label_of(entry.key), state = true })
   end
   footer(f, { "utl-param.make-blueprint" }, "make")
   player.opened = f
@@ -75,7 +78,7 @@ function Windows.chosen(player)
   local f = player.gui.screen[Windows.CHOOSE]
   local keys = {}
   if not f then return keys end
-  for _, child in pairs(f.inner.children) do
+  for _, child in pairs(f.inner.checks.children) do
     if child.type == "checkbox" and child.state then keys[#keys + 1] = child.name end
   end
   return keys
@@ -106,12 +109,23 @@ local function add_input(grid, player, key, cfg)
     local new = flow.add({ type = "textfield", name = "new", tooltip = { "utl-param.network-new" } })
     new.style.width = 100
   elseif key == "request" then
-    local flow = grid.add({ type = "flow", name = key })
-    local pick = flow.add({ type = "choose-elem-button", name = "ware", elem_type = "signal" })
-    local request = current --[[@as table]]
-    local signal = request.signal
-    if signal then pick.elem_value = { type = signal.type or "item", name = signal.name, quality = signal.quality } end
-    flow.add({ type = "textfield", name = "count", text = tostring(request.count or 0), numeric = true }).style.width = 90
+    -- je Ware eine Zeile (Ware | Menge), dazu zwei leere für weitere Waren
+    local t = grid.add({ type = "table", name = key, column_count = 2 })
+    local rows = current --[[@as table]]
+    local fuel_only = cfg.mode == "fuel"
+    for i = 1, math.min(RequestSlots, #rows + 2) do
+      local row = rows[i] or { count = 0 }
+      local pick = t.add({ type = "choose-elem-button", name = "w" .. i,
+        elem_type = fuel_only and "item-with-quality" or "signal",
+        elem_filters = fuel_only and { { filter = "fuel-value", comparison = ">", value = 0 } } or nil })
+      local signal = row.signal
+      if signal and fuel_only then
+        if signal.type ~= "fluid" then pick.elem_value = { name = signal.name, quality = signal.quality or "normal" } end
+      elseif signal then
+        pick.elem_value = { type = signal.type or "item", name = signal.name, quality = signal.quality }
+      end
+      t.add({ type = "textfield", name = "c" .. i, text = tostring(row.count or 0), numeric = true }).style.width = 90
+    end
   elseif entry.kind == "toggle" then
     grid.add({ type = "checkbox", name = key, state = current })
   elseif entry.kind == "offer" then
@@ -133,11 +147,28 @@ end
 function Windows.ask(player, keys, cfg, count)
   local f, inner = frame(player, Windows.ASK, { "utl-param.ask-title" })
   inner.add({ type = "label", caption = { "utl-param.ask-intro", count } }).style.single_line = false
-  local grid = inner.add({ type = "table", name = "grid", column_count = 2 })
-  grid.style.vertical_spacing = 6
+  -- drei Reiter, damit das Fenster klein bleibt (Wunsch Marcel); leere Reiter fallen weg
+  local tabs = inner.add({ type = "tabbed-pane", name = "tabs" })
   local role = Settings.role_code(cfg)
+  local grids = {}
+  for _, tab in ipairs(Ask.TABS) do
+    local has = false
+    for _, key in ipairs(keys) do
+      if Ask.relevant(key, role) and Ask.by_key[key].tab == tab then has = true end
+    end
+    if has then
+      local head = tabs.add({ type = "tab", caption = { "utl-param.tab-" .. tab } })
+      local scroll = tabs.add({ type = "scroll-pane", horizontal_scroll_policy = "never" })
+      scroll.style.maximal_height = 420
+      tabs.add_tab(head, scroll)
+      local grid = scroll.add({ type = "table", name = "grid", column_count = 2 })
+      grid.style.vertical_spacing = 6
+      grids[tab] = grid
+    end
+  end
   for _, key in ipairs(keys) do
-    if Ask.relevant(key, role) then
+    local grid = Ask.relevant(key, role) and grids[Ask.by_key[key].tab]
+    if grid then
       grid.add({ type = "label", caption = key == "output" and cfg.mode == "depot" and { "utl-gui.value-depot-output" }
         or label_of(key) })
       add_input(grid, player, key, cfg)
@@ -152,7 +183,13 @@ function Windows.answers(player)
   local f = player.gui.screen[Windows.ASK]
   local answers = {}
   if not f then return answers end
-  for _, el in pairs(f.inner.grid.children) do
+  local elements = {}
+  for _, content in pairs(f.inner.tabs.children) do
+    if content.type == "scroll-pane" and content.grid then
+      for _, el in pairs(content.grid.children) do elements[#elements + 1] = el end
+    end
+  end
+  for _, el in pairs(elements) do
     local entry = Ask.by_key[el.name]
     if el.name == "role" then
       answers.role = el.selected_index - 1
@@ -161,9 +198,19 @@ function Windows.answers(player)
       local picked = el.pick.selected_index > 0 and el.pick.get_item(el.pick.selected_index)
       answers.network = typed ~= "" and typed or (type(picked) == "string" and picked or nil)
     elseif el.name == "request" then
-      local v = el.ware.elem_value --[[@as SignalID?]]
-      local signal = v and v.name and Util.signal_key(v) and { type = v.type or "item", name = v.name, quality = v.quality }
-      answers.request = { signal = signal or nil, count = tonumber(el.count.text) or 0 }
+      local rows = {}
+      local i = 1
+      while el["w" .. i] do
+        local v = el["w" .. i].elem_value --[[@as table?]]
+        local signal = nil
+        if v and v.name then
+          signal = { type = v.type or "item", name = v.name, quality = v.quality }
+          if not Util.signal_key(signal) then signal = nil end
+        end
+        rows[#rows + 1] = { signal = signal, count = tonumber(el["c" .. i].text) or 0 }
+        i = i + 1
+      end
+      answers.request = rows
     elseif entry and entry.kind == "toggle" then
       answers[el.name] = el.state
     elseif entry and entry.kind == "offer" then

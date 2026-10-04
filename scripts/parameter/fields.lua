@@ -20,28 +20,29 @@ Ask.CLEANUP_OFFER = { "off", "reserve", "normal", "first" }
 --- Abfragbare Punkte in Anzeige-Reihenfolge. kind: role | network | request | number | toggle.
 --- `roles` = nur für diese Rollen sichtbar (nil = immer).
 Ask.list = {
-  { key = "role", kind = "role" },
-  { key = "network", kind = "network" },
-  { key = "fuel_request", kind = "toggle", roles = FUEL },
-  { key = "request", kind = "request", roles = REQUEST_SLOT },
-  { key = "min_train_length", kind = "number" },
-  { key = "max_train_length", kind = "number" },
-  { key = "max_trains", kind = "number" },
-  { key = "provide_threshold", kind = "number", roles = PROVIDER },
-  { key = "provide_stack_threshold", kind = "number", roles = PROVIDER },
-  { key = "provide_priority", kind = "number", roles = PROVIDER },
-  { key = "locked_slots", kind = "number", roles = PROVIDER },
-  { key = "filter_load", kind = "toggle", roles = PROVIDER },
-  { key = "request_threshold", kind = "number", roles = REQUEST_SLOT },
-  { key = "request_stack_threshold", kind = "number", roles = REQUEST_SLOT },
-  { key = "request_priority", kind = "number", roles = REQUEST_SLOT },
-  { key = "depot_priority", kind = "number", roles = DEPOT },
-  { key = "cleanup_all_items", kind = "toggle", roles = CLEANUP },
-  { key = "cleanup_all_fluids", kind = "toggle", roles = CLEANUP },
-  { key = "cleanup_offer", kind = "offer", roles = CLEANUP },
-  { key = "storage_limits", kind = "limits", roles = STORAGE },
-  { key = "output", kind = "toggle" },
+  { key = "role", kind = "role", tab = "general" },
+  { key = "network", kind = "network", tab = "general" },
+  { key = "fuel_request", kind = "toggle", roles = FUEL, tab = "goods" },
+  { key = "request", kind = "request", roles = REQUEST_SLOT, tab = "goods" },
+  { key = "min_train_length", kind = "number", tab = "general" },
+  { key = "max_train_length", kind = "number", tab = "general" },
+  { key = "max_trains", kind = "number", tab = "general" },
+  { key = "provide_threshold", kind = "number", roles = PROVIDER, tab = "values" },
+  { key = "provide_stack_threshold", kind = "number", roles = PROVIDER, tab = "values" },
+  { key = "provide_priority", kind = "number", roles = PROVIDER, tab = "values" },
+  { key = "locked_slots", kind = "number", roles = PROVIDER, tab = "values" },
+  { key = "filter_load", kind = "toggle", roles = PROVIDER, tab = "values" },
+  { key = "request_threshold", kind = "number", roles = REQUEST_SLOT, tab = "values" },
+  { key = "request_stack_threshold", kind = "number", roles = REQUEST_SLOT, tab = "values" },
+  { key = "request_priority", kind = "number", roles = REQUEST_SLOT, tab = "values" },
+  { key = "depot_priority", kind = "number", roles = DEPOT, tab = "values" },
+  { key = "cleanup_all_items", kind = "toggle", roles = CLEANUP, tab = "goods" },
+  { key = "cleanup_all_fluids", kind = "toggle", roles = CLEANUP, tab = "goods" },
+  { key = "cleanup_offer", kind = "offer", roles = CLEANUP, tab = "goods" },
+  { key = "storage_limits", kind = "limits", roles = STORAGE, tab = "goods" },
+  { key = "output", kind = "toggle", tab = "general" },
 }
+Ask.TABS = { "general", "goods", "values" }
 Ask.by_key = {}
 for _, entry in ipairs(Ask.list) do Ask.by_key[entry.key] = entry end
 
@@ -57,10 +58,16 @@ function Ask.current(cfg, key)
   if key == "role" then return Settings.role_code(cfg) end
   if key == "network" then return cfg.network or "default" end
   if key == "request" then
-    local r = cfg.requests and cfg.requests[1]
-    local proto = r and r.signal and r.signal.type ~= "fluid" and prototypes.item[r.signal.name]
-    if r and not (proto and proto.parameter) then return { signal = r.signal, count = r.count } end
-    return { count = r and r.count or 0 } -- Platzhalter nicht vorbelegen
+    -- alle belegten Anforderungs-Slots der Reihe nach; Platzhalter (parameter-0 …) ohne Ware vorbelegen
+    local rows = {}
+    for slot = 1, Requests.slot_count do
+      local r = cfg.requests and cfg.requests[slot]
+      if r then
+        local proto = r.signal and r.signal.type ~= "fluid" and prototypes.item[r.signal.name]
+        rows[#rows + 1] = (proto and proto.parameter) and { count = r.count } or { signal = r.signal, count = r.count }
+      end
+    end
+    return rows
   end
   local cleanup = cfg.cleanup or {}
   if key == "cleanup_all_items" then return cleanup.all_items ~= false end
@@ -81,11 +88,16 @@ function Ask.apply(cfg, answers)
     elseif key == "network" then
       if type(value) == "string" and value ~= "" then cfg.network = value end
     elseif key == "request" then
-      if value.signal and value.signal.name then
-        Requests.set(cfg, 1, value.signal, math.max(0, value.count or 0))
-      else
-        Requests.set(cfg, 1, nil)
+      -- Zeilen mit Ware der Reihe nach in die Slots, der Rest wird geleert
+      cfg.requests = {}
+      local slot = 0
+      for _, row in ipairs(value) do
+        if row.signal and row.signal.name and slot < Requests.slot_count then
+          slot = slot + 1
+          cfg.requests[slot] = { signal = row.signal, count = math.max(0, row.count or 0) }
+        end
       end
+      Requests.rebuild_map(cfg)
     elseif key == "cleanup_all_items" or key == "cleanup_all_fluids" then
       cfg.cleanup = cfg.cleanup or {}
       cfg.cleanup[key == "cleanup_all_items" and "all_items" or "all_fluids"] = value == true
