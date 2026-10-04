@@ -129,3 +129,11 @@ for i, def in ipairs(SIGNALS) do
   }
 end
 data:extend(prototypes)
+
+-- Schnittstelle für andere Mods: eigene Symbole für UTL-Signale. Eine Mod (Abhängigkeit auf
+-- UTLogistics) trägt in data.lua oder data-updates.lua ein:
+--   data.raw["mod-data"]["utl-signal-icons"].data["utl-loading"] = { { icon = "__meine-mod__/…png", icon_size = 64 } }
+-- UTL übernimmt die Einträge in data-final-fixes (prototypes/final-fixes/signal-icons.lua) – sie
+-- gelten dann statt des gewählten Stils. Zur Laufzeit: prototypes.mod_data["utl-signal-icons"].
+data:extend({ { type = "mod-data", name = "utl-signal-icons", data_type = "utl-signal-icons", data = {} } })
+
