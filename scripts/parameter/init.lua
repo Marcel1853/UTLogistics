@@ -45,6 +45,7 @@ local function on_selected(event)
     return
   end
   pending().select[player.index] = { surface = event.surface.index, area = event.area }
+  player.clear_cursor() -- Planer nach dem Ziehen aus der Hand (Wunsch Marcel)
   Windows.choose(player, count)
 end
 Events.on(defines.events.on_player_selected_area, on_selected)
@@ -82,6 +83,7 @@ local function make(player)
     stack.import_stack("0" .. helpers.encode_string(helpers.table_to_json(data)))
   end
   stack.label = "UTL-Parameter"
+  player.add_to_clipboard(stack) -- wie Kopieren: später mit Strg + V wieder einfügen
   player.create_local_flying_text({ text = { "utl-param.made", #keys }, create_at_cursor = true })
 end
 
@@ -100,7 +102,7 @@ local function on_built(event)
   if not player then return end
   local list = pending().ask[player.index]
   if not list or list.tick ~= game.tick then
-    list = { tick = game.tick, keys = keys, entries = {} }
+    list = { tick = game.tick, keys = keys, entries = {}, cfg = util.table.deepcopy(tags.utl or {}) }
     pending().ask[player.index] = list
   end
   list.entries[#list.entries + 1] = { ghost = entity, surface = entity.surface.index, position = entity.position,
@@ -139,6 +141,18 @@ local function apply(player)
   end
   player.create_local_flying_text({ text = { "utl-param.applied", #list.entries }, create_at_cursor = true })
 end
+
+-- Rolle im Abfrage-Fenster gewechselt: nur die dazu passenden Felder zeigen, Eingaben behalten
+Events.on(defines.events.on_gui_selection_state_changed, function(event)
+  local element = event.element
+  if not (element and element.valid and element.tags and element.tags.utl_param == "role") then return end
+  local player = game.get_player(event.player_index)
+  local list = player and pending().ask[player.index]
+  if not (player and list) then return end
+  local cfg = util.table.deepcopy(list.cfg)
+  Ask.apply(cfg, Windows.answers(player))
+  Windows.ask(player, list.keys, cfg, #list.entries)
+end)
 
 Events.on(defines.events.on_gui_click, function(event)
   local element = event.element
