@@ -44,6 +44,15 @@ Fields.groups = {
     },
   },
   {
+    name = "fuel",
+    visible = function(cfg) return cfg.roles.fuel end,
+    fields = {},
+    -- Tankstelle fordert ihren Treibstoff selbst an (Anforderungs-Slots, Standard aus)
+    toggles = {
+      { key = "fuel_request", signal = "utl-fuel-request", rebuild = true },
+    },
+  },
+  {
     name = "depot",
     visible = function(cfg) return cfg.roles.depot end,
     fields = {
@@ -61,6 +70,7 @@ end
 
 --- Standardwert eines Schalters: die Map-Einstellung, solange die Station nichts eigenes sagt.
 function Fields.toggle_default(toggle)
+  if not toggle.setting then return false end
   local cfg = Config.get()
   return cfg and cfg[toggle.setting] == true
 end

@@ -7,6 +7,7 @@ local Reader = require("scripts.stations.reader")
 local Window = require("scripts.gui.station.window")
 local Main = require("scripts.gui.station.panel-main")
 local Values = require("scripts.gui.station.panel-values")
+local Fields = require("scripts.stations.fields")
 local RequestsSection = require("scripts.gui.station.section-requests")
 local CleanupSection = require("scripts.gui.station.section-cleanup")
 local StorageSection = require("scripts.gui.station.section-storage")
@@ -109,6 +110,12 @@ Events.on(defines.events.on_gui_click, function(event)
   local action, cfg = tags.utl_action, station.config
   if action == "close" then
     Window.close(event.player_index)
+  elseif action == "window_pos" then
+    -- Panel links / rechts / frei (je Spieler): an der neuen Stelle neu aufbauen
+    Window.close(event.player_index)
+    Window.set_position(event.player_index, tags.side --[[@as string]])
+    local player = game.get_player(event.player_index)
+    if player then Window.open(player, station) end
   elseif action == "reset" then
     if Values.reset(cfg, tags.key) then changed(event, station, true) end
   elseif action == "req_slot" then
@@ -166,7 +173,10 @@ Events.on(defines.events.on_gui_checked_state_changed, function(event)
     Main.apply_role(station.config, tags.role, event.element.state)
     changed(event, station, true)
   elseif tags.utl_action == "toggle" then
-    if Values.toggle(station.config, tags.key, event.element.state) then changed(event, station, false) end
+    if Values.toggle(station.config, tags.key, event.element.state) then
+      local toggle = Fields.toggles[tags.key]
+      changed(event, station, toggle ~= nil and toggle.rebuild == true) -- neue Abschnitte → Fenster neu
+    end
   elseif tags.utl_action == "storage_leftover" then
     StorageSection.set_leftover(station.config, event.element.state)
     changed(event, station, true)

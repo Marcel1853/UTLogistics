@@ -9,24 +9,37 @@ local Ask = {}
 -- Rollen-Nummern (settings-combinator.lua): 1 Anbieter, 2 aktiver Anbieter, 3 Abnehmer,
 -- 4 Anbieter + Abnehmer, 5 Depot, 6 Tankstelle, 7 Cleanup, 8 Lager, 9 aktiver Anbieter + Abnehmer
 local PROVIDER = { [1] = true, [2] = true, [4] = true, [9] = true }
-local REQUESTER = { [3] = true, [4] = true, [9] = true }
+local REQUEST_SLOT = { [3] = true, [4] = true, [6] = true, [9] = true } -- Tankstelle: Treibstoff anfordern
 local DEPOT = { [5] = true }
+local FUEL = { [6] = true }
+local CLEANUP = { [7] = true }
+local STORAGE = { [8] = true }
+
+Ask.CLEANUP_OFFER = { "off", "reserve", "normal", "first" }
 
 --- Abfragbare Punkte in Anzeige-Reihenfolge. kind: role | network | request | number | toggle.
 --- `roles` = nur für diese Rollen sichtbar (nil = immer).
 Ask.list = {
   { key = "role", kind = "role" },
   { key = "network", kind = "network" },
-  { key = "request", kind = "request", roles = REQUESTER },
+  { key = "fuel_request", kind = "toggle", roles = FUEL },
+  { key = "request", kind = "request", roles = REQUEST_SLOT },
   { key = "min_train_length", kind = "number" },
   { key = "max_train_length", kind = "number" },
   { key = "max_trains", kind = "number" },
   { key = "provide_threshold", kind = "number", roles = PROVIDER },
+  { key = "provide_stack_threshold", kind = "number", roles = PROVIDER },
   { key = "provide_priority", kind = "number", roles = PROVIDER },
+  { key = "locked_slots", kind = "number", roles = PROVIDER },
   { key = "filter_load", kind = "toggle", roles = PROVIDER },
-  { key = "request_threshold", kind = "number", roles = REQUESTER },
-  { key = "request_priority", kind = "number", roles = REQUESTER },
+  { key = "request_threshold", kind = "number", roles = REQUEST_SLOT },
+  { key = "request_stack_threshold", kind = "number", roles = REQUEST_SLOT },
+  { key = "request_priority", kind = "number", roles = REQUEST_SLOT },
   { key = "depot_priority", kind = "number", roles = DEPOT },
+  { key = "cleanup_all_items", kind = "toggle", roles = CLEANUP },
+  { key = "cleanup_all_fluids", kind = "toggle", roles = CLEANUP },
+  { key = "cleanup_offer", kind = "offer", roles = CLEANUP },
+  { key = "storage_limits", kind = "limits", roles = STORAGE },
   { key = "output", kind = "toggle" },
 }
 Ask.by_key = {}
@@ -49,6 +62,11 @@ function Ask.current(cfg, key)
     if r and not (proto and proto.parameter) then return { signal = r.signal, count = r.count } end
     return { count = r and r.count or 0 } -- Platzhalter nicht vorbelegen
   end
+  local cleanup = cfg.cleanup or {}
+  if key == "cleanup_all_items" then return cleanup.all_items ~= false end
+  if key == "cleanup_all_fluids" then return cleanup.all_fluids ~= false end
+  if key == "cleanup_offer" then return cleanup.offer or "off" end
+  if key == "storage_limits" then return (cfg.storage and cfg.storage.limits) or {} end
   if entry and entry.kind == "toggle" then return cfg[key] == true end
   return cfg[key] or 0
 end
@@ -68,6 +86,16 @@ function Ask.apply(cfg, answers)
       else
         Requests.set(cfg, 1, nil)
       end
+    elseif key == "cleanup_all_items" or key == "cleanup_all_fluids" then
+      cfg.cleanup = cfg.cleanup or {}
+      cfg.cleanup[key == "cleanup_all_items" and "all_items" or "all_fluids"] = value == true
+    elseif key == "cleanup_offer" then
+      cfg.cleanup = cfg.cleanup or {}
+      if value ~= "off" then cfg.cleanup.offer_tier = value end
+      cfg.cleanup.offer = value ~= "off" and value or false
+    elseif key == "storage_limits" then
+      cfg.storage = cfg.storage or {}
+      cfg.storage.limits = value
     elseif entry and entry.kind == "toggle" then
       cfg[key] = value == true
     else

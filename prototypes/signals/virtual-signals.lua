@@ -36,6 +36,7 @@ local SIGNALS = {
   { "utl-request-stack-threshold", icon("requester-chest.png", "signal-stack-size.png") },
   { "utl-request-priority", icon("requester-chest.png", "signal-star.png") },
   { "utl-depot-priority", icon("train-stop.png", "signal-star.png") },
+  { "utl-fuel-request", arrow("coal.png", "signal-input.png") },
   { "utl-network", icon("radar.png", "signal_N.png") },
   -- Rolle als Zahl (Einstellungs-Kombinator, Blaupausen-Parameter): 1 Anbieter … 9 aktiver Anbieter + Abnehmer
   { "utl-role", icon("train-stop.png", "signal_R.png") },
@@ -91,6 +92,7 @@ local FLAT = {
   ["utl-request-threshold"] = flat("requester-chest", "signal", "signal-greater-than-or-equal-to"),
   ["utl-request-stack-threshold"] = flat("requester-chest", "signal", "signal-stack-size"),
   ["utl-request-priority"] = flat("requester-chest", "signal", "signal-star"),
+  ["utl-fuel-request"] = flat("fuel-pump-flat", "arrows", "signal-input"),
   ["utl-depot-priority"] = flat("depot-garage-flat", "signal", "signal-star"),
   ["utl-network"] = flat("network"),
   ["utl-role"] = flat("train-stop", "signal", "signal_R"),

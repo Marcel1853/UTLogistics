@@ -8,14 +8,37 @@ local Ask = require("scripts.parameter.fields")
 local Settings = require("scripts.stations.settings-combinator")
 local More = require("scripts.api.remote-more")
 local Util = require("scripts.lib.util")
+local StorageSlots = require("scripts.stations.fields").storage_slots
 
 local Windows = {}
 
 Windows.CHOOSE, Windows.ASK = "utl_param_choose", "utl_param_ask"
 
+local LABELS = {
+  cleanup_all_items = { "virtual-signal-name.utl-cleanup-all-items" },
+  cleanup_all_fluids = { "virtual-signal-name.utl-cleanup-all-fluids" },
+  cleanup_offer = { "utl-gui.cleanup-offer" },
+  storage_limits = { "utl-gui.section-storage" },
+}
+
 local function label_of(key)
   if key == "role" or key == "request" or key == "network" then return { "utl-param." .. key } end
-  return { "utl-gui.value-" .. key }
+  return LABELS[key] or { "utl-gui.value-" .. key }
+end
+
+--- Lager: je Zeile Ware | Mindest | Höchst.
+local function add_limits(grid, key, limits)
+  local t = grid.add({ type = "table", name = key, column_count = 3 })
+  t.add({ type = "label", caption = { "utl-gui.storage-good" } })
+  t.add({ type = "label", caption = { "utl-gui.storage-min" } })
+  t.add({ type = "label", caption = { "utl-gui.storage-max" } })
+  for slot = 1, StorageSlots do
+    local limit = limits[slot] or {}
+    t.add({ type = "choose-elem-button", name = "s" .. slot, style = "slot_button", elem_type = "signal",
+      signal = limit.signal, elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } } })
+    t.add({ type = "textfield", name = "min" .. slot, text = tostring(limit.min or 0), numeric = true }).style.width = 70
+    t.add({ type = "textfield", name = "max" .. slot, text = tostring(limit.max or 0), numeric = true }).style.width = 70
+  end
 end
 
 local function frame(player, name, caption)
@@ -91,6 +114,15 @@ local function add_input(grid, player, key, cfg)
     flow.add({ type = "textfield", name = "count", text = tostring(request.count or 0), numeric = true }).style.width = 90
   elseif entry.kind == "toggle" then
     grid.add({ type = "checkbox", name = key, state = current })
+  elseif entry.kind == "offer" then
+    local items, selected = {}, 1
+    for i, tier in ipairs(Ask.CLEANUP_OFFER) do
+      items[i] = tier == "off" and { "utl-param.offer-off" } or { "utl-gui.cleanup-offer-" .. tier }
+      if tier == current then selected = i end
+    end
+    grid.add({ type = "drop-down", name = key, items = items, selected_index = selected })
+  elseif entry.kind == "limits" then
+    add_limits(grid, key, current --[[@as table]])
   else
     grid.add({ type = "textfield", name = key, text = tostring(current), numeric = true,
       allow_negative = key:find("priority") ~= nil }).style.width = 90
@@ -134,6 +166,18 @@ function Windows.answers(player)
       answers.request = { signal = signal or nil, count = tonumber(el.count.text) or 0 }
     elseif entry and entry.kind == "toggle" then
       answers[el.name] = el.state
+    elseif entry and entry.kind == "offer" then
+      answers[el.name] = Ask.CLEANUP_OFFER[el.selected_index] or "off"
+    elseif entry and entry.kind == "limits" then
+      local limits = {}
+      for slot = 1, StorageSlots do
+        local v = el["s" .. slot].elem_value --[[@as SignalID?]]
+        if v and v.name and (v.type == "item" or v.type == "fluid" or v.type == nil) then
+          limits[slot] = { signal = { type = v.type or "item", name = v.name, quality = v.quality },
+            min = math.max(0, tonumber(el["min" .. slot].text) or 0), max = math.max(0, tonumber(el["max" .. slot].text) or 0) }
+        end
+      end
+      answers[el.name] = limits
     elseif entry and el.type == "textfield" then
       answers[el.name] = tonumber(el.text) or 0
     end

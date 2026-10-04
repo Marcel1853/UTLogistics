@@ -3,6 +3,7 @@
 local Fields = require("scripts.stations.fields")
 local Util = require("scripts.lib.util")
 local Unlocks = require("scripts.core.unlocks")
+local Roles = require("scripts.stations.roles")
 
 local Values = {}
 
@@ -91,6 +92,7 @@ end
 function Values.toggle(cfg, key, state)
   if not Fields.toggles[key] then return false end
   cfg[key] = state
+  Roles.derive(cfg) -- z. B. „Treibstoff anfordern“ macht die Tankstelle zum Abnehmer
   return true
 end
 
