@@ -42,7 +42,7 @@ local function add_limits(grid, key, limits)
   end
 end
 
-local function frame(player, name, caption)
+local function frame(player, name, caption, deep)
   local old = player.gui.screen[name]
   local location = old and old.location
   if old then old.destroy() end
@@ -50,12 +50,15 @@ local function frame(player, name, caption)
   local bar = Builder.titlebar(f, caption, "")
   bar.children[3].tags = { utl_param = "close", window = name }
   if location then f.location = location else f.auto_center = true end
-  local inner = f.add({ type = "frame", name = "inner", style = "inside_shallow_frame_with_padding", direction = "vertical" })
+  -- `deep`: Reiter brauchen den dunklen Vanilla-Rahmen (sonst doppelte Ränder)
+  local inner = f.add({ type = "frame", name = "inner", direction = "vertical",
+    style = deep and "inside_deep_frame" or "inside_shallow_frame_with_padding" })
   return f, inner
 end
 
-local function footer(f, caption, action)
+local function footer(f, caption, action, note)
   local bar = f.add({ type = "flow", style = "dialog_buttons_horizontal_flow" })
+  if note then bar.add({ type = "label", caption = note }).style.top_margin = 4 end
   bar.add({ type = "empty-widget", style = "flib_dialog_footer_drag_handle" }).drag_target = f
   bar.add({ type = "button", style = "confirm_button", caption = caption, tags = { utl_param = action } })
 end
@@ -106,8 +109,10 @@ local function add_input(grid, player, key, cfg)
       selected = #names
     end
     flow.add({ type = "drop-down", name = "pick", items = names, selected_index = selected })
+    flow.add({ type = "label", caption = { "utl-param.network-new-label" }, tooltip = { "utl-param.network-new" } })
     local new = flow.add({ type = "textfield", name = "new", tooltip = { "utl-param.network-new" } })
-    new.style.width = 100
+    new.style.width = 90
+    flow.style.vertical_align = "center"
   elseif key == "request" then
     -- je Ware eine Zeile (Ware | Menge), dazu zwei leere für weitere Waren
     local t = grid.add({ type = "table", name = key, column_count = 2 })
@@ -124,7 +129,7 @@ local function add_input(grid, player, key, cfg)
       elseif signal then
         pick.elem_value = { type = signal.type or "item", name = signal.name, quality = signal.quality }
       end
-      t.add({ type = "textfield", name = "c" .. i, text = tostring(row.count or 0), numeric = true }).style.width = 90
+      t.add({ type = "textfield", name = "c" .. i, text = tostring(row.count or 0), numeric = true, style = "utl_entry_text" }).style.width = 80
     end
   elseif entry.kind == "toggle" then
     grid.add({ type = "checkbox", name = key, state = current })
@@ -138,17 +143,16 @@ local function add_input(grid, player, key, cfg)
   elseif entry.kind == "limits" then
     add_limits(grid, key, current --[[@as table]])
   else
-    grid.add({ type = "textfield", name = key, text = tostring(current), numeric = true,
-      allow_negative = key:find("priority") ~= nil }).style.width = 90
+    grid.add({ type = "textfield", name = key, text = tostring(current), numeric = true, style = "utl_entry_text",
+      allow_negative = key:find("priority") ~= nil })
   end
 end
 
 --- Abfrage-Fenster: nur Punkte aus `keys`, die zur Rolle passen; vorbelegt aus `cfg`.
 function Windows.ask(player, keys, cfg, count)
-  local f, inner = frame(player, Windows.ASK, { "utl-param.ask-title" })
-  inner.add({ type = "label", caption = { "utl-param.ask-intro", count } }).style.single_line = false
+  local f, inner = frame(player, Windows.ASK, { "utl-param.ask-title" }, true)
   -- drei Reiter, damit das Fenster klein bleibt (Wunsch Marcel); leere Reiter fallen weg
-  local tabs = inner.add({ type = "tabbed-pane", name = "pages" })
+  local tabs = inner.add({ type = "tabbed-pane", name = "pages", style = "tabbed_pane_with_no_side_padding" })
   local role = Settings.role_code(cfg)
   local grids = {}
   for _, tab in ipairs(Ask.TABS) do
@@ -160,6 +164,7 @@ function Windows.ask(player, keys, cfg, count)
       local head = tabs.add({ type = "tab", caption = { "utl-param.tab-" .. tab } })
       local scroll = tabs.add({ type = "scroll-pane", horizontal_scroll_policy = "never" })
       scroll.style.maximal_height = 420
+      scroll.style.padding = 12
       tabs.add_tab(head, scroll)
       local grid = scroll.add({ type = "table", name = "grid", column_count = 2 })
       grid.style.vertical_spacing = 6
@@ -174,7 +179,8 @@ function Windows.ask(player, keys, cfg, count)
       add_input(grid, player, key, cfg)
     end
   end
-  footer(f, { "utl-param.apply" }, "apply")
+  -- Hinweis „gilt für n Stationen“ unten neben dem Knopf (statt eigener Zeile über den Reitern)
+  footer(f, { "utl-param.apply" }, "apply", { "utl-param.ask-intro", count })
   -- kein player.opened: die Blaupause soll in der Hand bleiben (weiter platzieren)
 end
 
