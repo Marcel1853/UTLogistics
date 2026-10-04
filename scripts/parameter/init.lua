@@ -8,6 +8,7 @@
 --- Antworten beim Bau mit den alten Werten.
 local C = require("scripts.core.constants")
 local Events = require("scripts.core.events")
+local Heartbeat = require("scripts.core.heartbeat")
 local Registry = require("scripts.stations.registry")
 local Blueprint = require("scripts.stations.blueprint")
 local Paste = require("scripts.stations.settings-paste")
@@ -88,6 +89,29 @@ local function make(player)
   player.create_local_flying_text({ text = { "utl-param.made", #keys }, create_at_cursor = true })
 end
 
+-- Nach dem Platzieren die Blaupause aus der Hand nehmen (Wunsch Marcel: beim Ausfüllen nicht aus
+-- Versehen noch einmal platzieren; Strg + V holt sie zurück). Erst im nächsten Herzschlag, damit
+-- alle Geister der Blaupause stehen; ohne Auftrag kostet die Aufgabe nur ein next().
+local function clear_hands()
+  local list = storage.param_planner and storage.param_planner.clear
+  if not (list and next(list)) then return end
+  for index in pairs(list) do
+    local player = game.get_player(index)
+    local stack = player and player.cursor_stack
+    if player and ((stack and stack.valid_for_read and stack.is_blueprint) or player.cursor_record) then
+      player.clear_cursor()
+    end
+  end
+  storage.param_planner.clear = {}
+end
+Heartbeat.add_task("param-clear-hands", 1, clear_hands)
+
+local function clear_later(player)
+  local p = pending()
+  p.clear = p.clear or {}
+  p.clear[player.index] = true
+end
+
 -- 3. Geister mit Abfrage-Tag platziert
 local ghost_filter = {
   { filter = "ghost_type", type = "train-stop" },
@@ -109,6 +133,7 @@ local function on_built(event)
   list.entries[#list.entries + 1] = { ghost = entity, surface = entity.surface.index, position = entity.position,
     name = entity.ghost_name }
   Windows.ask(player, keys, tags.utl or {}, #list.entries)
+  clear_later(player)
 end
 Events.on(defines.events.on_built_entity, on_built, ghost_filter)
 
