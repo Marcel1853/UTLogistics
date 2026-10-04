@@ -211,14 +211,29 @@ local function build_manifest(request, provider, record, amount)
   return manifest
 end
 
---- Lohnt die Fahrt? Mindestens die Abnehmer-Schwelle oder ein voller Zug – und, wenn die
---- Map-Einstellung „Mindestladung je Fahrt“ an ist, mindestens so viel Prozent des Laderaums.
+--- Lohnt die Fahrt? Mindestens die Abnehmer-Schwelle oder ein voller Zug. (Die „Mindestladung je
+--- Fahrt“ prüft `Select.full_enough` erst mit der fertigen Ladeliste – andere Waren zählen mit.)
 local function worth(amount, capacity, request)
-  if not (amount >= request.minimum or amount == capacity) then return false end
-  local percent = storage.cfg.min_load_percent or 0
-  return percent <= 0 or amount >= capacity * percent / 100
+  return amount >= request.minimum or amount == capacity
 end
 Select.worth = worth
+
+--- Map-Einstellung „Mindestladung je Fahrt“: Ist die ganze Ladeliste (alle Waren, die der Anbieter
+--- mitgibt) mindestens so viel Prozent des Laderaums? Items nach Slots, Flüssigkeit nach Tankinhalt.
+function Select.full_enough(record, manifest, locked)
+  local percent = storage.cfg.min_load_percent or 0
+  if percent <= 0 then return true end
+  local slots_used, fluid_used = 0, 0
+  for key, amount in pairs(manifest) do
+    local size = stack_size(key)
+    if size then slots_used = slots_used + math.ceil(amount / size) else fluid_used = fluid_used + amount end
+  end
+  local slots = math.max(0, record.slots - record.wagons * (locked or 0))
+  local share = 0
+  if slots > 0 then share = slots_used / slots end
+  if record.fluid and record.fluid > 0 then share = math.max(share, fluid_used / record.fluid) end
+  return share * 100 >= percent
+end
 
 --- Gehört (amount, distance) in die Bestenliste `best` (höchstens TRAIN_TRIES)?
 --- Mehr Ladung zuerst, dann näher am Anbieter.

@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.11
+Date: 2026-10-04
+  Features:
+    - Minimum load per trip (map setting, default 0 = off): a train only leaves if at least this percentage of its cargo space gets filled – all goods the same provider hands over for this requester count. No more trips for small leftovers.
+  Changes:
+    - "Trains" tab, automatic mode: train items another mod's train tab does not take (e.g. elevated rail ramp and support) now go into that tab too.
+  Bugfixes:
+    - The job output and depot output were left out of blueprints, so wires to them were lost. They are now included with their wires; UTL builds them itself once the train stop stands.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.10
 Date: 2026-10-01
   Features:

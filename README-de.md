@@ -297,7 +297,7 @@ Mehr: [Wiki – UTL-Manager und Warnungen](https://github.com/Marcel1853/UTLogis
 Die wichtigsten: **Direkt der nächste Auftrag** (an), **Nur den Auftrag laden** (an),
 **Auftrags-Ausgabe** (an), **UTL-Funktionen brauchen Forschung** (an), **Tanken unter** (40 %), **Mindest-Treibstoff** (10 %),
 **Inaktivität beim Laden / Entladen** (je 30 s, mit der Fracht per **oder** bzw. **und** verknüpft),
-**Nachladen** (aus), **Zweiter Anbieter** (aus, mit **höchstem Umweg** 50 %), **Warnung „Zug steckt
+**Nachladen** (aus), **Zweiter Anbieter** (aus, mit **höchstem Umweg** 50 %), **Mindestladung je Fahrt** (0 % = aus), **Warnung „Zug steckt
 fest“ nach** (5 Minuten), **Cleanup darf Inhalt wieder anbieten** (an), **Lager-Stationen erlauben** (an).
 Start-Einstellung **Registerkarte „Züge“**: automatisch – eigene UTL-Registerkarte, außer eine andere
 Mod hat schon eine Zug-Registerkarte; dann kommen die UTL-Sachen dort hinein.
