@@ -13,7 +13,8 @@ local ROLE_COLUMNS = {
 }
 
 local function role_checked(cfg, role)
-  if role == "provider" then return cfg.mode == "station" and cfg.provide end
+  -- „Anbieter“ und „Aktiver Anbieter“ schließen sich aus: nur ein Haken (aktiv ist intern auch Anbieter)
+  if role == "provider" then return cfg.mode == "station" and cfg.provide and cfg.active_provider ~= true end
   if role == "requester" then return cfg.mode == "station" and cfg.request end
   if role == "active_provider" then return cfg.mode == "station" and cfg.provide and cfg.active_provider == true end
   return cfg.mode == role
@@ -76,10 +77,10 @@ function Main.apply_role(cfg, role, state)
       cfg.request = state
     elseif role == "active_provider" then
       cfg.active_provider = state
-      if state then cfg.provide = true end -- aktiver Anbieter ist immer auch Anbieter
+      cfg.provide = state -- aktiver Anbieter ist intern auch Anbieter (Werte, Abschnitt „Anbieter“)
     else
       cfg.provide = state
-      if not state then cfg.active_provider = false end
+      cfg.active_provider = false -- „Anbieter“ angehakt = normaler Anbieter
     end
   elseif state then
     cfg.mode = role
