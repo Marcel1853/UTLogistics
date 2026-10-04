@@ -73,6 +73,14 @@ local function make(player)
     end
   end
   stack.set_blueprint_entities(entities)
+  -- Vanilla-Parameter-Liste entfernen (sie stammt aus dem geleerten Kombinator) – sonst öffnet
+  -- Factorio beim Platzieren zusätzlich sein leeres „Parametrisches Bauen“-Fenster.
+  local json = helpers.decode_string(stack.export_stack():sub(2))
+  local data = json and helpers.json_to_table(json) --[[@as table?]]
+  if data and data.blueprint and data.blueprint.parameters then
+    data.blueprint.parameters = nil
+    stack.import_stack("0" .. helpers.encode_string(helpers.table_to_json(data)))
+  end
   stack.label = "UTL-Parameter"
   player.create_local_flying_text({ text = { "utl-param.made", #keys }, create_at_cursor = true })
 end
