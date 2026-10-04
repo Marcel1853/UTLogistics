@@ -86,6 +86,8 @@ function Fields.fill(cfg)
   for key, toggle in pairs(Fields.toggles) do
     if cfg[key] == nil then cfg[key] = Fields.toggle_default(toggle) end
   end
+  -- Rolle „Aktiver Anbieter“ (wie die aktive Anbieterkiste): alles abgeben, auch ohne Anforderung
+  if cfg.active_provider == nil then cfg.active_provider = false end
   cfg.requests = cfg.requests or {}       -- [slot] = { signal = SignalID, count = n }
   cfg.request_map = cfg.request_map or {} -- [key] = Menge (abgeleitet)
   -- Zusatznetze („auch in diesen Netzen“); leer = nur das Heimatnetz cfg.network
@@ -105,12 +107,20 @@ end
 Fields.storage_slots = 8
 
 --- Rang als Anbieter: 2 = zuerst leeren, 1 = normal (jeder gewöhnliche Anbieter), 0 = Reserve.
---- Wird vor der Anbieter-Priorität verglichen.
+--- Wird vor der Anbieter-Priorität verglichen. Aktiver Anbieter = „zuerst leeren“ (wie Vanilla:
+--- aktive Kisten werden vor allen anderen geleert).
 local OFFER_RANK = { first = 2, normal = 1, reserve = 0 }
 function Fields.provider_rank(cfg)
   if cfg.mode == "cleanup" then return OFFER_RANK[cfg.cleanup and cfg.cleanup.offer] or 0 end
   if cfg.mode == "storage" then return 0 end -- je Ware genauer: station.provide_rank (reader.lua)
+  if Fields.is_active(cfg) then return 2 end
   return 1
+end
+
+--- Aktiver Anbieter? Nur normale Stationen – ein Lager oder Cleanup würde sonst Ware zwischen
+--- Lagern hin- und herschieben.
+function Fields.is_active(cfg)
+  return cfg.active_provider == true and cfg.mode == "station" and cfg.roles and cfg.roles.provider == true
 end
 Fields.RANK_RESERVE, Fields.RANK_NORMAL = 0, 1
 
