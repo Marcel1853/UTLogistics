@@ -103,10 +103,20 @@ local function role_items()
   return items
 end
 
---- Knopf „+“ unter einer mehrzeiligen Eingabe: eine leere Zeile mehr.
-local function add_row_button(parent, key)
-  parent.add({ type = "sprite-button", style = "tool_button", sprite = "utility/add",
-    tooltip = { "utl-param.add-row" }, tags = { utl_param = "add_row", key = key } })
+--- Knöpfe „+“ / „−“ unter einer mehrzeiligen Eingabe: Zeile dazu bzw. letzte weg. Klein (halbe
+--- Slot-Breite) und mittig zwischen den Spalten Ware und Menge (Wunsch Marcel).
+local function row_buttons(parent, key)
+  local flow = parent.add({ type = "flow", direction = "horizontal" })
+  flow.style.left_margin = 20
+  flow.style.horizontal_spacing = 4
+  for _, b in ipairs({ { "+", "add_row", "utl-param.add-row" }, { "-", "remove_row", "utl-param.remove-row" } }) do
+    local button = flow.add({ type = "button", style = "mini_button", caption = b[1], tooltip = { b[3] },
+      tags = { utl_param = b[2], key = key } })
+    button.style.width = 20
+    button.style.height = 20
+    button.style.padding = 0
+    button.style.font = "default-bold"
+  end
 end
 
 local function add_input(grid, player, key, cfg, extra)
@@ -142,7 +152,7 @@ local function add_input(grid, player, key, cfg, extra)
       local row = rows[i] or { count = 0 }
       local pick = t.add({ type = "choose-elem-button", name = "w" .. i, style = "slot_button",
         elem_type = fuel_only and "item-with-quality" or "signal",
-        elem_filters = fuel_only and { { filter = "fuel-value", comparison = ">", value = 0 } } or nil })
+        elem_filters = fuel_only and Util.locomotive_fuel_filters() or nil })
       local signal = row.signal
       if signal and fuel_only then
         if signal.type ~= "fluid" then pick.elem_value = { name = signal.name, quality = signal.quality or "normal" } end
@@ -170,7 +180,7 @@ end
 
 --- Abfrage-Fenster: nur Punkte aus `keys`, die zur Rolle passen; vorbelegt aus `cfg`.
 --- `extra` = { [key] = Anzahl zusätzlicher leerer Zeilen } (Knopf „+“).
-function Windows.ask(player, keys, cfg, count, extra)
+function Windows.ask(player, keys, cfg, count, extra, tab)
   local f, inner = frame(player, Windows.ASK, { "utl-param.ask-title" }, true)
   -- drei Reiter, damit das Fenster klein bleibt (Wunsch Marcel); leere Reiter fallen weg
   local tabs = inner.add({ type = "tabbed-pane", name = "pages", style = "tabbed_pane_with_no_side_padding" })
@@ -202,7 +212,7 @@ function Windows.ask(player, keys, cfg, count, extra)
         local scroll = grid.parent
         scroll.add({ type = "label", style = "utl_header_label", caption = label_of(key) }).style.top_margin = 6
         add_input(scroll, player, key, cfg, extra)
-        add_row_button(scroll, key)
+        row_buttons(scroll, key)
       else
         -- Werte-Reiter: Überschrift „Anbieter“ / „Abnehmer“ vor der ersten Zeile der Gruppe
         local group = entry.group
@@ -218,8 +228,23 @@ function Windows.ask(player, keys, cfg, count, extra)
     end
   end
   -- Hinweis „gilt für n Stationen“ unten neben dem Knopf (statt eigener Zeile über den Reitern)
+  -- gewählten Reiter behalten (+ / − / Rollenwechsel bauen neu auf); nur der sichtbare Reiter zählt
+  -- für die Höhe – sonst ist „Allgemein“ so lang wie „Waren“
+  if tab and tab <= #tabs.tabs then tabs.selected_tab_index = tab else tabs.selected_tab_index = 1 end
+  Windows.show_tab(tabs)
   footer(f, { "utl-param.apply" }, "apply", { "utl-param.ask-intro", count })
   -- kein player.opened: die Blaupause soll in der Hand bleiben (weiter platzieren)
+end
+
+--- Nur den gewählten Reiter sichtbar machen (die anderen bestimmen dann nicht die Höhe).
+function Windows.show_tab(tabs)
+  for i, t in ipairs(tabs.tabs) do t.content.visible = i == tabs.selected_tab_index end
+end
+
+--- Gewählter Reiter des Abfrage-Fensters (oder nil).
+function Windows.selected_tab(player)
+  local f = player.gui.screen[Windows.ASK]
+  return f and f.inner.pages.selected_tab_index or nil
 end
 
 --- Eingaben des Abfrage-Fensters → { [key] = Wert } (nur sichtbare Punkte).

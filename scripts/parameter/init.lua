@@ -170,8 +170,21 @@ end
 
 --- Abfrage-Fenster mit den bisherigen Eingaben neu aufbauen; `add_key` = dort eine leere Zeile mehr.
 --- Leere Zeilen (ohne Ware) bleiben erhalten, damit „+“ mehrfach hintereinander geht.
-local function rebuild(player, list, add_key)
+local function rebuild(player, list, add_key, remove_key)
+  local tab = Windows.selected_tab(player)
   local answers = Windows.answers(player)
+  -- „−“: letzte Zeile weg (eine leere zuerst, sonst die letzte belegte)
+  if remove_key == "request" and answers.request then
+    table.remove(answers.request)
+  elseif remove_key == "storage_limits" and answers.storage_limits then
+    local shown = answers.storage_rows or #answers.storage_limits
+    if shown > #answers.storage_limits then
+      answers.storage_rows = shown - 1
+    else
+      table.remove(answers.storage_limits)
+      answers.storage_rows = shown - 1
+    end
+  end
   local extra = {}
   for _, key in ipairs({ "request", "storage_limits" }) do
     local rows = answers[key]
@@ -186,7 +199,7 @@ local function rebuild(player, list, add_key)
   answers.storage_rows = nil
   local cfg = util.table.deepcopy(list.cfg)
   Ask.apply(cfg, answers)
-  Windows.ask(player, list.keys, cfg, #list.entries, extra)
+  Windows.ask(player, list.keys, cfg, #list.entries, extra, tab)
 end
 
 -- Rolle im Abfrage-Fenster gewechselt: nur die dazu passenden Felder zeigen, Eingaben behalten
@@ -197,6 +210,15 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
   local list = player and pending().ask[player.index]
   if not (player and list) then return end
   rebuild(player, list, nil)
+end)
+
+-- Reiter gewechselt: nur den gewählten sichtbar (Höhe passt sich an)
+Events.on(defines.events.on_gui_selected_tab_changed, function(event)
+  local element = event.element
+  if element and element.valid and element.name == "pages" and element.parent and element.parent.parent
+    and element.parent.parent.name == Windows.ASK then
+    Windows.show_tab(element)
+  end
 end)
 
 Events.on(defines.events.on_gui_click, function(event)
@@ -212,6 +234,9 @@ Events.on(defines.events.on_gui_click, function(event)
   elseif action == "add_row" then
     local list = pending().ask[player.index]
     if list then rebuild(player, list, element.tags.key --[[@as string]]) end
+  elseif action == "remove_row" then
+    local list = pending().ask[player.index]
+    if list then rebuild(player, list, nil, element.tags.key --[[@as string]]) end
   elseif action == "close" then
     Windows.close(player, element.tags.window --[[@as string]])
   end

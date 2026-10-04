@@ -60,7 +60,7 @@ function Section.build(parent, station)
       style = "flib_slot_button_default",
       elem_type = fuel_only and "item-with-quality" or "signal",
       signal = not fuel_only and request and request.signal or nil,
-      elem_filters = fuel_only and { { filter = "fuel-value", comparison = ">", value = 0 } } or nil,
+      elem_filters = fuel_only and Util.locomotive_fuel_filters() or nil,
       tooltip = { fuel_only and "utl-gui.request-slot-fuel-tooltip" or "utl-gui.request-slot-tooltip" },
       tags = { utl_action = "req_slot", slot = slot },
     })
