@@ -112,7 +112,7 @@ function Windows.ask(player, keys, cfg, count)
     end
   end
   footer(f, { "utl-param.apply" }, "apply")
-  player.opened = f
+  -- kein player.opened: die Blaupause soll in der Hand bleiben (weiter platzieren)
 end
 
 --- Eingaben des Abfrage-Fensters → { [key] = Wert } (nur sichtbare Punkte).

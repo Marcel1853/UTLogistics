@@ -84,6 +84,7 @@ local function make(player)
   end
   stack.label = "UTL-Parameter"
   player.add_to_clipboard(stack) -- wie Kopieren: später mit Strg + V wieder einfügen
+  if not (player.cursor_stack and player.cursor_stack.valid_for_read) then player.activate_paste() end
   player.create_local_flying_text({ text = { "utl-param.made", #keys }, create_at_cursor = true })
 end
 
