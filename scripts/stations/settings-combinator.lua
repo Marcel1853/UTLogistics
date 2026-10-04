@@ -57,6 +57,8 @@ local function apply_role(cfg, code)
   end
 end
 
+Settings.role_code, Settings.apply_role, Settings.ROLE_COUNT = role_code, apply_role, #ROLE_OF
+
 --- Zahlenfelder in fester Reihenfolge (Abschnitt 2 nach der Rolle).
 local FIELD_ORDER, BY_SIGNAL = {}, {}
 for _, group in ipairs(Fields.groups) do
