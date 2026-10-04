@@ -27,14 +27,14 @@ Ask.list = {
   { key = "min_train_length", kind = "number", tab = "general" },
   { key = "max_train_length", kind = "number", tab = "general" },
   { key = "max_trains", kind = "number", tab = "general" },
-  { key = "provide_threshold", kind = "number", roles = PROVIDER, tab = "values" },
-  { key = "provide_stack_threshold", kind = "number", roles = PROVIDER, tab = "values" },
-  { key = "provide_priority", kind = "number", roles = PROVIDER, tab = "values" },
-  { key = "locked_slots", kind = "number", roles = PROVIDER, tab = "values" },
-  { key = "filter_load", kind = "toggle", roles = PROVIDER, tab = "values" },
-  { key = "request_threshold", kind = "number", roles = REQUEST_SLOT, tab = "values" },
-  { key = "request_stack_threshold", kind = "number", roles = REQUEST_SLOT, tab = "values" },
-  { key = "request_priority", kind = "number", roles = REQUEST_SLOT, tab = "values" },
+  { key = "provide_threshold", kind = "number", roles = PROVIDER, tab = "values", group = "provider" },
+  { key = "provide_stack_threshold", kind = "number", roles = PROVIDER, tab = "values", group = "provider" },
+  { key = "provide_priority", kind = "number", roles = PROVIDER, tab = "values", group = "provider" },
+  { key = "locked_slots", kind = "number", roles = PROVIDER, tab = "values", group = "provider" },
+  { key = "filter_load", kind = "toggle", roles = PROVIDER, tab = "values", group = "provider" },
+  { key = "request_threshold", kind = "number", roles = REQUEST_SLOT, tab = "values", group = "requester" },
+  { key = "request_stack_threshold", kind = "number", roles = REQUEST_SLOT, tab = "values", group = "requester" },
+  { key = "request_priority", kind = "number", roles = REQUEST_SLOT, tab = "values", group = "requester" },
   { key = "depot_priority", kind = "number", roles = DEPOT, tab = "values" },
   { key = "cleanup_all_items", kind = "toggle", roles = CLEANUP, tab = "goods" },
   { key = "cleanup_all_fluids", kind = "toggle", roles = CLEANUP, tab = "goods" },
@@ -58,13 +58,18 @@ function Ask.current(cfg, key)
   if key == "role" then return Settings.role_code(cfg) end
   if key == "network" then return cfg.network or "default" end
   if key == "request" then
-    -- alle belegten Anforderungs-Slots der Reihe nach; Platzhalter (parameter-0 …) ohne Ware vorbelegen
+    -- alle belegten Anforderungs-Slots der Reihe nach; Platzhalter (parameter-0 …) zählen als leer
     local rows = {}
+    local by_slot = {}
+    for key, r in pairs(cfg.requests or {}) do
+      local n = tonumber(key)
+      if n then by_slot[n] = r end -- auch Text-Schlüssel („3“) aus dem Blaupausen-Textformat
+    end
     for slot = 1, Requests.slot_count do
-      local r = cfg.requests and cfg.requests[slot]
-      if r then
-        local proto = r.signal and r.signal.type ~= "fluid" and prototypes.item[r.signal.name]
-        rows[#rows + 1] = (proto and proto.parameter) and { count = r.count } or { signal = r.signal, count = r.count }
+      local r = by_slot[slot]
+      local proto = r and r.signal and r.signal.type ~= "fluid" and prototypes.item[r.signal.name]
+      if r and r.signal and not (proto and proto.parameter) then
+        rows[#rows + 1] = { signal = r.signal, count = r.count }
       end
     end
     return rows

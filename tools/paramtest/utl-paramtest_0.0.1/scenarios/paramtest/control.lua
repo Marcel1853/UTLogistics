@@ -62,6 +62,13 @@ local function simulate(s, force, stack, y, settings_first)
   end
   stack.set_blueprint_entities(entities)
   local ghosts = stack.build_blueprint({ surface = s, force = force, position = { 0, y }, build_mode = defines.build_mode.forced })
+  for _, g in ipairs(ghosts) do
+    if g.valid and g.type == "entity-ghost" and g.tags and g.tags.utl then
+      local kinds = {}
+      for k in pairs(g.tags.utl.requests or {}) do kinds[#kinds + 1] = type(k) .. ":" .. tostring(k) end
+      L("Geist-Tags requests-Schlüssel: " .. table.concat(kinds, ","))
+    end
+  end
   -- Haltestelle zuerst beleben, den Einstellungs-Kombinator danach (wie beim Bau durch Roboter)
   table.sort(ghosts, function(a, b)
     if settings_first then return is_settings(a) > is_settings(b) end

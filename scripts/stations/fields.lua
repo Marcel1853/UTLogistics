@@ -99,6 +99,24 @@ function Fields.fill(cfg)
   -- Rolle „Aktiver Anbieter“ (wie die aktive Anbieterkiste): alles abgeben, auch ohne Anforderung
   if cfg.active_provider == nil then cfg.active_provider = false end
   cfg.requests = cfg.requests or {}       -- [slot] = { signal = SignalID, count = n }
+  -- Slot-Nummern als Zahl: über das Blaupausen-Textformat (JSON) können Lücken-Listen mit
+  -- Text-Schlüsseln („3“) zurückkommen
+  local function numeric_keys(list)
+    if type(list) ~= "table" then return end
+    for key, value in pairs(list) do
+      local n = type(key) == "string" and tonumber(key)
+      if n then
+        list[key] = nil
+        list[n] = value
+      end
+    end
+  end
+  numeric_keys(cfg.requests)
+  if cfg.storage then numeric_keys(cfg.storage.limits) end
+  if cfg.cleanup then
+    numeric_keys(cfg.cleanup.items)
+    numeric_keys(cfg.cleanup.fluids)
+  end
   cfg.request_map = cfg.request_map or {} -- [key] = Menge (abgeleitet)
   -- Zusatznetze („auch in diesen Netzen“); leer = nur das Heimatnetz cfg.network
   -- Cleanup: was hier geleert werden darf. Standard wie früher: alles.

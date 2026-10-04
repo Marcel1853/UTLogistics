@@ -33,12 +33,14 @@ local function add_limits(grid, key, limits)
   t.add({ type = "label", caption = { "utl-gui.storage-good" } })
   t.add({ type = "label", caption = { "utl-gui.storage-min" } })
   t.add({ type = "label", caption = { "utl-gui.storage-max" } })
+  local by_slot = {}
+  for k, v in pairs(limits) do if tonumber(k) then by_slot[tonumber(k)] = v end end -- auch „3“ aus JSON
   for slot = 1, StorageSlots do
-    local limit = limits[slot] or {}
+    local limit = by_slot[slot] or {}
     t.add({ type = "choose-elem-button", name = "s" .. slot, style = "slot_button", elem_type = "signal",
       signal = limit.signal, elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } } })
-    t.add({ type = "textfield", name = "min" .. slot, text = tostring(limit.min or 0), numeric = true }).style.width = 70
-    t.add({ type = "textfield", name = "max" .. slot, text = tostring(limit.max or 0), numeric = true }).style.width = 70
+    t.add({ type = "textfield", name = "min" .. slot, text = tostring(limit.min or 0), numeric = true, style = "utl_entry_text" }).style.width = 70
+    t.add({ type = "textfield", name = "max" .. slot, text = tostring(limit.max or 0), numeric = true, style = "utl_entry_text" }).style.width = 70
   end
 end
 
@@ -116,11 +118,14 @@ local function add_input(grid, player, key, cfg)
   elseif key == "request" then
     -- je Ware eine Zeile (Ware | Menge), dazu zwei leere für weitere Waren
     local t = grid.add({ type = "table", name = key, column_count = 2 })
+    t.style.vertical_spacing = 4
+    t.add({ type = "label", caption = { "utl-gui.storage-good" } })
+    t.add({ type = "label", caption = { "utl-param.amount" } })
     local rows = current --[[@as table]]
     local fuel_only = cfg.mode == "fuel"
     for i = 1, math.min(RequestSlots, #rows + 2) do
       local row = rows[i] or { count = 0 }
-      local pick = t.add({ type = "choose-elem-button", name = "w" .. i,
+      local pick = t.add({ type = "choose-elem-button", name = "w" .. i, style = "slot_button",
         elem_type = fuel_only and "item-with-quality" or "signal",
         elem_filters = fuel_only and { { filter = "fuel-value", comparison = ">", value = 0 } } or nil })
       local signal = row.signal
@@ -171,12 +176,28 @@ function Windows.ask(player, keys, cfg, count)
       grids[tab] = grid
     end
   end
+  local headed = {}
   for _, key in ipairs(keys) do
-    local grid = Ask.relevant(key, role) and grids[Ask.by_key[key].tab]
+    local entry = Ask.by_key[key]
+    local grid = Ask.relevant(key, role) and grids[entry.tab]
     if grid then
-      grid.add({ type = "label", caption = key == "output" and cfg.mode == "depot" and { "utl-gui.value-depot-output" }
-        or label_of(key) })
-      add_input(grid, player, key, cfg)
+      if entry.kind == "request" or entry.kind == "limits" then
+        -- mehrzeilig: Überschrift über voller Breite, darunter die Tabelle (nicht neben dem Text)
+        local scroll = grid.parent
+        scroll.add({ type = "label", style = "utl_header_label", caption = label_of(key) }).style.top_margin = 6
+        add_input(scroll, player, key, cfg)
+      else
+        -- Werte-Reiter: Überschrift „Anbieter“ / „Abnehmer“ vor der ersten Zeile der Gruppe
+        local group = entry.group
+        if group and not headed[group] then
+          headed[group] = true
+          grid.add({ type = "label", style = "utl_header_label", caption = { "utl-gui.section-" .. group } })
+          grid.add({ type = "empty-widget" })
+        end
+        grid.add({ type = "label", caption = key == "output" and cfg.mode == "depot" and { "utl-gui.value-depot-output" }
+          or label_of(key) })
+        add_input(grid, player, key, cfg)
+      end
     end
   end
   -- Hinweis „gilt für n Stationen“ unten neben dem Knopf (statt eigener Zeile über den Reitern)
@@ -191,8 +212,14 @@ function Windows.answers(player)
   if not f then return answers end
   local elements = {}
   for _, content in pairs(f.inner.pages.children) do
-    if content.type == "scroll-pane" and content.grid then
-      for _, el in pairs(content.grid.children) do elements[#elements + 1] = el end
+    if content.type == "scroll-pane" then
+      for _, el in pairs(content.children) do
+        if el.name == "grid" then
+          for _, cell in pairs(el.children) do elements[#elements + 1] = cell end
+        elseif el.name ~= "" then
+          elements[#elements + 1] = el -- mehrzeilige Eingaben (Anforderungen, Lager) unter dem Raster
+        end
+      end
     end
   end
   for _, el in pairs(elements) do
