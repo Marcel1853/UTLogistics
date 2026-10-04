@@ -87,8 +87,9 @@ local function tick()
     start_round()
   elseif a.phase == "running" and ((left == 0 and not busy) or game.tick >= a.round_until) then
     a.step, a.phase, a.wait_until = 5, "pause", game.tick + PAUSE
-    log(("[AKTIV] Runde %d: Abnehmer %d, Lager %d, Cleanup %d, Rest %d"):format(a.round, a.sent.requester,
-      a.sent.storage, a.sent.cleanup, left))
+    log(("[AKTIV] Runde %d: Abnehmer %d, Lager %d, Cleanup %d, Rest %d – in den Kisten: Abnehmer %d, Lager %d"):format(
+      a.round, a.sent.requester, a.sent.storage, a.sent.cleanup, left, World.count(a.requester_chests),
+      World.count(a.storage_chests)))
   end
 
   -- schwebende Texte über den Haltestellen

@@ -90,13 +90,12 @@ function World.build()
       cfg(unit, { mode = "depot" })
       sign(spec.stop, "aktiv-depot")
     elseif spec.kind == "provider" then
-      cfg(unit, { mode = "station", provide = true, request = false, active_provider = true, provide_threshold = 1,
-        filter_load = false })
+      cfg(unit, { mode = "station", provide = true, request = false, active_provider = true, provide_threshold = 1 })
       w.provider, w.provider_chests = spec.stop, chests_of(s, spec.stop)
       plain(w.provider_chests)
       sign(spec.stop, "aktiv-provider")
     elseif spec.kind == "requester" then
-      cfg(unit, { mode = "station", provide = false, request = true, request_threshold = 100, max_trains = 1 })
+      cfg(unit, { mode = "station", provide = false, request = true, request_threshold = 500, max_trains = 1 })
       remote.call("utl", "set_request", unit, 1, { type = "item", name = World.ITEM }, World.REQUEST)
       w.requester, w.requester_chests = spec.stop, chests_of(s, spec.stop)
       plain(w.requester_chests)
