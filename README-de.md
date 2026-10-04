@@ -324,13 +324,16 @@ zeigen, was UTL und die Züge brauchen, nicht die UPS einer ganzen Megabase.
 
 ## Szenarien zum Ausprobieren
 
-**Neues Spiel → Szenarien** (alles erforscht, Cheat-Modus an, Anzeigefelder mit Erklärungen):
+**Neues Spiel → Szenarien** (alles erforscht, Cheat-Modus an, Anzeigefelder mit Erklärungen). Alle laufen
+auch ohne Space Age, nur der Planeten-Test braucht es:
 
 - **UTL-Beispiele (gemischter Anbieter)** – gemischter Anbieter mit Auftrags-Ausgabe, zwei Waren in
   einer Fahrt, Öl und Wasser über geschaltete Pumpen.
 - **UTL-Netzverbund** – vier Netze, ein Stern mit einem Partner ohne eigene Züge.
 - **UTL-Teams** – vier Teams mit gleichen Stations- und Netznamen; `/utl-team rot` wechselt.
 - **UTL-Nachladen (zum Anschauen)** – mit und ohne Nachladen, Runde für Runde, mit Erklärfenster.
+- **UTL-Aktiver-Anbieter (zum Anschauen)** – ein aktiver Anbieter wird leer: erst der Abnehmer, dann
+  das Lager bis zum Höchstbestand, der Rest ins Cleanup, mit Erklärfenster.
 - **UTL-Lager (zum Anschauen)** – neu in 0.0.8: Lager, ein Cleanup, der zurückgibt, und vier kleine
   Beispiel-Strecken, mit Erklärfenster.
 - **UTL-Planeten-Test (Space Age)** – dasselbe Netz auf Nauvis, Vulcanus und Gleba.

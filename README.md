@@ -278,13 +278,16 @@ what UTL and the trains need, not the UPS of a whole megabase.
 
 ## Scenarios
 
-**New game → Scenarios** (everything researched, cheat mode on, display panels with explanations):
+**New game → Scenarios** (everything researched, cheat mode on, display panels with explanations). All of them
+also run without Space Age, only the planet test needs it:
 
 - **UTL examples (mixed provider)** – mixed provider with the job output, two goods in one trip,
   oil and water with switched pumps.
 - **UTL network links** – four networks, a star with a partner that has no trains of its own.
 - **UTL teams** – four teams with the same station and network names; `/utl-team rot` switches.
 - **UTL top up (to watch)** – with and without topping up, round by round, with an explanation window.
+- **UTL active provider (to watch)** – an active provider is emptied: first the requester, then the
+  storage up to its maximum, the rest to the cleanup, with an explanation window.
 - **UTL storage (to watch)** – new in 0.0.8: storage, a cleanup that gives back and four small
   example lines, with an explanation window.
 - **UTL planet test (Space Age)** – the same network on Nauvis, Vulcanus and Gleba.
