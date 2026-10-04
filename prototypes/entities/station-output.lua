@@ -41,4 +41,25 @@ for key, value in pairs(depot) do
   if type(key) == "string" and key:sub(-7) == "sprites" then tint_layers(value) end
 end
 
+-- Unsichtbares Item ohne Rezept: Factorio nimmt nur Gebäude mit Item in Blaupausen auf. So kommt
+-- die Ausgabe samt Kabeln mit; bauen kann den Geist niemand (das Item hat keiner) – UTL baut ihn
+-- selbst auf, sobald die Haltestelle steht (scripts/stations/output.lua, Output.ensure).
+local items = {}
+for _, e in ipairs({ entity, depot }) do
+  e.placeable_by = { item = e.name, count = 1 }
+  items[#items + 1] = {
+    type = "item",
+    name = e.name,
+    icons = e.icons,
+    hidden = true,
+    hidden_in_factoriopedia = true,
+    flags = { "only-in-cursor" },
+    subgroup = "circuit-network",
+    order = "z[utl]-" .. e.name,
+    place_result = e.name,
+    stack_size = 1,
+  }
+end
+
 data:extend({ entity, depot })
+data:extend(items)
