@@ -10,7 +10,8 @@ function Roles.derive(cfg)
   local storage_mode = cfg.mode == "storage"
   roles.storage = storage_mode
   roles.provider = (station and cfg.provide) or (offers and true) or storage_mode
-  roles.requester = (station and cfg.request) or storage_mode
+  -- Tankstelle mit „Treibstoff anfordern“: ihre Anforderungs-Slots gelten wie bei einem Abnehmer
+  roles.requester = (station and cfg.request) or storage_mode or (cfg.mode == "fuel" and cfg.fuel_request == true)
   roles.depot = cfg.mode == "depot"
   roles.fuel = cfg.mode == "fuel"
   roles.cleanup = cfg.mode == "cleanup" or (storage_mode and cfg.storage ~= nil and cfg.storage.accept_leftover == true)

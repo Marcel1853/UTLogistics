@@ -1,5 +1,9 @@
 # Unified Train Logistics (UTL) – Deutsch
 
+[![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
+[![Version](https://img.shields.io/badge/version-0.0.13-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
+
 *English version: [README.md](https://github.com/Marcel1853/UTLogistics/blob/main/README.md).*
 
 > **📖 Wiki mit Bildern:** [github.com/Marcel1853/UTLogistics/wiki](https://github.com/Marcel1853/UTLogistics/wiki) – jede Funktion Schritt für Schritt erklärt,
@@ -15,11 +19,12 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
   (Lager-Stationen). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
-> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (161 Prüfungen) und einen
+> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (168 Prüfungen) und einen
 > headless-Lasttest mit 384 Zügen auf 12 × 12 City Blocks; Updates werden geprüft, indem ein
 > Spielstand der Vorversion geladen wird. Die wichtigsten Funktionen zeigen die Szenarien. Im
-> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Lager** und **Cleanup gibt
-> zurück** (0.0.8), **Nachladen** (0.0.7, Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
+> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Blaupausen-Parameter** mit dem
+> **Parameter-Planer** (0.0.13) und der **aktive Anbieter** (0.0.12); die **Team-Trennung** (0.0.6) ist
+> im echten Mehrspieler noch nicht erprobt. Wenn
 > etwas schiefgeht: bitte in der [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion)
 > melden, am besten mit Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem
 > gewachsenen Spielstand vorher sichern.
@@ -200,6 +205,10 @@ Depot, mit der Warnung „Treibstoff fehlt“ und dem Signal „Züge ohne Treib
 Ein Netz **ganz ohne** UTL-Tankstelle tankt auf deine Art (Interrupt, von Hand). Min./max.
 Zuglänge an Tankstellen trennt kleine und große Züge.
 
+**Tankstelle fordert Treibstoff an** (Schalter je Tankstelle, Standard aus): Die Anforderungs-Slots
+gelten dann wie bei einem Abnehmer – wählbar ist nur, was Loks verbrennen können. Entlade-Greifarme in
+eine Kiste, aus der die Tank-Greifarme die Loks füllen.
+
 ## Cleanup (Restladung)
 
 Züge mit Restladung (mit Ladung zurück im Depot, abgebrochene Lieferung, beim Abnehmer nicht leer
@@ -218,7 +227,8 @@ Mehr: [Wiki – Tanken, Cleanup und Depots](https://github.com/Marcel1853/UTLogi
 
 *Braucht die Forschung „UTL: Lager“.*
 
-Ein **Lager** nimmt an **und** gibt ab – ein Puffer nahe bei den Verbrauchern. Je Ware (bis zu acht)
+Ein **Lager** nimmt an **und** gibt ab – ein Puffer nahe bei den Verbrauchern. Je Ware (8, mit den
+Forschungen „UTL: Lager II–IV“ 12, 16 oder 20)
 ein **Mindest-** und ein **Höchstbestand**: unter Mindest fordert es bis Höchst an, über Mindest bietet
 es den Rest an **wie ein normaler Anbieter**. Zwei Lager schieben sich Ware nie hin und her. Mit
 **„Restladung annehmen“** (an) dürfen Züge hier auch Reste abladen. Map-Einstellung: „Lager-Stationen
@@ -228,6 +238,22 @@ erlauben“.
 Umlade-Greifarm → Kiste → Lade-Greifarm. Die Auftrags-Ausgabe an Entlade- und Lade-Greifarme
 verdrahten: Laden **[utl-loading] > 0**, Entladen **[utl-loading] = 0**. Das Szenario „UTL-Lager“
 zeigt es.
+
+## Blaupausen mit Parametern
+
+Wie im Basisspiel: In der Blaupause Ware, Menge oder Rolle zum **Parameter** machen – beim Platzieren
+fragt Factorio die Werte ab. UTL legt dafür Anforderungen, Rolle (Signal „UTL: Rolle“) und geänderte
+Werte in einen unsichtbaren Kombinator an jeder Station, den Factorio kennt. Zahl-Parameter ordnet
+Factorio über den Wert zu – gleiche Zahlen werden ein Parameter.
+
+Bequemer: der **UTL-Parameter-Planer** (Knopf in der Shortcut-Leiste). Bereich ziehen, ankreuzen, was
+beim Platzieren gefragt werden soll → Blaupause im Cursor (auch in der Zwischenablage, Strg + V). Beim
+Platzieren öffnet sich ein kleines Fenster mit Reitern (Allgemein, Waren, Werte), das nur zeigt, was
+zur gewählten Rolle gehört – Rolle, Netz, Anforderungen (mehrere Waren, „+“ / „−“), Schwellen,
+Prioritäten, Lager-Grenzen, Cleanup-Waren. Die Frage reist mit der Blaupause, auch in der Bibliothek.
+
+Das Panel an der UTL-Haltestelle kann links, rechts oder frei als eigenes Fenster sitzen (Pfeile in
+seiner Titelleiste).
 
 ## Netz-Kombinator
 
@@ -396,3 +422,9 @@ einstellen, Netzverbindungen, Team- und Kartenwerte, per Script erstellte Blaupa
 Stationen nach Filter, Lieferung abbrechen) und **Ereignisse** für angelegte, geänderte, fertige und
 abgebrochene Lieferungen, dazu eigene **Symbole für UTL-Signale** über `mod-data` „utl-signal-icons“:
 [Wiki – Für Mod-Autoren](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren).
+
+## Lizenz
+
+[Apache License 2.0](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE). UTL darf benutzt,
+geändert und weitergegeben werden, auch in eigenen Mods – dabei die Dateien `LICENSE` und `NOTICE`
+mitgeben und das Original nennen: [github.com/Marcel1853/UTLogistics](https://github.com/Marcel1853/UTLogistics).

@@ -51,16 +51,22 @@ function Section.build(parent, station)
     tooltip = { "utl-gui.requests-tooltip" } })
   local frame = parent.add({ type = "frame", style = "slot_button_deep_frame", direction = "vertical" })
   local grid = frame.add({ type = "table", style = "slot_table", column_count = COLUMNS })
+  -- Tankstelle („Treibstoff anfordern“): nur Gegenstände mit Brennwert wählbar (Wunsch Marcel)
+  local fuel_only = cfg.mode == "fuel"
   for slot = 1, Requests.slot_count do
     local request = cfg.requests[slot]
     local button = grid.add({
       type = "choose-elem-button",
       style = "flib_slot_button_default",
-      elem_type = "signal",
-      signal = request and request.signal or nil,
-      tooltip = { "utl-gui.request-slot-tooltip" },
+      elem_type = fuel_only and "item-with-quality" or "signal",
+      signal = not fuel_only and request and request.signal or nil,
+      elem_filters = fuel_only and Util.locomotive_fuel_filters() or nil,
+      tooltip = { fuel_only and "utl-gui.request-slot-fuel-tooltip" or "utl-gui.request-slot-tooltip" },
       tags = { utl_action = "req_slot", slot = slot },
     })
+    if fuel_only and request and request.signal and request.signal.type ~= "fluid" then
+      button.elem_value = { name = request.signal.name, quality = request.signal.quality or "normal" }
+    end
     button.locked = request ~= nil -- gefüllte Slots: Klick wählt zum Bearbeiten statt Auswahlfenster
     button.add({ type = "label", style = "utl_slot_count", ignored_by_interaction = true,
       caption = count_caption(request and request.count) })
@@ -104,6 +110,10 @@ end
 
 --- Neue Ware in einem Slot gewählt oder geleert.
 function Section.on_elem_changed(refs, cfg, slot, signal)
+  -- Tankstelle: Auswahl „Item mit Qualität“ ({ name, quality }) → Signal
+  if type(signal) == "table" and signal.type == nil and signal.name and prototypes.item[signal.name] then
+    signal = { type = "item", name = signal.name, quality = signal.quality }
+  end
   if not signal or signal.type == "virtual" then
     Requests.set(cfg, slot, nil)
     Section.refresh_slot(refs, cfg, slot)
@@ -143,7 +153,12 @@ function Section.refresh_slot(refs, cfg, slot)
   local button = refs.slots[slot]
   local request = cfg.requests[slot]
   button.locked = false
-  button.elem_value = request and request.signal or nil
+  local signal = request and request.signal
+  if signal and button.elem_type == "item-with-quality" then
+    button.elem_value = { name = signal.name, quality = signal.quality or "normal" } -- Tankstelle
+  else
+    button.elem_value = signal or nil
+  end
   button.locked = request ~= nil
   button.children[1].caption = count_caption(request and request.count)
 end

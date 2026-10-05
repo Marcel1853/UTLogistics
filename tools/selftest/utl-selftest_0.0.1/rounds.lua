@@ -4,6 +4,7 @@
 --   R32 Lager bekommt zwei Waren in einer Fahrt (Eisen und Kupfer, beide unter Mindest).
 -- Laden und Entladen übernimmt der Test per Script.
 local Rounds = {}
+local Param = require("rounds-param") -- R40 (require nur beim Laden erlaubt)
 
 --- R36: UTL-Ereignisse mitzählen (Anmeldung in on_init und on_load, siehe control.lua).
 function Rounds.listen()
@@ -185,7 +186,21 @@ function Rounds.build(check)
   cfg9(active9, { mode = "station", provide = true, request = false, active_provider = true })
   cfg9(cleanup9, { mode = "cleanup" })
   train(s, force, 4, "R38b-Depot")
+  -- R39: Tankstelle mit „Treibstoff anfordern“ bestellt Kohle wie ein Abnehmer
+  LINE = 321
+  rails(s, force, -85, 85)
+  local depot10 = stop(s, force, "R39-Depot", 10, true)
+  local prov10 = stop(s, force, "R39-Anbieter", 60, true)
+  local fuel10 = stop(s, force, "R39-Tankstelle", -60, false)
+  supply(s, force, prov10, 60, { "coal" }, 5000)
+  local function cfg10(e, changes) changes.network = "R39"; remote.call("utl", "configure_station", e.unit_number, changes) end
+  cfg10(depot10, { mode = "depot" })
+  cfg10(prov10, { mode = "station", provide = true, request = false })
+  cfg10(fuel10, { mode = "fuel", fuel_request = true })
+  remote.call("utl", "set_request", fuel10.unit_number, 1, { type = "item", name = "coal" }, 2000)
+  train(s, force, 4, "R39-Depot")
   LINE = 1
+  Param.run(check) -- R40: Blaupausen-Parameter (sofort, eigene Oberfläche)
   check("R31/R32 strecken gebaut", r31_train ~= nil and r32_train ~= nil)
   return { start = game.tick, train = r31_train, wagon = r31_wagon, train2 = r32_train, wagon2 = r32_wagon,
     train3 = r33_train, wagon3 = r33_wagon, loco3 = r33_train and r33_train.front_stock,
@@ -231,6 +246,11 @@ function Rounds.watch(r, check)
       r.r38.fill = true
       check("R38 aktiver anbieter füllt lager über dem mindest", d.from == "R38-Aktiv"
         and (d.manifest["item|iron-plate|normal"] or 0) == 1000, d.from .. " " .. serpent.line(d.manifest))
+    end
+    if d.to == "R39-Tankstelle" and not r.r39 then
+      r.r39 = true
+      check("R39 tankstelle fordert treibstoff an", d.from == "R39-Anbieter"
+        and (d.manifest["item|coal|normal"] or 0) == 2000, d.from .. " " .. serpent.line(d.manifest))
     end
     if d.to == "R38b-Cleanup" and not r.r38.cleanup then
       r.r38.cleanup = true
@@ -344,8 +364,9 @@ function Rounds.watch(r, check)
     remote.call("utl", "set_map_config", "utl-multi-pickup-detour", 50)
   end
   if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done
-      and r.r38.fill and r.r38.cleanup) or game.tick - r.start > 36000 then
+      and r.r38.fill and r.r38.cleanup and r.r39) or game.tick - r.start > 36000 then
     r.done = true
+    if not r.r39 then check("R39 tankstelle fordert treibstoff an", false, "keine lieferung") end
     if not r.r38.fill then check("R38 aktiver anbieter füllt lager über dem mindest", false, "keine lieferung") end
     if not r.r38.cleanup then check("R38 aktiver anbieter leert ins cleanup", false, "keine lieferung") end
     if not r.r37.done then check("R37 mindestladung: 400 warten, 3000 fahren", false, serpent.line(r.r37)) end

@@ -1,5 +1,9 @@
 # Unified Train Logistics (UTL)
 
+[![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
+[![Version](https://img.shields.io/badge/version-0.0.13-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
+
 Automatic train logistics for Factorio 2.1: **providers, requesters, depots, fuel stations,
 cleanup and an overview window in one mod**, built for high UPS.
 
@@ -15,11 +19,12 @@ cleanup and an overview window in one mod**, built for high UPS.
   (storage stations). The map
   setting “UTL features need research” turns this off – then everything is available right away.
 
-> **Testing status.** UTL runs through an automated self test (161 checks) and a headless load
+> **Testing status.** UTL runs through an automated self test (168 checks) and a headless load
 > test with 384 trains on 12 × 12 city blocks; updates are checked by loading a save from the
 > previous version. The main features are shown in the scenarios. In real games it has so far been
-> played on small networks. Newest: **storage** and **cleanup gives back** (0.0.8), **topping up** (0.0.7, off by default) and **team separation** (0.0.6, not yet tried in a
-> real multiplayer game). If something goes wrong, please report it in
+> played on small networks. Newest: **blueprint parameters** with the **parameter planner** (0.0.13)
+> and the **active provider** (0.0.12); **team separation** (0.0.6) has not yet been tried in a real
+> multiplayer game. If something goes wrong, please report it in
 > the [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save
 > and what you did. Keep a backup before adding UTL to a long-running base.
 
@@ -162,6 +167,10 @@ anyway – only below the **minimum fuel** (map setting, 10 %) it stays in the d
 fuel station at all refuels your way (interrupts, by hand).
 Min./max. train length on fuel stations separates small and large trains.
 
+**Fuel station requests fuel** (switch per fuel station, off by default): its request slots then work
+like a requester's – only what locomotives can burn can be chosen. Unloading inserters into a chest
+the refuel inserters take from.
+
 ## Cleanup
 
 Trains with leftover cargo (back in the depot with cargo, canceled delivery, not fully unloaded) go
@@ -179,7 +188,8 @@ More: [wiki – Fuel, cleanup and depots](https://github.com/Marcel1853/UTLogist
 
 *Needs research: “UTL: Storage”.*
 
-A **storage** takes in **and** gives out – a buffer close to the consumers. Per good (up to eight) a
+A **storage** takes in **and** gives out – a buffer close to the consumers. Per good (8, with the
+research “UTL: Storage II–IV” 12, 16 or 20) a
 **minimum** and a **maximum**: below the minimum it requests up to the maximum, above the minimum it
 offers the rest **like a normal provider**. Two storages never shove goods back and forth. With
 **“Accept leftover cargo”** (on) trains may drop leftovers there, too. Map setting: “Allow storage
@@ -189,6 +199,22 @@ stations”.
 transfer inserter → chest → loading inserter. Wire the job output to the unloading and loading
 inserters: loading **[utl-loading] > 0**, unloading **[utl-loading] = 0**. Scenario “UTL storage”
 shows it.
+
+## Blueprints with parameters
+
+Like in the base game: make goods, amounts or the role a **parameter** in the blueprint – Factorio asks
+for the values when placing. For this UTL keeps requests, role (signal “UTL: Role”) and changed values
+in an invisible combinator at every station that Factorio knows. Factorio matches number parameters by
+value – equal numbers become one parameter.
+
+More convenient: the **UTL parameter planner** (button in the shortcut bar). Drag over an area, tick
+what should be asked when placing → blueprint in the cursor (also in the clipboard, Ctrl + V). When
+placing, a small window with tabs (General, Goods, Values) opens and only shows what belongs to the
+chosen role – role, network, requests (several goods, “+” / “−”), thresholds, priorities, storage
+limits, cleanup goods. The question travels with the blueprint, also in the library.
+
+The panel at the UTL train stop can sit on the left, on the right or free as its own window (arrows in
+its title bar).
 
 ## Network combinator
 
@@ -347,3 +373,9 @@ Remote interface `utl` (station data, deliveries, alerts, configuring stations a
 links, team and map values, tagging script-made blueprints, trains and stations by filter, cancelling
 a delivery) and **events** for created, changed, completed and cancelled deliveries, plus own **icons for UTL signals** via `mod-data` "utl-signal-icons":
 [wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
+
+## License
+
+[Apache License 2.0](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE). You may use, change
+and pass on UTL, also in your own mods – but keep the files `LICENSE` and `NOTICE` and name the
+original: [github.com/Marcel1853/UTLogistics](https://github.com/Marcel1853/UTLogistics).

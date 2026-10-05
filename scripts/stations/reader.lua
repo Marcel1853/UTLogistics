@@ -12,6 +12,12 @@ local Reader = {}
 local signal_key = Util.signal_key
 local stack_size = Util.stack_size
 
+-- Platzhalter für Blaupausen-Parameter (parameter-0 … parameter-9) sind keine Ware.
+local placeholder = {}
+for name, proto in pairs(prototypes.item) do
+  if proto.parameter then placeholder[name] = true end
+end
+
 -- Wiederverwendete Arbeitstabelle [key] = Netto-Menge (nur Lua-Zustand, kein storage).
 local net = {}
 
@@ -20,7 +26,7 @@ local function collect(signals, cfg)
   if signals then
     for i = 1, #signals do
       local s = signals[i]
-      local key = signal_key(s.signal)
+      local key = not placeholder[s.signal.name] and signal_key(s.signal)
       if key then net[key] = (net[key] or 0) + s.count end
     end
   end

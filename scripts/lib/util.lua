@@ -50,6 +50,29 @@ function Util.stack_size(key)
   return size or nil
 end
 
+local fuel_filters = nil
+
+--- Auswahl-Filter „Treibstoff, den Loks verbrennen“ (Tankstelle): Brennstoff-Kategorien aller
+--- Lok-Prototypen (Vanilla: chemical) – Uran-Brennelemente oder Fusionsbrennstoff passen nicht in
+--- Fahrzeuge. Ohne Kategorien (nur E-Loks) alles mit Brennwert.
+function Util.locomotive_fuel_filters()
+  if fuel_filters then return fuel_filters end
+  local categories = {}
+  for _, proto in pairs(prototypes.get_entity_filtered({ { filter = "type", type = "locomotive" } })) do
+    local burner = proto.burner_prototype
+    for category in pairs(burner and burner.fuel_categories or {}) do categories[category] = true end
+  end
+  local list = {}
+  for category in pairs(categories) do
+    list[#list + 1] = { filter = "fuel-category", ["fuel-category"] = category, mode = #list > 0 and "or" or nil }
+  end
+  table.sort(list, function(a, b) return a["fuel-category"] < b["fuel-category"] end)
+  for i, f in ipairs(list) do f.mode = i > 1 and "or" or nil end
+  if #list == 0 then list = { { filter = "fuel-value", comparison = ">", value = 0 } } end
+  fuel_filters = list
+  return list
+end
+
 --- Variablen für Rechenausdrücke zu einer Ware: s bzw. S = Stapelgröße (nur Items). nil ohne Ware.
 function Util.variables(key)
   local size = key and Util.stack_size(key)

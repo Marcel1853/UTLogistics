@@ -20,7 +20,8 @@ local Window = {}
 local NAME = "utl_station_window"
 -- Bei jedem Umbau des Fensters erhöhen: offene Fenster aus alten Spielständen werden dann
 -- geschlossen statt mit falschem Aufbau aufgefrischt.
-local GUI_VERSION = 17 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+local GUI_VERSION = 18 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+-- 18: Position des Panels wählbar (links/rechts/frei), Tankstelle „Treibstoff anfordern“
 -- 17: Rolle „Aktiver Anbieter“, Rollen im Rahmen
 -- 16: Schalter „über den Weltraumaufzug liefern“ (nur mit Space Exploration)
 -- 15: Depot-Ausgabe, Panel auch am UTL-Hafen
@@ -43,10 +44,35 @@ function Window.is_window(element)
   return element and element.valid and element.name == NAME
 end
 
+--- Wo das Panel an der UTL-Haltestelle sitzt (je Spieler, Wunsch Marcel): "left" (Standard),
+--- "right" oder "free" (eigenes, verschiebbares Fenster).
+local POSITIONS = { "left", "right", "free" }
+function Window.position(player_index)
+  local p = storage.station_window_pos and storage.station_window_pos[player_index]
+  return p and p.side or "left"
+end
+
+function Window.set_position(player_index, side)
+  storage.station_window_pos = storage.station_window_pos or {}
+  local p = storage.station_window_pos[player_index] or {}
+  p.side = side
+  storage.station_window_pos[player_index] = p
+end
+
 function Window.close(player_index)
   local gui = storage.guis[player_index]
   storage.guis[player_index] = nil
-  if gui and gui.frame and gui.frame.valid then gui.frame.destroy() end
+  local frame = gui and gui.frame
+  if frame and frame.valid then
+    -- freies Fenster: Stelle merken
+    if gui.free and frame.parent and frame.parent.name == "screen" then
+      storage.station_window_pos = storage.station_window_pos or {}
+      local p = storage.station_window_pos[player_index] or { side = "free" }
+      p.location = frame.location
+      storage.station_window_pos[player_index] = p
+    end
+    frame.destroy()
+  end
 end
 
 --- Alle UTL-Fenster schließen (nach Mod-Update); auch verwaiste ohne storage-Eintrag.
@@ -60,27 +86,60 @@ function Window.close_all()
   end
 end
 
+--- Pfeile „links / rechts / frei“ in der Titelleiste des Haltestellen-Panels (wie Vanilla
+--- „zurück/weiter“); die aktive Stellung ist gedrückt.
+local function position_buttons(bar, player)
+  local side = Window.position(player.index)
+  local sprites = { left = "utility/backward_arrow", right = "utility/forward_arrow", free = "utility/expand" }
+  for _, p in ipairs(POSITIONS) do
+    bar.add({ type = "sprite-button", style = "frame_action_button", sprite = sprites[p], toggled = p == side,
+      tooltip = { "utl-gui.window-position-" .. p }, tags = { utl_action = "window_pos", side = p } })
+  end
+end
+
 --- `standalone`: Haltestellen-Panel als eigenes Fenster statt am Vanilla-Haltestellenfenster (Tipps-
 --- Szenen: dort schöbe das Schaltungsfenster der Haltestelle das Panel aus dem Bild).
 local function create_frame(player, station, standalone)
-  if station.kind == "stop" and not standalone then
-    return player.gui.relative.add({
+  local side = Window.position(player.index)
+  if station.kind == "stop" and not standalone and side ~= "free" then
+    local panel = player.gui.relative.add({
       type = "frame",
       name = NAME,
       direction = "vertical",
-      caption = { "utl-gui.station-title" },
       anchor = {
         gui = defines.relative_gui_type.train_stop_gui,
-        position = defines.relative_gui_position.left, -- links: rechts sitzt das Schaltungs-Panel
+        -- Standard links (rechts sitzt das Schaltungs-Panel); wählbar über die Knöpfe oben im Panel
+        position = side == "right" and defines.relative_gui_position.right or defines.relative_gui_position.left,
         names = anchor_names(), -- UTL-Haltestelle und (mit Cargo Ships) UTL-Hafen
       },
     })
+    -- eigene Titelleiste (statt caption): Platz für die Positions-Pfeile wie bei Vanilla „zurück/weiter“
+    local bar = panel.add({ type = "flow", style = "flib_titlebar_flow" })
+    bar.add({ type = "label", style = "frame_title", caption = { "utl-gui.station-title" }, ignored_by_interaction = true })
+    bar.add({ type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true })
+    position_buttons(bar, player)
+    return panel
   end
   local frame = player.gui.screen.add({ type = "frame", name = NAME, direction = "vertical" })
-  frame.auto_center = true
-  Builder.titlebar(frame, { "utl-gui.station-title" }, "close")
+  local saved = storage.station_window_pos and storage.station_window_pos[player.index]
+  if station.kind == "stop" and side == "free" and saved and saved.location then
+    frame.location = saved.location
+  else
+    frame.auto_center = true
+  end
+  local bar = Builder.titlebar(frame, { "utl-gui.station-title" }, "close")
+  frame.bring_to_front() -- freies Fenster: möglichst vor dem Haltestellen-Fenster
+  if station.kind == "stop" and not standalone then
+    -- Positions-Pfeile vor dem Schließen-Knopf
+    local close = bar.children[#bar.children]
+    position_buttons(bar, player)
+    close.destroy()
+    bar.add({ type = "sprite-button", style = "frame_action_button", sprite = "utility/close",
+      tooltip = { "gui.close-instruction" }, tags = { utl_action = "close" } })
+  end
   return frame
 end
+
 
 local function box(parent, width)
   local frame = parent.add({ type = "frame", style = "inside_shallow_frame_with_padding", direction = "vertical" })
@@ -145,6 +204,7 @@ function Window.open(player, station, standalone)
   storage.guis[player.index] = {
     version = GUI_VERSION, frame = frame, unit = station.unit, main = main, requests = requests, goods = goods,
     tabs = tabs, standalone = standalone,
+    free = station.kind == "stop" and not standalone and Window.position(player.index) == "free",
   }
   Window.refresh(player.index)
 end

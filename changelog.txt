@@ -1,4 +1,19 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.13
+Date: 2026-10-05
+  Features:
+    - Blueprint parameters: every UTL station keeps its requests, role and changed values in an invisible combinator, so the base game's blueprint parameters work – goods, amounts and the role can be asked when placing.
+    - UTL parameter planner (shortcut bar): drag over stations, tick what should be asked, and a small window with tabs (General, Goods, Values) asks for role, network, requests, thresholds, priorities, storage limits and cleanup goods when the blueprint is placed. The blueprint also goes to the clipboard.
+    - Fuel stations can request their fuel ("Request fuel", off by default): their request slots then work like a requester's; only fuel locomotives can burn can be chosen.
+    - Research "UTL: Storage II–IV": 12, 16 and 20 goods per storage station.
+    - The UTL panel at the train stop can sit on the left, on the right or free as its own window (arrows in its title bar).
+    - New signal "UTL" with the mod logo.
+  Changes:
+    - The UTL Manager button and the parameter planner use the UTL logo.
+    - License: Apache 2.0 (LICENSE and NOTICE come with the mod).
+  Bugfixes:
+    - Blueprint parameter placeholders (parameter-0 … parameter-9) no longer count as goods.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.12
 Date: 2026-10-04
   Features:

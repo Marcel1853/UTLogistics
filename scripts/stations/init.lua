@@ -7,6 +7,7 @@ local Reader = require("scripts.stations.reader")
 local Paste = require("scripts.stations.settings-paste") -- vor dem GUI-Handler anmelden
 local Blueprint = require("scripts.stations.blueprint")
 local Output = require("scripts.stations.output")
+local Settings = require("scripts.stations.settings-combinator")
 local Unlocks = require("scripts.core.unlocks")
 local Config = require("scripts.core.config")
 
@@ -14,13 +15,31 @@ local Config = require("scripts.core.config")
 local build_filter = {
   { filter = "name", name = C.station_combinator },
   { filter = "type", type = "train-stop" },
+  { filter = "name", name = C.station_settings },
 }
 
--- Bauen (auch aus Blaupausen): Einstellungen aus den Tags übernehmen.
+--- Einstellungs-Kombinator hat Werte aus einer Blaupause übernommen: Station neu lesen.
+local function settings_taken(station)
+  Reader.read(station)
+  Registry.config_changed(station)
+end
+
+-- Bauen (auch aus Blaupausen): Einstellungen aus den Tags übernehmen. Danach gewinnt der
+-- Einstellungs-Kombinator (Blaupausen-Parameter, scripts/stations/settings-combinator.lua).
 local function on_built(event)
-  local station = Registry.on_built(event.entity)
+  local entity = event.entity
+  if entity and entity.valid and entity.name == C.station_settings then
+    -- einzeln gebaut (Haltestelle stand schon): der Station darunter zuordnen
+    local station = Settings.adopt(entity)
+    if station then settings_taken(station) end
+    return
+  end
+  local station = Registry.on_built(entity)
   if event.tags then Blueprint.apply_tags(station, event.tags) end
-  if station then Output.refresh(station) end
+  if station then
+    Output.refresh(station)
+    if Settings.refresh(station) then settings_taken(station) end
+  end
 end
 
 Events.on(defines.events.on_built_entity, on_built, build_filter)
@@ -47,6 +66,11 @@ Heartbeat.add_task("station-output", 1, Output.step)
 -- Auftrags-Ausgabe: anlegen, wenn eine Station eine Haltestelle bekommt, und mit ihr verschwinden.
 Registry.on_config_changed(Output.refresh)
 Registry.on_lost(Output.destroy)
+-- Einstellungs-Kombinator: Änderungen hineinschreiben (oder Werte aus einer Blaupause übernehmen)
+Registry.on_config_changed(function(station)
+  if Settings.refresh(station) then settings_taken(station) end
+end)
+Registry.on_lost(Settings.destroy)
 
 --- Ausgaben neu anlegen bzw. entfernen – für eine Force (Forschung) oder alle (Einstellung).
 local function refresh_outputs(force)
@@ -75,6 +99,7 @@ Events.on_configuration_changed(function()
     if station.config then
       Fields.fill(station.config)
       Output.refresh(station) -- bestehende Spielstände bekommen ihre Ausgabe
+      Settings.refresh(station) -- … und ihren Einstellungs-Kombinator
     end
   end
 end)

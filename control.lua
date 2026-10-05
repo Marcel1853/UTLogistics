@@ -15,5 +15,6 @@ require("scripts.compat.space-exploration")
 require("scripts.api.remote")
 require("scripts.core.news")
 require("scripts.gui.notice.recipe-notice")
+require("scripts.parameter.init")
 
 Events.register()

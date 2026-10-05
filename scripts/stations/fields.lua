@@ -44,6 +44,15 @@ Fields.groups = {
     },
   },
   {
+    name = "fuel",
+    visible = function(cfg) return cfg.roles.fuel end,
+    fields = {},
+    -- Tankstelle fordert ihren Treibstoff selbst an (Anforderungs-Slots, Standard aus)
+    toggles = {
+      { key = "fuel_request", signal = "utl-fuel-request", rebuild = true },
+    },
+  },
+  {
     name = "depot",
     visible = function(cfg) return cfg.roles.depot end,
     fields = {
@@ -61,6 +70,7 @@ end
 
 --- Standardwert eines Schalters: die Map-Einstellung, solange die Station nichts eigenes sagt.
 function Fields.toggle_default(toggle)
+  if not toggle.setting then return false end
   local cfg = Config.get()
   return cfg and cfg[toggle.setting] == true
 end
@@ -89,6 +99,24 @@ function Fields.fill(cfg)
   -- Rolle „Aktiver Anbieter“ (wie die aktive Anbieterkiste): alles abgeben, auch ohne Anforderung
   if cfg.active_provider == nil then cfg.active_provider = false end
   cfg.requests = cfg.requests or {}       -- [slot] = { signal = SignalID, count = n }
+  -- Slot-Nummern als Zahl: über das Blaupausen-Textformat (JSON) können Lücken-Listen mit
+  -- Text-Schlüsseln („3“) zurückkommen
+  local function numeric_keys(list)
+    if type(list) ~= "table" then return end
+    for key, value in pairs(list) do
+      local n = type(key) == "string" and tonumber(key)
+      if n then
+        list[key] = nil
+        list[n] = value
+      end
+    end
+  end
+  numeric_keys(cfg.requests)
+  if cfg.storage then numeric_keys(cfg.storage.limits) end
+  if cfg.cleanup then
+    numeric_keys(cfg.cleanup.items)
+    numeric_keys(cfg.cleanup.fluids)
+  end
   cfg.request_map = cfg.request_map or {} -- [key] = Menge (abgeleitet)
   -- Zusatznetze („auch in diesen Netzen“); leer = nur das Heimatnetz cfg.network
   -- Cleanup: was hier geleert werden darf. Standard wie früher: alles.
@@ -104,7 +132,7 @@ function Fields.fill(cfg)
   if cfg.storage.accept_leftover == nil then cfg.storage.accept_leftover = true end
 end
 
-Fields.storage_slots = 8
+Fields.storage_slots = 20 -- Höchstzahl; je Force freigeschaltet: Unlocks.storage_slots
 
 --- Rang als Anbieter: 2 = zuerst leeren, 1 = normal (jeder gewöhnliche Anbieter), 0 = Reserve.
 --- Wird vor der Anbieter-Priorität verglichen. Aktiver Anbieter = „zuerst leeren“ (wie Vanilla:
