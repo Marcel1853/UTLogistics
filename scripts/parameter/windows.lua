@@ -9,6 +9,7 @@ local Settings = require("scripts.stations.settings-combinator")
 local More = require("scripts.api.remote-more")
 local Util = require("scripts.lib.util")
 local Unlocks = require("scripts.core.unlocks")
+local Fields = require("scripts.stations.fields")
 local RequestSlots = require("scripts.stations.requests").slot_count
 
 local Windows = {}
@@ -21,6 +22,7 @@ local LABELS = {
   cleanup_offer = { "utl-gui.cleanup-offer" },
   storage_limits = { "utl-gui.section-storage" },
   storage_leftover = { "utl-gui.storage-leftover" },
+  cleanup_wares = { "utl-param.cleanup-wares" },
 }
 
 local function label_of(key)
@@ -103,6 +105,20 @@ local function role_items()
   return items
 end
 
+--- Cleanup: einzelne Waren, die angenommen werden – je eine Reihe Items und Flüssigkeiten.
+local function add_wares(parent, key, wares)
+  local t = parent.add({ type = "table", name = key, column_count = 1 })
+  for _, kind in ipairs({ "item", "fluid" }) do
+    local count = kind == "item" and Fields.cleanup_item_slots or Fields.cleanup_fluid_slots
+    local list = wares[kind == "item" and "items" or "fluids"] or {}
+    local row = t.add({ type = "table", name = kind, column_count = count, style = "filter_slot_table" })
+    for i = 1, count do
+      row.add({ type = "choose-elem-button", name = "e" .. i, style = "slot_button", elem_type = kind,
+        [kind] = list[i] or list[tostring(i)] })
+    end
+  end
+end
+
 --- Knöpfe „+“ / „−“ unter einer mehrzeiligen Eingabe: Zeile dazu bzw. letzte weg. Klein (halbe
 --- Slot-Breite) und mittig zwischen den Spalten Ware und Menge (Wunsch Marcel).
 local function row_buttons(parent, key)
@@ -151,6 +167,7 @@ local function add_input(grid, player, key, cfg, extra)
     for i = 1, math.min(RequestSlots, math.max(1, #rows + (extra.request or 0))) do
       local row = rows[i] or { count = 0 }
       local pick = t.add({ type = "choose-elem-button", name = "w" .. i, style = "slot_button",
+        tags = { utl_param = "ware", row = i },
         elem_type = fuel_only and "item-with-quality" or "signal",
         elem_filters = fuel_only and Util.locomotive_fuel_filters() or nil })
       local signal = row.signal
@@ -170,6 +187,8 @@ local function add_input(grid, player, key, cfg, extra)
       if tier == current then selected = i end
     end
     grid.add({ type = "drop-down", name = key, items = items, selected_index = selected })
+  elseif entry.kind == "wares" then
+    add_wares(grid, key, current --[[@as table]])
   elseif entry.kind == "limits" then
     add_limits(grid, key, current --[[@as table]], player, extra.storage_limits or 0)
   else
@@ -207,12 +226,12 @@ function Windows.ask(player, keys, cfg, count, extra, tab)
     local entry = Ask.by_key[key]
     local grid = Ask.relevant(key, role) and grids[entry.tab]
     if grid then
-      if entry.kind == "request" or entry.kind == "limits" then
+      if entry.kind == "request" or entry.kind == "limits" or entry.kind == "wares" then
         -- mehrzeilig: Überschrift über voller Breite, darunter die Tabelle (nicht neben dem Text)
         local scroll = grid.parent
         scroll.add({ type = "label", style = "utl_header_label", caption = label_of(key) }).style.top_margin = 6
         add_input(scroll, player, key, cfg, extra)
-        row_buttons(scroll, key)
+        if entry.kind ~= "wares" then row_buttons(scroll, key) end
       else
         -- Werte-Reiter: Überschrift „Anbieter“ / „Abnehmer“ vor der ersten Zeile der Gruppe
         local group = entry.group
@@ -234,6 +253,18 @@ function Windows.ask(player, keys, cfg, count, extra, tab)
   Windows.show_tab(tabs)
   footer(f, { "utl-param.apply" }, "apply", { "utl-param.ask-intro", count })
   -- kein player.opened: die Blaupause soll in der Hand bleiben (weiter platzieren)
+end
+
+--- Ware in einer Anforderungs-Zeile gewählt: steht die Menge noch auf 0, einen Stapel eintragen
+--- (Flüssigkeit 1000) – wie im Stationsfenster.
+function Windows.ware_chosen(element)
+  local row = element.tags.row
+  local count = row and element.parent["c" .. row]
+  if not (count and (tonumber(count.text) or 0) == 0) then return end
+  local v = element.elem_value --[[@as table?]]
+  if not (v and v.name) then return end
+  local key = Util.signal_key({ type = v.type or "item", name = v.name, quality = v.quality })
+  count.text = tostring(key and Util.stack_size(key) or 1000)
 end
 
 --- Nur den gewählten Reiter sichtbar machen (die anderen bestimmen dann nicht die Höhe).
@@ -290,6 +321,15 @@ function Windows.answers(player)
       answers[el.name] = el.state
     elseif entry and entry.kind == "offer" then
       answers[el.name] = Ask.CLEANUP_OFFER[el.selected_index] or "off"
+    elseif entry and entry.kind == "wares" then
+      local wares = { items = {}, fluids = {} }
+      for _, kind in ipairs({ "item", "fluid" }) do
+        local list = wares[kind == "item" and "items" or "fluids"]
+        for _, button in ipairs(el[kind].children) do
+          if button.elem_value then list[#list + 1] = button.elem_value end
+        end
+      end
+      answers[el.name] = wares
     elseif entry and entry.kind == "limits" then
       local limits = {}
       local shown = 0

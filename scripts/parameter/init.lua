@@ -212,6 +212,14 @@ Events.on(defines.events.on_gui_selection_state_changed, function(event)
   rebuild(player, list, nil)
 end)
 
+-- Ware in einer Zeile gewählt: Menge vorbelegen
+Events.on(defines.events.on_gui_elem_changed, function(event)
+  local element = event.element
+  if element and element.valid and element.tags and element.tags.utl_param == "ware" then
+    Windows.ware_chosen(element)
+  end
+end)
+
 -- Reiter gewechselt: nur den gewählten sichtbar (Höhe passt sich an)
 Events.on(defines.events.on_gui_selected_tab_changed, function(event)
   local element = event.element

@@ -4,6 +4,7 @@
 --   R32 Lager bekommt zwei Waren in einer Fahrt (Eisen und Kupfer, beide unter Mindest).
 -- Laden und Entladen übernimmt der Test per Script.
 local Rounds = {}
+local Param = require("rounds-param") -- R40 (require nur beim Laden erlaubt)
 
 --- R36: UTL-Ereignisse mitzählen (Anmeldung in on_init und on_load, siehe control.lua).
 function Rounds.listen()
@@ -199,6 +200,7 @@ function Rounds.build(check)
   remote.call("utl", "set_request", fuel10.unit_number, 1, { type = "item", name = "coal" }, 2000)
   train(s, force, 4, "R39-Depot")
   LINE = 1
+  Param.run(check) -- R40: Blaupausen-Parameter (sofort, eigene Oberfläche)
   check("R31/R32 strecken gebaut", r31_train ~= nil and r32_train ~= nil)
   return { start = game.tick, train = r31_train, wagon = r31_wagon, train2 = r32_train, wagon2 = r32_wagon,
     train3 = r33_train, wagon3 = r33_wagon, loco3 = r33_train and r33_train.front_stock,
