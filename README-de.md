@@ -204,6 +204,10 @@ Depot, mit der Warnung „Treibstoff fehlt“ und dem Signal „Züge ohne Treib
 Ein Netz **ganz ohne** UTL-Tankstelle tankt auf deine Art (Interrupt, von Hand). Min./max.
 Zuglänge an Tankstellen trennt kleine und große Züge.
 
+**Tankstelle fordert Treibstoff an** (Schalter je Tankstelle, Standard aus): Die Anforderungs-Slots
+gelten dann wie bei einem Abnehmer – wählbar ist nur, was Loks verbrennen können. Entlade-Greifarme in
+eine Kiste, aus der die Tank-Greifarme die Loks füllen.
+
 ## Cleanup (Restladung)
 
 Züge mit Restladung (mit Ladung zurück im Depot, abgebrochene Lieferung, beim Abnehmer nicht leer
@@ -222,7 +226,8 @@ Mehr: [Wiki – Tanken, Cleanup und Depots](https://github.com/Marcel1853/UTLogi
 
 *Braucht die Forschung „UTL: Lager“.*
 
-Ein **Lager** nimmt an **und** gibt ab – ein Puffer nahe bei den Verbrauchern. Je Ware (bis zu acht)
+Ein **Lager** nimmt an **und** gibt ab – ein Puffer nahe bei den Verbrauchern. Je Ware (8, mit den
+Forschungen „UTL: Lager II–IV“ 12, 16 oder 20)
 ein **Mindest-** und ein **Höchstbestand**: unter Mindest fordert es bis Höchst an, über Mindest bietet
 es den Rest an **wie ein normaler Anbieter**. Zwei Lager schieben sich Ware nie hin und her. Mit
 **„Restladung annehmen“** (an) dürfen Züge hier auch Reste abladen. Map-Einstellung: „Lager-Stationen
@@ -232,6 +237,22 @@ erlauben“.
 Umlade-Greifarm → Kiste → Lade-Greifarm. Die Auftrags-Ausgabe an Entlade- und Lade-Greifarme
 verdrahten: Laden **[utl-loading] > 0**, Entladen **[utl-loading] = 0**. Das Szenario „UTL-Lager“
 zeigt es.
+
+## Blaupausen mit Parametern
+
+Wie im Basisspiel: In der Blaupause Ware, Menge oder Rolle zum **Parameter** machen – beim Platzieren
+fragt Factorio die Werte ab. UTL legt dafür Anforderungen, Rolle (Signal „UTL: Rolle“) und geänderte
+Werte in einen unsichtbaren Kombinator an jeder Station, den Factorio kennt. Zahl-Parameter ordnet
+Factorio über den Wert zu – gleiche Zahlen werden ein Parameter.
+
+Bequemer: der **UTL-Parameter-Planer** (Knopf in der Shortcut-Leiste). Bereich ziehen, ankreuzen, was
+beim Platzieren gefragt werden soll → Blaupause im Cursor (auch in der Zwischenablage, Strg + V). Beim
+Platzieren öffnet sich ein kleines Fenster mit Reitern (Allgemein, Waren, Werte), das nur zeigt, was
+zur gewählten Rolle gehört – Rolle, Netz, Anforderungen (mehrere Waren, „+“ / „−“), Schwellen,
+Prioritäten, Lager-Grenzen, Cleanup-Waren. Die Frage reist mit der Blaupause, auch in der Bibliothek.
+
+Das Panel an der UTL-Haltestelle kann links, rechts oder frei als eigenes Fenster sitzen (Pfeile in
+seiner Titelleiste).
 
 ## Netz-Kombinator
 
