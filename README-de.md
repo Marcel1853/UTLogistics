@@ -1,7 +1,7 @@
 # Unified Train Logistics (UTL) – Deutsch
 
 [![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
-[![Version](https://img.shields.io/badge/version-0.0.12-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![Version](https://img.shields.io/badge/version-0.0.13-orange)](https://mods.factorio.com/mod/UTLogistics)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
 
 *English version: [README.md](https://github.com/Marcel1853/UTLogistics/blob/main/README.md).*
@@ -19,11 +19,12 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
   (Lager-Stationen). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
-> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (161 Prüfungen) und einen
+> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (168 Prüfungen) und einen
 > headless-Lasttest mit 384 Zügen auf 12 × 12 City Blocks; Updates werden geprüft, indem ein
 > Spielstand der Vorversion geladen wird. Die wichtigsten Funktionen zeigen die Szenarien. Im
-> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Lager** und **Cleanup gibt
-> zurück** (0.0.8), **Nachladen** (0.0.7, Standard aus) und die **Team-Trennung** (0.0.6, im echten Mehrspieler noch nicht erprobt). Wenn
+> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Blaupausen-Parameter** mit dem
+> **Parameter-Planer** (0.0.13) und der **aktive Anbieter** (0.0.12); die **Team-Trennung** (0.0.6) ist
+> im echten Mehrspieler noch nicht erprobt. Wenn
 > etwas schiefgeht: bitte in der [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion)
 > melden, am besten mit Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem
 > gewachsenen Spielstand vorher sichern.

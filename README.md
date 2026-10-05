@@ -1,7 +1,7 @@
 # Unified Train Logistics (UTL)
 
 [![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
-[![Version](https://img.shields.io/badge/version-0.0.12-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![Version](https://img.shields.io/badge/version-0.0.13-orange)](https://mods.factorio.com/mod/UTLogistics)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
 
 Automatic train logistics for Factorio 2.1: **providers, requesters, depots, fuel stations,
@@ -19,11 +19,12 @@ cleanup and an overview window in one mod**, built for high UPS.
   (storage stations). The map
   setting “UTL features need research” turns this off – then everything is available right away.
 
-> **Testing status.** UTL runs through an automated self test (161 checks) and a headless load
+> **Testing status.** UTL runs through an automated self test (168 checks) and a headless load
 > test with 384 trains on 12 × 12 city blocks; updates are checked by loading a save from the
 > previous version. The main features are shown in the scenarios. In real games it has so far been
-> played on small networks. Newest: **storage** and **cleanup gives back** (0.0.8), **topping up** (0.0.7, off by default) and **team separation** (0.0.6, not yet tried in a
-> real multiplayer game). If something goes wrong, please report it in
+> played on small networks. Newest: **blueprint parameters** with the **parameter planner** (0.0.13)
+> and the **active provider** (0.0.12); **team separation** (0.0.6) has not yet been tried in a real
+> multiplayer game. If something goes wrong, please report it in
 > the [discussion](https://mods.factorio.com/mod/UTLogistics/discussion) – ideally with the save
 > and what you did. Keep a backup before adding UTL to a long-running base.
 
