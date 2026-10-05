@@ -204,6 +204,9 @@ function Windows.ask(player, keys, cfg, count, extra, tab)
   -- drei Reiter, damit das Fenster klein bleibt (Wunsch Marcel); leere Reiter fallen weg
   local tabs = inner.add({ type = "tabbed-pane", name = "pages", style = "tabbed_pane_with_no_side_padding" })
   local content = inner.add({ type = "flow", name = "content", direction = "vertical" })
+  -- Rahmen über die volle Fensterbreite, auch wenn der gewählte Reiter schmal ist
+  inner.style.horizontally_stretchable = true
+  inner.style.minimal_width = 360
   local role = Settings.role_code(cfg)
   local grids = {}
   for _, tab in ipairs(Ask.TABS) do
