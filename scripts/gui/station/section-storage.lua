@@ -7,14 +7,14 @@ local Unlocks = require("scripts.core.unlocks")
 
 local Section = {}
 
-local function number_field(parent, value, action, slot, tooltip)
+local function number_field(parent, value, action, slot, tooltip, width)
   local field = parent.add({
     -- nicht numeric: Rechnen wie „10*s“ (s = Stapelgröße der Ware) erlaubt
     type = "textfield", text = value and tostring(value) or "",
     lose_focus_on_confirm = true, clear_and_focus_on_right_click = true, tooltip = tooltip,
     tags = { utl_action = action, slot = slot },
   })
-  field.style.width = 80
+  field.style.width = width or 80
   return field
 end
 
@@ -35,7 +35,7 @@ function Section.build(parent, station)
   local slots = Unlocks.storage_slots(Unlocks.force_of(station))
   local pairs_per_row = slots > 8 and 2 or 1
   local grid = inner.add({ type = "table", column_count = 3 * pairs_per_row })
-  grid.style.horizontal_spacing = 8
+  grid.style.horizontal_spacing = pairs_per_row > 1 and 4 or 8
   grid.style.vertical_spacing = 2
   grid.style.vertical_align = "center"
   for _ = 1, pairs_per_row do
@@ -50,8 +50,10 @@ function Section.build(parent, station)
       elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } },
       tooltip = { "utl-gui.storage-good-tooltip" }, tags = { utl_action = "storage_signal", slot = slot },
     })
-    number_field(grid, limit.min, "storage_min", slot, { "", { "utl-gui.storage-min-tooltip" }, "\n", { "utl-gui.expression-tooltip" } })
-    number_field(grid, limit.max, "storage_max", slot, { "", { "utl-gui.storage-max-tooltip" }, "\n", { "utl-gui.expression-tooltip" } })
+    -- zwei Spalten: schmalere Felder, sonst ragt die rechte Spalte aus dem Panel
+    local width = pairs_per_row > 1 and 56 or 80
+    number_field(grid, limit.min, "storage_min", slot, { "", { "utl-gui.storage-min-tooltip" }, "\n", { "utl-gui.expression-tooltip" } }, width)
+    number_field(grid, limit.max, "storage_max", slot, { "", { "utl-gui.storage-max-tooltip" }, "\n", { "utl-gui.expression-tooltip" } }, width)
   end
   inner.add({
     type = "checkbox", caption = { "utl-gui.storage-leftover" }, state = st.accept_leftover == true,

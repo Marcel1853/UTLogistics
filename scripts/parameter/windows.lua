@@ -203,6 +203,7 @@ function Windows.ask(player, keys, cfg, count, extra, tab)
   local f, inner = frame(player, Windows.ASK, { "utl-param.ask-title" }, true)
   -- drei Reiter, damit das Fenster klein bleibt (Wunsch Marcel); leere Reiter fallen weg
   local tabs = inner.add({ type = "tabbed-pane", name = "pages", style = "tabbed_pane_with_no_side_padding" })
+  local content = inner.add({ type = "flow", name = "content", direction = "vertical" })
   local role = Settings.role_code(cfg)
   local grids = {}
   for _, tab in ipairs(Ask.TABS) do
@@ -211,11 +212,15 @@ function Windows.ask(player, keys, cfg, count, extra, tab)
       if Ask.relevant(key, role) and Ask.by_key[key].tab == tab then has = true end
     end
     if has then
+      -- Reiter nur als Kopf (leerer Inhalt); der echte Inhalt steht darunter in `content` –
+      -- Factorio macht ein tabbed-pane so hoch wie seinen längsten Inhalt, auch wenn er verborgen ist
       local head = tabs.add({ type = "tab", caption = { "utl-param.tab-" .. tab } })
-      local scroll = tabs.add({ type = "scroll-pane", horizontal_scroll_policy = "never" })
+      local empty = tabs.add({ type = "empty-widget" })
+      empty.style.height = 0
+      tabs.add_tab(head, empty)
+      local scroll = content.add({ type = "scroll-pane", name = tab, horizontal_scroll_policy = "never" })
       scroll.style.maximal_height = 420
       scroll.style.padding = 12
-      tabs.add_tab(head, scroll)
       local grid = scroll.add({ type = "table", name = "grid", column_count = 2 })
       grid.style.vertical_spacing = 6
       grids[tab] = grid
@@ -269,7 +274,8 @@ end
 
 --- Nur den gewählten Reiter sichtbar machen (die anderen bestimmen dann nicht die Höhe).
 function Windows.show_tab(tabs)
-  for i, t in ipairs(tabs.tabs) do t.content.visible = i == tabs.selected_tab_index end
+  local content = tabs.parent.content
+  for i, page in ipairs(content.children) do page.visible = i == tabs.selected_tab_index end
 end
 
 --- Gewählter Reiter des Abfrage-Fensters (oder nil).
@@ -284,7 +290,7 @@ function Windows.answers(player)
   local answers = {}
   if not f then return answers end
   local elements = {}
-  for _, content in pairs(f.inner.pages.children) do
+  for _, content in pairs(f.inner.content.children) do
     if content.type == "scroll-pane" then
       for _, el in pairs(content.children) do
         if el.name == "grid" then

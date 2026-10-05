@@ -15,4 +15,7 @@ for dep in "$MOD_DIR"/../creative-mod_*.zip; do [ -e "$dep" ] && ln -sfn "$(real
 for dep in "$MOD_DIR"/../flib_*.zip; do [ -e "$dep" ] && ln -sfn "$(realpath "$dep")" "$WORK/mods/$(basename "$dep")"; done
 printf '[path]\nread-data=__PATH__executable__/../../data\nwrite-data=%s/data\n[general]\nlocale=de\n' "$WORK" > "$WORK/config.ini"
 rm -f "$WORK/data/factorio-current.log"
-"$FACTORIO" -c "$WORK/config.ini" --mod-directory "$WORK/mods" --load-scenario "utl-paramtest/paramtest" > "$WORK/run.log" 2>&1 || true
+SCEN="${1:-paramtest}"   # paramshots = Bilder-Strecke (Bilder danach nach docs/screenshots kopieren)
+LANG_CODE="${2:-de}"
+sed -i "s/^locale=.*/locale=$LANG_CODE/" "$WORK/config.ini"
+"$FACTORIO" -c "$WORK/config.ini" --mod-directory "$WORK/mods" --load-scenario "utl-paramtest/$SCEN" > "$WORK/run.log" 2>&1 || true
