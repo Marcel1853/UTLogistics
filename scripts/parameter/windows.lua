@@ -207,6 +207,7 @@ function Windows.ask(player, keys, cfg, count, extra, tab)
   -- Rahmen über die volle Fensterbreite, auch wenn der gewählte Reiter schmal ist
   inner.style.horizontally_stretchable = true
   inner.style.minimal_width = 360
+  tabs.style.horizontally_stretchable = true -- Linie unter den Reitern bis zum rechten Rand
   local role = Settings.role_code(cfg)
   local grids = {}
   for _, tab in ipairs(Ask.TABS) do
