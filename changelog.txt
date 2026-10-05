@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.14
+Date: 2026-10-05
+  Bugfixes:
+    - Crash on start together with Voidcraft and Space Age ("item-subgroup 'utl-rails-qual' does not exist"): the "Trains" tab no longer moves recipes another mod placed in its own row – only recipes that stood in the same row as their item follow it. Reported in the discussion by CapnSudz.
+  Compatibility:
+    - Voidcraft is now an optional dependency, so UTL loads after it.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.13
 Date: 2026-10-05
   Features:

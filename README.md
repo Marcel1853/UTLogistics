@@ -1,7 +1,7 @@
 # Unified Train Logistics (UTL)
 
 [![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
-[![Version](https://img.shields.io/badge/version-0.0.13-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![Version](https://img.shields.io/badge/version-0.0.14-orange)](https://mods.factorio.com/mod/UTLogistics)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
 
 Automatic train logistics for Factorio 2.1: **providers, requesters, depots, fuel stations,

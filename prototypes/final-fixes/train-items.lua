@@ -111,12 +111,14 @@ for _, name in ipairs(TRAIN_CIRCUITS) do
 end
 
 local moved = {} -- [item-name] = subgroup
+local was = {}   -- [item-name] = Zeile vor dem Umzug (für Rezepte, die ihrem Item folgen)
 for _, item_type in ipairs(ITEM_TYPES) do
   for name, item in pairs(data.raw[item_type] or {}) do
     local place_result = item.place_result
     local subgroup = place_result and subgroup_by_entity[place_result]
     if not subgroup and item_type == "rail-planner" then subgroup = "utl-rails" end
     if subgroup and not item.hidden and not item.parameter then
+      was[name] = item.subgroup
       item.subgroup = subgroup
       moved[name] = subgroup
     end
@@ -148,10 +150,13 @@ for name, subgroup in pairs(data.raw["item-subgroup"]) do
   end
 end
 
--- Rezepte mit fest eingetragener Zeile ebenfalls umziehen (sonst bleiben sie im alten Reiter).
+-- Rezepte mit fest eingetragener Zeile ebenfalls umziehen (sonst bleiben sie im alten Reiter) – aber
+-- nur, wenn sie in derselben Zeile standen wie ihr Item. Rezepte, die eine andere Mod bewusst in eine
+-- eigene Zeile legt, bleiben dort: Voidcraft z. B. baut zu jedem eigenen Rezept eine Kopie in der
+-- Zeile „<zeile>-qual“ und legt diese Zeilen nur für seine eigenen an („utl-rails-qual“ gäbe es nicht).
 for _, recipe in pairs(data.raw["recipe"]) do
   if recipe.subgroup and recipe.results then
     local main = recipe.main_product or (#recipe.results == 1 and recipe.results[1].name)
-    if main and moved[main] then recipe.subgroup = moved[main] end
+    if main and moved[main] and recipe.subgroup == was[main] then recipe.subgroup = moved[main] end
   end
 end
