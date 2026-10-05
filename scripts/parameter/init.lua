@@ -140,7 +140,11 @@ Events.on(defines.events.on_built_entity, on_built, ghost_filter)
 -- 4. Antworten übernehmen
 local function apply(player)
   local list = pending().ask[player.index]
-  local answers = Windows.answers(player)
+  -- Eingaben aller Reiter: gemerkte (andere Reiter) + die des angezeigten
+  local answers = {}
+  for k, v in pairs(list and list.answers or {}) do answers[k] = v end
+  for k, v in pairs(Windows.answers(player)) do answers[k] = v end
+  answers.storage_rows = nil
   Windows.close(player, Windows.ASK)
   pending().ask[player.index] = nil
   if not list then return end
@@ -170,9 +174,17 @@ end
 
 --- Abfrage-Fenster mit den bisherigen Eingaben neu aufbauen; `add_key` = dort eine leere Zeile mehr.
 --- Leere Zeilen (ohne Ware) bleiben erhalten, damit „+“ mehrfach hintereinander geht.
-local function rebuild(player, list, add_key, remove_key)
-  local tab = Windows.selected_tab(player)
-  local answers = Windows.answers(player)
+--- Eingaben aller Reiter: gemerkte (list.answers) + die des gerade angezeigten Reiters.
+local function merged_answers(player, list)
+  local answers = {}
+  for k, v in pairs(list.answers or {}) do answers[k] = v end
+  for k, v in pairs(Windows.answers(player)) do answers[k] = v end
+  return answers
+end
+
+local function rebuild(player, list, add_key, remove_key, tab)
+  tab = tab or Windows.selected_tab(player)
+  local answers = merged_answers(player, list)
   -- „−“: letzte Zeile weg (eine leere zuerst, sonst die letzte belegte)
   if remove_key == "request" and answers.request then
     table.remove(answers.request)
@@ -197,6 +209,7 @@ local function rebuild(player, list, add_key, remove_key)
     extra[key] = math.max(0, empty) + (add_key == key and 1 or 0)
   end
   answers.storage_rows = nil
+  list.answers = answers
   local cfg = util.table.deepcopy(list.cfg)
   Ask.apply(cfg, answers)
   Windows.ask(player, list.keys, cfg, #list.entries, extra, tab)
@@ -220,13 +233,15 @@ Events.on(defines.events.on_gui_elem_changed, function(event)
   end
 end)
 
--- Reiter gewechselt: nur den gewählten sichtbar (Höhe passt sich an)
+-- Reiter gewechselt: mit dem neuen Reiter neu aufbauen (nur er hat Inhalt → passende Höhe);
+-- die Eingaben des alten Reiters wandern in list.answers
 Events.on(defines.events.on_gui_selected_tab_changed, function(event)
   local element = event.element
-  if element and element.valid and element.name == "pages" and element.parent and element.parent.parent
-    and element.parent.parent.name == Windows.ASK then
-    Windows.show_tab(element)
-  end
+  if not (element and element.valid and element.name == "pages" and element.parent and element.parent.parent
+    and element.parent.parent.name == Windows.ASK) then return end
+  local player = game.get_player(event.player_index)
+  local list = player and pending().ask[player.index]
+  if list then rebuild(player, list, nil, nil, element.selected_tab_index) end
 end)
 
 Events.on(defines.events.on_gui_click, function(event)
@@ -249,3 +264,13 @@ Events.on(defines.events.on_gui_click, function(event)
     Windows.close(player, element.tags.window --[[@as string]])
   end
 end)
+
+-- Für Test-Skripte (Bilder-Strecke tools/paramtest): Reiter des Abfrage-Fensters wechseln – ein
+-- Wechsel per Skript löst kein on_gui_selected_tab_changed aus.
+remote.add_interface("utl_param", {
+  select_tab = function(player_index, index)
+    local player = game.get_player(player_index)
+    local list = player and pending().ask[player.index]
+    if list then rebuild(player, list, nil, nil, index) end
+  end,
+})

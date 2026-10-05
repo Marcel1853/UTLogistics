@@ -203,33 +203,37 @@ function Windows.ask(player, keys, cfg, count, extra, tab)
   local f, inner = frame(player, Windows.ASK, { "utl-param.ask-title" }, true)
   -- drei Reiter, damit das Fenster klein bleibt (Wunsch Marcel); leere Reiter fallen weg
   local tabs = inner.add({ type = "tabbed-pane", name = "pages", style = "tabbed_pane_with_no_side_padding" })
-  local content = inner.add({ type = "flow", name = "content", direction = "vertical" })
-  -- Rahmen über die volle Fensterbreite, auch wenn der gewählte Reiter schmal ist
   inner.style.horizontally_stretchable = true
   inner.style.minimal_width = 360
-  tabs.style.horizontally_stretchable = true -- Linie unter den Reitern bis zum rechten Rand
+  tabs.style.horizontally_stretchable = true
   local role = Settings.role_code(cfg)
-  local grids = {}
-  for _, tab in ipairs(Ask.TABS) do
-    local has = false
+  -- Reiter mit Inhalt (leere fallen weg)
+  local present = {}
+  for _, t in ipairs(Ask.TABS) do
     for _, key in ipairs(keys) do
-      if Ask.relevant(key, role) and Ask.by_key[key].tab == tab then has = true end
+      if Ask.relevant(key, role) and Ask.by_key[key].tab == t then present[#present + 1] = t break end
     end
-    if has then
-      -- Reiter nur als Kopf (leerer Inhalt); der echte Inhalt steht darunter in `content` –
-      -- Factorio macht ein tabbed-pane so hoch wie seinen längsten Inhalt, auch wenn er verborgen ist
-      local head = tabs.add({ type = "tab", caption = { "utl-param.tab-" .. tab } })
-      local empty = tabs.add({ type = "empty-widget" })
-      empty.style.height = 0
-      tabs.add_tab(head, empty)
-      local scroll = content.add({ type = "scroll-pane", name = tab, horizontal_scroll_policy = "never" })
+  end
+  local selected = (tab and tab <= #present) and tab or 1
+  -- Nur der gewählte Reiter bekommt Inhalt, die anderen einen leeren Platzhalter: Factorio macht ein
+  -- tabbed-pane so hoch wie seinen längsten Inhalt. Wechsel baut neu auf, die Eingaben der anderen
+  -- Reiter merkt sich init.lua (list.answers).
+  local grids = {}
+  for i, t in ipairs(present) do
+    local head = tabs.add({ type = "tab", caption = { "utl-param.tab-" .. t } })
+    if i == selected then
+      local scroll = tabs.add({ type = "scroll-pane", name = t, horizontal_scroll_policy = "never" })
       scroll.style.maximal_height = 420
       scroll.style.padding = 12
       local grid = scroll.add({ type = "table", name = "grid", column_count = 2 })
       grid.style.vertical_spacing = 6
-      grids[tab] = grid
+      grids[t] = grid
+      tabs.add_tab(head, scroll)
+    else
+      tabs.add_tab(head, tabs.add({ type = "empty-widget" }))
     end
   end
+  tabs.selected_tab_index = selected
   local headed = {}
   for _, key in ipairs(keys) do
     local entry = Ask.by_key[key]
@@ -256,10 +260,6 @@ function Windows.ask(player, keys, cfg, count, extra, tab)
     end
   end
   -- Hinweis „gilt für n Stationen“ unten neben dem Knopf (statt eigener Zeile über den Reitern)
-  -- gewählten Reiter behalten (+ / − / Rollenwechsel bauen neu auf); nur der sichtbare Reiter zählt
-  -- für die Höhe – sonst ist „Allgemein“ so lang wie „Waren“
-  if tab and tab <= #tabs.tabs then tabs.selected_tab_index = tab else tabs.selected_tab_index = 1 end
-  Windows.show_tab(tabs)
   footer(f, { "utl-param.apply" }, "apply", { "utl-param.ask-intro", count })
   -- kein player.opened: die Blaupause soll in der Hand bleiben (weiter platzieren)
 end
@@ -276,12 +276,6 @@ function Windows.ware_chosen(element)
   count.text = tostring(key and Util.stack_size(key) or 1000)
 end
 
---- Nur den gewählten Reiter sichtbar machen (die anderen bestimmen dann nicht die Höhe).
-function Windows.show_tab(tabs)
-  local content = tabs.parent.content
-  for i, page in ipairs(content.children) do page.visible = i == tabs.selected_tab_index end
-end
-
 --- Gewählter Reiter des Abfrage-Fensters (oder nil).
 function Windows.selected_tab(player)
   local f = player.gui.screen[Windows.ASK]
@@ -294,7 +288,7 @@ function Windows.answers(player)
   local answers = {}
   if not f then return answers end
   local elements = {}
-  for _, content in pairs(f.inner.content.children) do
+  for _, content in pairs(f.inner.pages.children) do
     if content.type == "scroll-pane" then
       for _, el in pairs(content.children) do
         if el.name == "grid" then

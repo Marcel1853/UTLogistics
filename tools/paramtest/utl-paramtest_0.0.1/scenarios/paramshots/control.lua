@@ -111,9 +111,9 @@ local STEPS = {
   function() shot("tankstelle-treibstoff") end,
   function() player().opened = nil; place_parameter_blueprint() end,
   function() shot("parameter-allgemein") end,
-  function() select_tab(player().gui.screen, "utl_param_ask", 2) end,
+  function() remote.call("utl_param", "select_tab", 1, 2) end,
   function() shot("parameter-waren") end,
-  function() select_tab(player().gui.screen, "utl_param_ask", 3) end,
+  function() remote.call("utl_param", "select_tab", 1, 3) end,
   function() shot("parameter-werte") end,
   function() L("fertig") end,
 }
