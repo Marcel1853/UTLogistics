@@ -126,6 +126,44 @@ function Schedule.send(train, provider_stop, requester_stop, manifest, fuel_stop
   return true
 end
 
+--- Wartebedingungen für Add-ons und das Wiederherstellen nach einem Umbau (train-change.lua).
+function Schedule.loading_wait(manifest, timeouts)
+  timeouts = timeouts or {}
+  return with_timeout(loading_conditions(manifest), timeouts.load, timeouts.mode)
+end
+
+function Schedule.unloading_wait(timeouts)
+  timeouts = timeouts or {}
+  return with_timeout({ { type = "empty" } }, timeouts.unload, timeouts.mode)
+end
+
+--- Einen Halt an Position `index` einfügen: `target` = Haltestelle (LuaEntity, mit Schienen-
+--- Wegpunkt davor) oder { rail = LuaEntity, rail_direction = … } (nur das Gleis). Liefert den
+--- Index hinter dem eingefügten Halt.
+function Schedule.insert(schedule, index, target, wait_conditions)
+  if target.object_name == "LuaEntity" then return add_stop(schedule, index, target, wait_conditions or {}) end
+  schedule.add_record({
+    rail = target.rail,
+    rail_direction = target.rail_direction,
+    temporary = true,
+    wait_conditions = wait_conditions or {},
+    index = { schedule_index = index },
+  })
+  return index + 1
+end
+
+--- Halte `legs` = Liste { stop = LuaEntity, wait = Wartebedingungen } hinter dem aktuellen Halt
+--- einfügen und losschicken (Fahrplan einer Lieferung nach einem Umbau neu setzen).
+function Schedule.send_legs(train, legs)
+  local schedule = train.get_schedule()
+  if not (schedule and legs[1]) then return false end
+  local first = (schedule.current or 0) + 1
+  local index = first
+  for _, leg in ipairs(legs) do index = add_stop(schedule, index, leg.stop, leg.wait) end
+  schedule.go_to_station(first)
+  return true
+end
+
 --- Ladeliste eines laufenden Auftrags ändern (Nachladen): die Wartebedingungen des
 --- Anbieter-Halts durch die der neuen Ladeliste ersetzen. Gesucht wird der temporäre Halt mit
 --- dem Namen der Anbieter-Haltestelle ab dem aktuellen Eintrag. Erst die neuen Bedingungen

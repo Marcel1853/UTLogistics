@@ -31,6 +31,9 @@ function State.init()
   trains.home = trains.home or {} -- [train_id] = { train, depot = Name, stop = Haltestelle } (für den Manager)
   trains.filtered = trains.filtered or {} -- [train_id] = von UTL gesetzte Ladefilter (wagon-filters.lua)
   trains.transfer = trains.transfer or {} -- [alte train_id] = Tick: fährt gerade durch einen Aufzug (SE)
+  trains.held = trains.held or {} -- [train_id] = Mod, der ihn festhält (trains/held.lua, Schnittstelle hold_train)
+  trains.change_records = trains.change_records or {} -- [alte train_id] = gesicherter Fahrplan beim Umbau (train-change.lua)
+  trains.waiting_at = trains.waiting_at or {} -- [train_id] = UTL-Station, an der er gerade wartet (Ereignis on_train_departed)
   storage.trains = trains
 
   -- Dienst-Stationen: [rolle][station] = true (fuel, cleanup)

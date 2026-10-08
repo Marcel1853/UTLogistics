@@ -8,6 +8,7 @@
 local Alerts = require("scripts.alerts.alerts")
 local Deliveries = require("scripts.deliveries.deliveries")
 local Rekey = require("scripts.trains.rekey")
+local Held = require("scripts.trains.held")
 
 local Stuck = {}
 
@@ -41,8 +42,8 @@ function Stuck.check()
     -- Lieferungen aus älteren Spielständen haben noch keine Uhr: ab jetzt zählen
     if not delivery.progress then delivery.progress = game.tick end
     if not (train and train.valid) then
-      if not Rekey.in_transfer(delivery.train_id) then Deliveries.cancel(delivery, "rebuilt") end
-    elseif limit and WAITING[train.state] and game.tick - delivery.progress >= limit then
+      if not Rekey.protected(delivery.train_id) then Deliveries.cancel(delivery, "rebuilt") end
+    elseif limit and not Held.is(train.id) and WAITING[train.state] and game.tick - delivery.progress >= limit then
       delivery.stuck = true
       local loading = delivery.state == "to_provider" or delivery.state == "loading"
       Alerts.raise("train", "stuck", train.front_stock, { "utl-alert.stuck", Alerts.train_name(train),

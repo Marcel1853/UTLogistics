@@ -16,7 +16,8 @@ end
 local More = {}
 
 --- IDs der UTL-Ereignisse: { on_delivery_created, on_delivery_state_changed, on_delivery_completed,
---- on_delivery_canceled }. Daten wie bei get_delivery, dazu `train` (LuaTrain) und bei
+--- on_delivery_canceled, on_train_arrived, on_train_departed, on_train_idle, on_train_rebuilt }
+--- (Felder siehe api/public-events.lua). Daten wie bei get_delivery, dazu `train` (LuaTrain) und bei
 --- on_delivery_canceled `reason` („station-lost“, „manual“, „rebuilt“, „provider-empty“, „remote“).
 function More.get_event_ids()
   return util.table.deepcopy(PublicEvents.ids)
@@ -49,7 +50,7 @@ function More.get_train(train_id)
   local home = trains.home[train_id]
   local delivery = Deliveries.of_train(train_id)
   local service = trains.service[train_id]
-  if not (record or home or delivery or service) then return nil end
+  if not (record or home or delivery or service or trains.held[train_id]) then return nil end
   local depot_stop = home and home.stop and home.stop.valid and home.stop or nil
   local depot_unit = depot_stop and storage.stations.by_stop[depot_stop.unit_number]
   local depot = depot_unit and Registry.get(depot_unit)
@@ -62,6 +63,7 @@ function More.get_train(train_id)
     delivery = delivery and delivery.id or nil,
     service = service,
     stuck_minutes = delivery and Stuck.minutes(delivery) or nil,
+    held_by = trains.held[train_id], -- Mod, der ihn festhält (hold_train)
   }
 end
 

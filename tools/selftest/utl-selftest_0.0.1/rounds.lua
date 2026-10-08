@@ -5,6 +5,7 @@
 -- Laden und Entladen übernimmt der Test per Script.
 local Rounds = {}
 local Param = require("rounds-param") -- R40 (require nur beim Laden erlaubt)
+local Api = require("rounds-api") -- R41
 
 --- R36: UTL-Ereignisse mitzählen (Anmeldung in on_init und on_load, siehe control.lua).
 function Rounds.listen()
@@ -15,6 +16,7 @@ function Rounds.listen()
       local key = name .. (event.reason and ("-" .. event.reason) or "")
       storage.r36[key] = (storage.r36[key] or 0) + 1
       if name == "on_delivery_created" and not (event.train and event.train.valid) then storage.r36.bad = true end
+      Api.record(name, event)
     end)
   end
 end
@@ -206,6 +208,7 @@ function Rounds.build(check)
     train3 = r33_train, wagon3 = r33_wagon, loco3 = r33_train and r33_train.front_stock,
     train4 = r34_train, wagon4 = r34_wagon, r34 = {},
     train5 = r35_train, surface = s, r35 = {}, r37 = { req = req7.unit_number }, r38 = {},
+    r41 = Api.build(check), -- R41: Schnittstelle für Add-ons (eigene Oberfläche)
     far = far.backer_name, near = near.backer_name, chained = nil, loaded = {}, unloaded = {} }
 end
 
@@ -363,8 +366,9 @@ function Rounds.watch(r, check)
     check("R34 umweg über der grenze: kein zweiter anbieter", not r.r34.early)
     remote.call("utl", "set_map_config", "utl-multi-pickup-detour", 50)
   end
+  local r41_done = Api.watch(r.r41, check)
   if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done
-      and r.r38.fill and r.r38.cleanup and r.r39) or game.tick - r.start > 36000 then
+      and r.r38.fill and r.r38.cleanup and r.r39 and r41_done) or game.tick - r.start > 36000 then
     r.done = true
     if not r.r39 then check("R39 tankstelle fordert treibstoff an", false, "keine lieferung") end
     if not r.r38.fill then check("R38 aktiver anbieter füllt lager über dem mindest", false, "keine lieferung") end

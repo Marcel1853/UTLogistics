@@ -1,8 +1,10 @@
 --- Neue Zug-ID für denselben Zug (Weltraumaufzug von Space Exploration: auf der anderen Oberfläche
---- entsteht ein neuer Zug). Alle UTL-Einträge ziehen auf die neue ID um, statt die Lieferung wie bei
---- einem Umbau abzubrechen. Ohne passende Mod wird das nie aufgerufen.
+--- entsteht ein neuer Zug; Add-ons, die Wagen an- oder abkuppeln: trains/train-change.lua). Alle
+--- UTL-Einträge ziehen auf die neue ID um, statt die Lieferung wie bei einem Umbau abzubrechen.
+--- Ohne passende Mod wird das nie aufgerufen.
 local Depot = require("scripts.trains.depot")
 local Filters = require("scripts.trains.wagon-filters")
+local Held = require("scripts.trains.held")
 
 local Rekey = {}
 
@@ -21,6 +23,12 @@ function Rekey.in_transfer(train_id)
   return transfer ~= nil and transfer[train_id] ~= nil
 end
 
+--- Darf UTL diesen Zug (alte ID) beim Umbau oder im Handbetrieb nicht anfassen? Ja, wenn er gerade
+--- umzieht (Aufzug, Umbau durch ein Add-on) oder ein anderer Mod ihn festhält.
+function Rekey.protected(train_id)
+  return Rekey.in_transfer(train_id) or Held.is(train_id)
+end
+
 function Rekey.start(train_id)
   local trains = storage.trains
   trains.transfer = trains.transfer or {}
@@ -32,8 +40,12 @@ end
 function Rekey.sweep(max_age)
   local transfer = storage.trains.transfer
   if not transfer then return end
+  local saved = storage.trains.change_records
   for id, tick in pairs(transfer) do
-    if game.tick - tick > max_age then transfer[id] = nil end
+    if game.tick - tick > max_age then
+      transfer[id] = nil
+      saved[id] = nil -- gesicherter Fahrplan (train-change.lua)
+    end
   end
 end
 
@@ -51,6 +63,8 @@ function Rekey.move(old_id, train)
   local waiting = move(trains.cargo_waiting, old_id, new_id)
   if waiting then waiting.train = train end
   move(trains.pending, old_id, new_id)
+  move(trains.waiting_at, old_id, new_id)
+  move(trains.held, old_id, new_id)
   local filtered = move(trains.filtered, old_id, new_id)
   Filters.rehome(filtered, train)
   local id = move(deliveries.by_train, old_id, new_id)

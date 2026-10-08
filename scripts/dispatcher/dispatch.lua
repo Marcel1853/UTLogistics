@@ -18,6 +18,7 @@ local Fuel = require("scripts.trains.fuel")
 local Select = require("scripts.dispatcher.select")
 local Warn = require("scripts.dispatcher.no-train-alerts")
 local TopUp = require("scripts.dispatcher.top-up")
+local Held = require("scripts.trains.held")
 
 local Dispatch = {}
 
@@ -125,6 +126,7 @@ end
 --- verlässt (Schlüssel für den Erreichbarkeits-Cache). Liefert die Lieferung oder nil.
 function Dispatch.chain(train, network, from_stop, depot_name)
   if not (storage.cfg.chaining and train.valid and from_stop and from_stop.valid) then return nil end
+  if Held.is(train.id) then return nil end -- ein anderer Mod hält ihn fest
   -- erst Cleanup/Tanken; fast leer (unter dem Mindest-Treibstoff): ins Depot, keine weitere Fahrt
   if Depot.has_cargo(train) or Fuel.needs_station(train, network, from_stop) or Fuel.is_empty(train) then return nil end
   local front = train.front_stock

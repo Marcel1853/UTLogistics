@@ -367,6 +367,8 @@ local interface = {
 
 -- Weitere Funktionen (0.0.10): Ereignisse, einzelne Lieferung/Zug, Listen, Abbrechen
 for name, fn in pairs(require("scripts.api.remote-more")) do interface[name] = fn end
+-- Für Add-ons (0.0.15): Umbau, Festhalten, zusätzliche Halte, Züge an einer Station
+for name, fn in pairs(require("scripts.api.remote-addons")) do interface[name] = fn end
 
 -- Jede Funktion kann vor UTLs on_init aufgerufen werden (Szenario-Script startet zuerst).
 local State = require("scripts.core.state")

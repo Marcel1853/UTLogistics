@@ -17,6 +17,9 @@ local Alerts = require("scripts.alerts.alerts")
 local Heartbeat = require("scripts.core.heartbeat")
 local Perf = require("scripts.core.perf")
 local State = require("scripts.core.state")
+local TrainChange = require("scripts.trains.train-change")
+local TrainEvents = require("scripts.trains.train-events")
+local PublicEvents = require("scripts.api.public-events")
 
 local S = defines.train_state
 
@@ -33,8 +36,9 @@ local function on_state(event)
   if delivery then Stuck.progress(delivery) end -- Hänger-Erkennung: Zustandswechsel = Fortschritt
 
   if MANUAL[state] then
-    -- SE schaltet Züge beim Durchfahren des Aufzugs kurz auf Handbetrieb: kein Abbruch
-    if Rekey.in_transfer(id) then return end
+    -- SE schaltet Züge beim Durchfahren des Aufzugs kurz auf Handbetrieb: kein Abbruch. Ebenso,
+    -- wenn ein anderer Mod den Zug festhält oder umbaut (Schnittstelle hold_train/begin_train_change).
+    if Rekey.protected(id) then return end
     Depot.remove(id)
     storage.trains.service[id] = nil
     Pending.release(id)
@@ -110,37 +114,52 @@ local function on_state(event)
   end
 end
 
+local function on_state_and_events(event)
+  local delivery = storage.deliveries.by_train[event.train.id]
+  on_state(event)
+  TrainEvents.state_changed(event, delivery) -- Ankunft/Abfahrt für andere Mods
+end
+
 Events.on(defines.events.on_train_changed_state, function(event)
   State.ensure() -- Züge eines Szenario-Scripts können vor UTLs on_init entstehen
-  Perf.measure("zug-event", on_state, event)
+  Perf.measure("zug-event", on_state_and_events, event)
 end)
+
+--- Kennt UTL diese Zug-ID (Lieferung, Depot, Heimat, Dienstfahrt, festgehalten, Umzug)?
+local function known(id)
+  local trains = storage.trains
+  return storage.deliveries.by_train[id] or trains.by_id[id] or trains.home[id] or trains.service[id]
+    or trains.held[id] or trains.filtered[id] or trains.pending[id] or trains.visiting[id] or trains.cargo_waiting[id]
+    or Rekey.in_transfer(id)
+end
 
 -- Zug umgebaut (Wagen an-/abgekoppelt): alte Zug-IDs sind ungültig.
 Events.on(defines.events.on_train_created, function(event)
   State.ensure()
+  local old_ids, canceled, changing = {}, {}, false
   local function retire(old)
     if not old then return end
-    -- fährt durch einen Weltraumaufzug (SE): kein Umbau, die Einträge ziehen am Ende um (rekey.lua)
-    if Rekey.in_transfer(old) then return end
-    Filters.reset(old) -- die Wagen gehören jetzt zu einer anderen Zug-ID
-    Depot.remove(old)
-    storage.trains.service[old] = nil
-    storage.trains.visiting[old] = nil
-    storage.trains.cargo_waiting[old] = nil
-    storage.trains.home[old] = nil
-    Pending.release(old) -- vorgemerkte Fahrten der alten Zug-ID
-    local delivery = Deliveries.of_train(old)
-    if delivery then
-      Deliveries.cancel(delivery, "rebuilt")
-      return true
+    if not known(old) then return end
+    old_ids[#old_ids + 1] = old
+    -- fährt durch einen Weltraumaufzug (SE) oder ein Add-on baut ihn um bzw. hält ihn fest: die
+    -- Einträge ziehen am Ende um (rekey.lua, train-change.lua)
+    if Rekey.protected(old) then
+      changing = true
+      return
     end
+    local done, delivery_id = TrainChange.retire(old)
+    if done then canceled[#canceled + 1] = delivery_id end
   end
-  local canceled = retire(event.old_train_id_1)
-  canceled = retire(event.old_train_id_2) or canceled
+  retire(event.old_train_id_1)
+  retire(event.old_train_id_2)
   -- Der alte Zug ist schon ungültig (cancel konnte seine Halte nicht löschen): der neue Zug erbt
   -- sonst die temporären UTL-Halte und führe die Tour ohne Lieferung weiter.
   local train = event.train
-  if canceled and train.valid then Schedule.clear(train) end
+  if canceled[1] and train.valid then Schedule.clear(train) end
+  if old_ids[1] and train.valid then
+    PublicEvents.raise_data("on_train_rebuilt", { train = train, train_id = train.id, old_train_ids = old_ids,
+      canceled = canceled, changing = changing })
+  end
 end)
 
 -- Umbenannte Haltestelle: Depot-Namen neu ermitteln.
@@ -181,7 +200,8 @@ Heartbeat.add_task("pending-sweep", 600, function()
   Rekey.sweep(10 * 60 * 60) -- Aufzug-Fahrten, deren Ende nie gemeldet wurde
   -- Einträge zerstörter Züge (jeder Umbau erzeugt eine neue ID)
   local manager = game.train_manager
-  for _, tbl in pairs({ storage.trains.home, storage.statistics and storage.statistics.trains }) do
+  for _, tbl in pairs({ storage.trains.home, storage.statistics and storage.statistics.trains, storage.trains.held,
+    storage.trains.waiting_at }) do
     for id in pairs(tbl) do
       if not (manager.get_train_by_id(id) or Rekey.in_transfer(id)) then tbl[id] = nil end
     end

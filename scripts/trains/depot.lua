@@ -9,6 +9,8 @@ local Alerts = require("scripts.alerts.alerts")
 local Networks = require("scripts.stations.networks")
 local Pending = require("scripts.trains.pending")
 local DepotRoute = require("scripts.trains.depot-route")
+local Held = require("scripts.trains.held")
+local PublicEvents = require("scripts.api.public-events")
 
 local Depot = {}
 
@@ -65,6 +67,7 @@ end
 function Depot.arrive(train, stop, station)
   if not (station and station.config.roles.depot and station.stop_unit == stop.unit_number) then return end
   local id = train.id
+  if Held.is(id) then return end -- ein anderer Mod hält ihn fest: nicht in den Pool
   Pending.release(id) -- angekommen: keine vorgemerkte Fahrt mehr offen
   local front = train.front_stock
   if front and stop.force_index ~= front.force_index then
@@ -141,6 +144,8 @@ function Depot.arrive(train, stop, station)
     trains.idle[key] = pool
   end
   pool[id] = true
+  PublicEvents.raise_data("on_train_idle", { train = train, train_id = id, station = station.unit,
+    stop = stop, network = network })
 end
 
 --- Steht der Zug noch wirklich wartend an seinem Depot? (Lazy-Prüfung im Dispatcher.)
@@ -177,6 +182,7 @@ end
 --- Zug losgeschickt wurde, sonst false und ggf. die Ware ohne passendes Cleanup. Der Zug fährt
 --- danach mit seinem Fahrplan weiter (ins Depot).
 function Depot.send_service(train, network)
+  if Held.is(train.id) then return false, nil end
   local fuel_stop = Fuel.stop_if_low(train, network)
   local route, missing = nil, nil
   if Depot.has_cargo(train) then route, missing = CleanupRoute.plan(train, network) end
@@ -351,6 +357,7 @@ end
 --- Zug ohne Auftrag wartet an einer Haltestelle ohne Depot-Rolle. Heißt sie wie ein Depot
 --- (Depot-Halt im Fahrplan hat sie gewählt), in ein freies echtes Depot gleichen Namens umsetzen.
 function Depot.stray(train, stop)
+  if Held.is(train.id) then return end
   if not names()[stop.backer_name] then return end
   local id = train.id
   local service = storage.trains.service[id]

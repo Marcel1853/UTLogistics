@@ -8,6 +8,7 @@ local Schedule = require("scripts.trains.schedule")
 local Networks = require("scripts.stations.networks")
 local Pending = require("scripts.trains.pending")
 local Capacity = require("scripts.trains.capacity")
+local Held = require("scripts.trains.held")
 
 local DepotRoute = {}
 
@@ -64,7 +65,7 @@ end
 --- Nur wenn sein nächster Halt wirklich dieses Depot ist (kein Interrupt, keine weitere
 --- Dienststation dazwischen). Findet sich kein Platz, fährt er wie bisher nach Fahrplan.
 function DepotRoute.send_home(train)
-  if not train.valid then return false end
+  if not train.valid or Held.is(train.id) then return false end
   local home = storage.trains.home[train.id]
   if not (home and home.stop and home.stop.valid) then return false end
   local schedule = train.get_schedule()

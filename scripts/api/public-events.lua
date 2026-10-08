@@ -4,6 +4,11 @@
 ---                                zweiten Anbieter)
 ---   on_delivery_completed      – beim Abnehmer entladen und abgefahren
 ---   on_delivery_canceled       – abgebrochen (Feld `reason`)
+---   on_train_arrived           – Zug wartet an einer UTL-Station (train, station, stop, mode, roles,
+---                                delivery_id, held_by)
+---   on_train_departed          – Zug verlässt eine UTL-Station (dieselben Felder)
+---   on_train_idle              – Zug steht frei im Depot (train, station, stop, network)
+---   on_train_rebuilt           – Zug mit UTL-Daten umgebaut (train, old_train_ids, canceled, changing)
 --- Daten: siehe `Events.info` (keine Tabellen aus storage, nur Kopien). Ausgelöst wird immer erst
 --- am Ende der eigenen Verarbeitung, damit ein Empfänger UTL nicht mitten im Ablauf stört.
 local util = require("util")
@@ -16,6 +21,11 @@ PublicEvents.ids = {
   on_delivery_state_changed = script.generate_event_name(),
   on_delivery_completed = script.generate_event_name(),
   on_delivery_canceled = script.generate_event_name(),
+  -- seit 0.0.15 (Schnittstelle für Add-ons, api/remote-addons.lua); neue IDs immer hinten anhängen
+  on_train_arrived = script.generate_event_name(),
+  on_train_departed = script.generate_event_name(),
+  on_train_idle = script.generate_event_name(),
+  on_train_rebuilt = script.generate_event_name(),
 }
 
 --- Öffentliche Sicht auf eine Lieferung (auch für get_deliveries/get_delivery).
@@ -37,6 +47,7 @@ function PublicEvents.info(delivery)
     state = delivery.state,
     started = delivery.started,
     chained = delivery.chained,
+    extra_stops = delivery.extra_stops, -- von Add-ons eingefügte Halte (Anzahl)
   }
 end
 
@@ -46,6 +57,11 @@ function PublicEvents.raise(name, delivery, extra)
   if extra then
     for key, value in pairs(extra) do data[key] = value end
   end
+  script.raise_event(PublicEvents.ids[name], data)
+end
+
+--- Ereignis `name` mit fertigen Daten auslösen (Zug-Ereignisse; nur Kopien bzw. LuaObjekte).
+function PublicEvents.raise_data(name, data)
   script.raise_event(PublicEvents.ids[name], data)
 end
 
