@@ -34,22 +34,39 @@ def material(name, rgb, metallic=0.25, roughness=0.55, emission=None, strength=0
         bsdf.inputs["Emission Color"].default_value = (*srgb(emission), 1)
         bsdf.inputs["Emission Strength"].default_value = strength
     elif grime:
+        # Metall-Optik wie bei Factorio statt Holz-Maserung: Umgebungsverdeckung dunkelt Ecken und
+        # Fugen ab, Kanten (Pointiness) werden leicht heller (abgegriffen), dazu nur grobe, schwache
+        # Fleckigkeit ohne Streifen.
+        base = nodes.new("ShaderNodeRGB")
+        base.outputs[0].default_value = (*srgb(rgb), 1)
+        ao = nodes.new("ShaderNodeAmbientOcclusion")
+        ao.inputs["Distance"].default_value = 0.35
+        ao_ramp = nodes.new("ShaderNodeValToRGB")
+        ao_ramp.color_ramp.elements[0].color = (0.35, 0.33, 0.32, 1)
+        links.new(ao.outputs["AO"], ao_ramp.inputs["Fac"])
+        geo = nodes.new("ShaderNodeNewGeometry")
+        edge = nodes.new("ShaderNodeValToRGB")
+        edge.color_ramp.elements[0].position = 0.5
+        edge.color_ramp.elements[0].color = (1, 1, 1, 1)
+        edge.color_ramp.elements[1].position = 0.56
+        edge.color_ramp.elements[1].color = (1.45, 1.4, 1.35, 1)
+        links.new(geo.outputs["Pointiness"], edge.inputs["Fac"])
         noise = nodes.new("ShaderNodeTexNoise")
-        noise.inputs["Scale"].default_value = 9.0
-        noise.inputs["Detail"].default_value = 8.0
-        ramp = nodes.new("ShaderNodeValToRGB")
-        ramp.color_ramp.elements[0].position = 0.35
-        ramp.color_ramp.elements[0].color = (0.55, 0.5, 0.47, 1)
-        ramp.color_ramp.elements[1].position = 0.7
-        ramp.color_ramp.elements[1].color = (1, 1, 1, 1)
-        mix = nodes.new("ShaderNodeMix")
-        mix.data_type = "RGBA"
-        mix.blend_type = "MULTIPLY"
-        mix.inputs["Factor"].default_value = 1.0
-        mix.inputs["A"].default_value = (*srgb(rgb), 1)
-        links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
-        links.new(ramp.outputs["Color"], mix.inputs["B"])
-        links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
+        noise.inputs["Scale"].default_value = 2.5
+        noise.inputs["Detail"].default_value = 2.0
+        spot = nodes.new("ShaderNodeValToRGB")
+        spot.color_ramp.elements[0].color = (0.82, 0.8, 0.78, 1)
+        links.new(noise.outputs["Fac"], spot.inputs["Fac"])
+        prev = base.outputs[0]
+        for factor in (ao_ramp.outputs["Color"], edge.outputs["Color"], spot.outputs["Color"]):
+            mix = nodes.new("ShaderNodeMix")
+            mix.data_type = "RGBA"
+            mix.blend_type = "MULTIPLY"
+            mix.inputs["Factor"].default_value = 1.0
+            links.new(prev, mix.inputs["A"])
+            links.new(factor, mix.inputs["B"])
+            prev = mix.outputs["Result"]
+        links.new(prev, bsdf.inputs["Base Color"])
     return mat
 
 
@@ -104,7 +121,18 @@ def render(out, size=256, target=(0, 0, 1.0), ortho=5.0, elev=30, yaw=-38, sampl
     bpy.context.object.data.size = 5
     world = bpy.data.worlds.new("welt")
     world.use_nodes = True
-    next(n for n in world.node_tree.nodes if n.type == "BACKGROUND").inputs["Strength"].default_value = 1.1
+    bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
+    bg.inputs["Strength"].default_value = 1.1
+    # Verlauf hell oben / dunkel unten: Metallflächen bekommen Spiegelungen statt flacher Farbe
+    grad = world.node_tree.nodes.new("ShaderNodeTexGradient")
+    coord = world.node_tree.nodes.new("ShaderNodeTexCoord")
+    sep = world.node_tree.nodes.new("ShaderNodeSeparateXYZ")
+    ramp = world.node_tree.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].color = (0.08, 0.075, 0.07, 1)
+    ramp.color_ramp.elements[1].color = (0.75, 0.78, 0.82, 1)
+    world.node_tree.links.new(coord.outputs["Generated"], sep.inputs[0])
+    world.node_tree.links.new(sep.outputs["Z"], ramp.inputs["Fac"])
+    world.node_tree.links.new(ramp.outputs["Color"], bg.inputs["Color"])
     scene.world = world
     scene.render.engine = "CYCLES"
     scene.cycles.samples = samples

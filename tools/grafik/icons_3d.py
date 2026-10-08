@@ -19,8 +19,8 @@ NAME, OUT = args[0], args[1]
 SIZE = int(args[2]) if len(args) > 2 else 256
 
 K.reset()
-LOCO_RED = K.material("lok_rot", (128, 48, 44), 0.3, 0.5)          # Vanilla-Lok
-STEEL = K.material("stahl", (112, 100, 94), 0.3, 0.55)
+LOCO_RED = K.material("lok_rot", (128, 48, 44), 0.5, 0.42)          # Vanilla-Lok
+STEEL = K.material("stahl", (112, 100, 94), 0.6, 0.45)
 GREY = K.material("wagen_grau", (150, 146, 140), 0.25, 0.5)        # Vanilla-Güterwagen
 DARK = K.material("dunkel", (24, 20, 19), 0.4, 0.7)
 HUB = K.material("nabe", (150, 140, 130), 0.6, 0.4, grime=False)
