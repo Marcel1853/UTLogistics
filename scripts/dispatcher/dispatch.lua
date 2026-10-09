@@ -19,6 +19,7 @@ local Select = require("scripts.dispatcher.select")
 local Warn = require("scripts.dispatcher.no-train-alerts")
 local TopUp = require("scripts.dispatcher.top-up")
 local Held = require("scripts.trains.held")
+local Log = require("scripts.lib.log")
 
 local Dispatch = {}
 
@@ -168,6 +169,8 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   if not Select.full_enough(record, manifest, best.provider.station.config.locked_slots) then return nil end
   local delivery = Deliveries.create(record, best.provider.station, best.request.station, manifest, nil)
   if delivery then
+    Log.debug("Anschlussfahrt: Zug " .. train.id .. " übernimmt Lieferung " .. delivery.id .. " direkt ab "
+      .. Log.stop_name(from_stop) .. ".")
     delivery.chained = true
     storage.deliveries.chained = (storage.deliveries.chained or 0) + 1
     if not best.request.only_active then Warn.waiting_since(best.request.station.unit, best.request.key, true) end

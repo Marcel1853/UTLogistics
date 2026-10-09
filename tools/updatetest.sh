@@ -5,6 +5,7 @@
 #   2. Den Spielstand mit dem aktuellen Stand + Prüf-Mod (tools/updatetest) 3 Minuten laufen lassen:
 #      keine Fehler, gleich viele Stationen, Lieferungen laufen weiter.
 # Aufruf: tools/updatetest.sh [SZENARIO …]   (Standard: Beispiele, Lager, Netzverbund, Teams, Nachladen)
+#   OLD_REF=origin/main tools/updatetest.sh   – alte Version aus einem anderen Stand (Standard: main)
 set -uo pipefail
 MOD_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 FACTORIO="${FACTORIO:-/mnt/6459bc3a-dd91-42e5-8723-71427d99d0ba/SteamLibrary/steamapps/common/Factorio/bin/x64/factorio}"
@@ -13,7 +14,7 @@ WORK="$(mktemp -d)"
 cleanup() { git -C "$MOD_DIR" worktree remove --force "$WORK/old/UTLogistics" 2>/dev/null; rm -rf "$WORK"; }
 trap cleanup EXIT
 mkdir -p "$WORK/old" "$WORK/new/mods" "$WORK/new/data"
-git -C "$MOD_DIR" worktree add -q "$WORK/old/UTLogistics" main
+git -C "$MOD_DIR" worktree add -q --detach "$WORK/old/UTLogistics" "${OLD_REF:-main}"
 echo "alte Version: $(grep -o '"version": *"[^"]*"' "$WORK/old/UTLogistics/info.json")"
 cat > "$WORK/server.json" <<'JSON'
 { "name": "upd", "description": "", "tags": [], "max_players": 2, "visibility": { "public": false, "lan": false },

@@ -57,7 +57,11 @@ function Deliveries.create(record, provider, requester, manifest, fuel_stop, via
   if second then
     pickup2 = { stop = second.station.stop, first = Reservations.first_share({ manifest = manifest, second = second }) }
   end
-  if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop, timeouts, via, pickup2) then return nil end
+  if not Schedule.send(train, provider.stop, requester.stop, manifest, fuel_stop, timeouts, via, pickup2) then
+    Log.debug("Zug " .. train.id .. ": Fahrplan ließ sich nicht setzen, keine Lieferung " .. Log.stop_name(provider.stop)
+      .. " → " .. Log.stop_name(requester.stop) .. ".")
+    return nil
+  end
   -- Tankhalt vormerken: bis zur Ankunft zählt ihn das Zuglimit der Tankstelle sonst nicht mit
   if fuel_stop then Pending.reserve(train.id, { fuel_stop }) end
   Depot.remove(record.id)
@@ -198,11 +202,13 @@ function Deliveries.on_arrive(delivery, stop)
   local pickup = Reservations.pickup_unit(delivery)
   if delivery.state == "to_provider" and unit == stop_unit_of(pickup) then
     delivery.state = "loading"
+    Log.debug("Lieferung " .. delivery.id .. ": Zug " .. delivery.train_id .. " lädt an " .. Log.stop_name(stop) .. ".")
     Filters.repair(delivery) -- Slots, die beim Losschicken noch belegt waren
     train_at(pickup, delivery.train, "load")
     PublicEvents.raise("on_delivery_state_changed", delivery)
   elseif delivery.state == "to_requester" and unit == stop_unit_of(delivery.requester) then
     delivery.state = "unloading"
+    Log.debug("Lieferung " .. delivery.id .. ": Zug " .. delivery.train_id .. " entlädt an " .. Log.stop_name(stop) .. ".")
     train_at(delivery.requester, delivery.train, "unload")
     PublicEvents.raise("on_delivery_state_changed", delivery)
   end

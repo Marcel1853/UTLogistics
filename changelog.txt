@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.15
+Date: 2026-10-09
+  Bugfixes:
+    - Crash "Given train stop is not connected to any rails" when a train stop stood without rail, e.g. when robots built a blueprint's train stop before its rail. Train stops without rail are no longer a target (requesters, providers, depots, fuel and cleanup stations) until a rail is connected. Reported in the discussion by Lt_Tinkle.
+  Changes:
+    - The map setting "Debug log" writes many more messages: train stops without rail, unreachable targets, no free depot, loading and unloading, chained deliveries, trains free in the depot.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.14
 Date: 2026-10-05
   Bugfixes:

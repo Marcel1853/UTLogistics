@@ -1,4 +1,4 @@
---- Schnittstelle „utl“ für Add-ons (seit 0.0.15), eingebunden in api/remote.lua: Züge umbauen,
+--- Schnittstelle „utl“ für Add-ons (seit 0.0.16), eingebunden in api/remote.lua: Züge umbauen,
 --- festhalten, Halte in Lieferungen einfügen, Züge an einer Station. UTL kuppelt selbst nie und
 --- plant nichts für das Add-on – es führt nur Fahrpläne aus und meldet, was passiert.
 --- Rückgaben sind Kopien; Züge über `train.id`, Stationen über die `unit_number` des Kombinators.

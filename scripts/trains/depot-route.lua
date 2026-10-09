@@ -9,6 +9,7 @@ local Networks = require("scripts.stations.networks")
 local Pending = require("scripts.trains.pending")
 local Capacity = require("scripts.trains.capacity")
 local Held = require("scripts.trains.held")
+local Log = require("scripts.lib.log")
 
 local DepotRoute = {}
 
@@ -35,7 +36,10 @@ local function find_free(train, name, surface, network, exclude)
   local heading = Pending.counts()
   for _, station in pairs(storage.stations.by_unit) do
     local stop, cfg = station.stop, station.config
-    if cfg.roles.depot and stop and stop.valid and stop ~= exclude and stop.backer_name == name
+    if cfg.roles.depot and stop and stop.valid and not stop.connected_rail then
+      Log.debug_once("no-rail:" .. stop.unit_number,
+        "Depot " .. Log.stop_name(stop) .. " hat kein Gleis: wird nicht angefahren, bis eins anliegt.")
+    elseif cfg.roles.depot and stop and stop.valid and stop ~= exclude and stop.backer_name == name
       and stop.surface_index == surface and stop.force_index == force
       and (network == nil or Networks.related(place, cfg.network, network))
       and length_ok(cfg, length)
@@ -45,8 +49,14 @@ local function find_free(train, name, surface, network, exclude)
       if #goals >= MAX_DEPOT_CANDIDATES then break end
     end
   end
-  if #goals == 0 then return nil end
+  if #goals == 0 then
+    Log.debug("Zug " .. train.id .. ": kein freies Depot „" .. name .. "“ mit Platz und passender Länge.")
+    return nil
+  end
   local result = game.train_manager.request_train_path({ train = train, goals = goals, steps_limit = 20000 })
+  if not result.found_path then
+    Log.debug("Zug " .. train.id .. ": keins der " .. #goals .. " freien Depots „" .. name .. "“ ist erreichbar.")
+  end
   return result.found_path and stops[result.goal_index] or nil
 end
 
