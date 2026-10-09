@@ -4,6 +4,8 @@
 --- liegen praktisch immer zusammen, so reicht eine Suche für alle Züge dieses Depots.
 --- Verworfen wird alles, sobald sich das Gleisnetz ändert (Gleise, Signale gebaut/abgerissen),
 --- und sicherheitshalber jede Stunde.
+local Log = require("scripts.lib.log")
+
 local Reach = {}
 
 local MAX_AGE = 60 * 60 * 60
@@ -51,7 +53,12 @@ end
 function Reach.check(train, depot_stop, stop, ignore_budget)
   -- Haltestelle ohne Gleis (z. B. Blaupause: Halt steht vor dem Gleis): kein Ziel. Nicht cachen,
   -- das Gleis kann gleich dazukommen. request_train_path bräche hier mit einem Fehler ab.
-  if not (stop.valid and stop.connected_rail) then return false end
+  if not (stop and stop.valid and stop.connected_rail) then
+    Log.debug_once("no-rail:" .. (stop and stop.valid and stop.unit_number or "?"),
+      "Haltestelle " .. Log.stop_name(stop) .. " hat kein Gleis: wird nicht angefahren, bis eins anliegt.")
+    return false
+  end
+  if not (depot_stop and depot_stop.valid) then return false end
   local from = cache()
   -- Schlüssel mit Team: zwei Teams können gleichnamige Depots auf derselben Oberfläche haben.
   -- Nur Depots teilen sich den Eintrag über den Namen; andere Start-Halte (Anschlussfahrt ab dem
@@ -80,6 +87,10 @@ function Reach.check(train, depot_stop, stop, ignore_budget)
   })
   known = result.found_path == true
   by_stop[unit] = known
+  if not known and Log.on() then
+    Log.debug("Zug " .. train.id .. " erreicht " .. Log.stop_name(stop) .. " von " .. Log.stop_name(depot_stop)
+      .. " aus nicht (Pfadsuche, bis zur nächsten Gleisänderung gemerkt).")
+  end
   return known
 end
 
@@ -87,8 +98,13 @@ end
 --- Halten (zweiter Anbieter): der Zug fährt an `from` in Haltestellen-Richtung ab, mit Loks an beiden
 --- Enden auch rückwärts. Gecacht je Start-Haltestelle wie `check`, gleiches Such-Budget.
 function Reach.between(train, from, to, ignore_budget)
+  if not (from and from.valid and to and to.valid) then return false end
   local rail = from.connected_rail
-  if not (rail and to.valid and to.connected_rail) then return false end
+  if not (rail and to.connected_rail) then
+    Log.debug_once("no-rail:" .. (rail and to.unit_number or from.unit_number),
+      "Haltestelle " .. Log.stop_name(rail and to or from) .. " hat kein Gleis: wird nicht angefahren, bis eins anliegt.")
+    return false
+  end
   local both = #train.locomotives.front_movers > 0 and #train.locomotives.back_movers > 0
   local cached = cache()
   local key = "stop|" .. from.unit_number .. (both and "|2" or "|1")

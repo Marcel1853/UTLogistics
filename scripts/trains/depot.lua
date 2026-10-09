@@ -141,6 +141,7 @@ function Depot.arrive(train, stop, station)
     trains.idle[key] = pool
   end
   pool[id] = true
+  Log.debug("Zug " .. id .. " steht frei im Depot " .. Log.stop_name(stop) .. ", Netz „" .. network .. "“.")
 end
 
 --- Steht der Zug noch wirklich wartend an seinem Depot? (Lazy-Prüfung im Dispatcher.)

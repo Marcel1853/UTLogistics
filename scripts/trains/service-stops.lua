@@ -6,6 +6,7 @@ local Networks = require("scripts.stations.networks")
 local Pending = require("scripts.trains.pending")
 local Capacity = require("scripts.trains.capacity")
 local Reach = require("scripts.dispatcher.reach")
+local Log = require("scripts.lib.log")
 
 local ServiceStops = {}
 
@@ -97,7 +98,10 @@ function ServiceStops.candidates(train, network, role)
       -- davor, da greift das Vanilla-Limit nicht von selbst – ein Stau würde sonst die Hauptstrecke
       -- blockieren.
       -- ohne Gleis (Halt aus einer Blaupause, Gleis fehlt noch) kein Ziel: die Pfadsuche bräche ab
-      if stop and stop.valid and stop.connected_rail and cfg.roles[role] and stop.surface_index == surface
+      if stop and stop.valid and cfg.roles[role] and not stop.connected_rail then
+        Log.debug_once("no-rail:" .. stop.unit_number,
+          "Haltestelle " .. Log.stop_name(stop) .. " (" .. role .. ") hat kein Gleis: wird nicht angefahren, bis eins anliegt.")
+      elseif stop and stop.valid and cfg.roles[role] and stop.surface_index == surface
         and stop.force_index == force
         and Networks.related(place, cfg.network, network) and length_ok(cfg, length)
         and Capacity.has_room(stop, cfg, heading) then
@@ -114,6 +118,9 @@ function ServiceStops.nearest(train, candidates)
   for i = 1, math.min(#candidates, MAX_CANDIDATES) do goals[i] = { train_stop = candidates[i].stop } end
   if #goals == 0 then return nil end
   local result = game.train_manager.request_train_path({ train = train, goals = goals, steps_limit = PATH_STEPS })
+  if not result.found_path then
+    Log.debug("Zug " .. train.id .. ": keine der " .. #goals .. " passenden Tank-/Cleanup-Stationen ist erreichbar.")
+  end
   return result.found_path and candidates[result.goal_index] or nil
 end
 

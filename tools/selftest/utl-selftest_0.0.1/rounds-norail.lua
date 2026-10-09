@@ -2,6 +2,8 @@
 -- Ein Abnehmer ohne Gleis im selben Netz darf weder beim Losschicken noch bei der Anschlussfahrt
 -- (Dispatch.chain → Reach.check) einen Absturz in request_train_path auslösen und bekommt keine
 -- Lieferung; der Abnehmer mit Gleis wird normal beliefert. Gemeldet von Lt_Tinkle im Mod-Portal.
+-- Dazu ein zweites „R42-Depot“ und ein Cleanup ohne Gleis: Nach dem Entladen bleibt Kupfer im Zug,
+-- UTL sucht ein Cleanup (Dienststationen-Suche) und lenkt den Zug ins Depot (Depot-Suche).
 local NoRail = {}
 
 local W = defines.wire_connector_id
@@ -21,18 +23,25 @@ function NoRail.build(check)
   s.request_to_generate_chunks({ 0, 0 }, 4)
   s.force_generate_chunk_requests()
   local force = game.forces["player"]
+  -- Debug-Protokoll an: die neuen Meldungen laufen mit (Text „hat kein Gleis“ im Log, selftest.sh)
+  check("R42 debug-protokoll an", remote.call("utl", "set_map_config", "utl-debug-log", true) == true)
   for x = -85, 85, 2 do s.create_entity({ name = "straight-rail", position = { x, LINE }, direction = 4, force = force }) end
   local depot = stop(s, force, "R42-Depot", 10, LINE + 2, true)
   local prov = stop(s, force, "R42-Anbieter", 60, LINE + 2, true)
   local req = stop(s, force, "R42-Abnehmer", -60, LINE - 2, false)
   local lonely = stop(s, force, "R42-OhneGleis", -30, LINE + 40, false) -- weit weg vom Gleis
-  check("R42 haltestelle ohne gleis gebaut", lonely.valid and lonely.connected_rail == nil)
+  local lonely_depot = stop(s, force, "R42-Depot", 0, LINE + 40, true)
+  local lonely_cleanup = stop(s, force, "R42-Cleanup", 30, LINE + 40, true)
+  check("R42 haltestellen ohne gleis gebaut", lonely.connected_rail == nil and lonely_depot.connected_rail == nil
+    and lonely_cleanup.connected_rail == nil)
   local c = s.create_entity({ name = "constant-combinator", position = { 63.5, LINE + 5.5 }, force = force }) --[[@as LuaEntity]]
   local behavior = c.get_or_create_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
   behavior.get_section(1).set_slot(1, { value = { type = "item", name = "iron-plate", quality = "normal", comparator = "=" }, min = 2000 })
   c.get_wire_connector(W.circuit_green, true).connect_to(prov.get_wire_connector(W.circuit_green, true))
   local function cfg(e, changes) changes.network = "R42"; remote.call("utl", "configure_station", e.unit_number, changes) end
   cfg(depot, { mode = "depot" })
+  cfg(lonely_depot, { mode = "depot" })
+  cfg(lonely_cleanup, { mode = "cleanup" })
   cfg(prov, { mode = "station", provide = true, request = false })
   for _, e in ipairs({ req, lonely }) do
     cfg(e, { mode = "station", provide = false, request = true, request_threshold = 100 })
@@ -63,6 +72,7 @@ function NoRail.watch(r, check)
       elseif d.state == "unloading" and not r.unloaded then
         r.unloaded = game.tick
         inv.clear()
+        inv.insert({ name = "copper-plate", count = 50 }) -- Restladung: Cleanup-Suche
         -- danach nur noch der Abnehmer ohne Gleis: Anschlussfahrt prüft ihn (früher Absturz)
         remote.call("utl", "configure_station", r.req, { request = false })
       end
