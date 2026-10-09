@@ -100,7 +100,7 @@ function Api2.build(check)
   schedule.add_record({ station = "R43-Rangierdepot", wait_conditions = { { type = "inactivity", ticks = 120 } } })
   schedule.go_to_station(1)
   loco.train.manual_mode = false
-  return { start = game.tick, loco = loco, siding = siding.unit_number }
+  return { start = game.tick, loco = loco, siding = siding.unit_number, siding_stop = siding }
 end
 
 local function own_idle(train_id)
@@ -119,6 +119,14 @@ function Api2.watch(r, check)
     local in_pool = false
     for _, t in pairs(remote.call("utl", "get_idle_trains", { network = "R43" })) do in_pool = in_pool or t.id == train.id end
     check("R43 zug im rangierdepot gehört dem add-on, nicht dem dispatcher", not in_pool)
+    -- Zuglimit 0 am Ziel: Auftrag wird abgelehnt (UTL fährt per Wegpunkt, das Spiel zählte ihn sonst nicht)
+    local siding = r.siding_stop
+    siding.trains_limit = 0
+    local full, full_why, full_index = remote.call("utl", "send_job", train.id, MOD,
+      { { station = r.siding, wait = { { type = "time", ticks = 60 } } } })
+    siding.trains_limit = nil
+    check("R43 send_job: zuglimit 0 am ziel wird abgelehnt", full == nil and full_why == "station-full" and full_index == 1,
+      serpent.line({ full, full_why, full_index }))
     local id, why = remote.call("utl", "send_job", train.id, MOD, { { station = r.siding, wait = { { type = "time", ticks = 60 } } } })
     check("R43 send_job", id ~= nil and remote.call("utl", "is_held", train.id) == MOD
       and remote.call("utl", "get_job", id) ~= nil, tostring(why))

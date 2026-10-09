@@ -64,19 +64,41 @@ local function wagons_on(yard, side, y)
   return list
 end
 
---- Nächste Aufgabe: Gleis mit Wagen auf der einen Seite, freies Gleis auf der anderen.
+--- Platz an der Haltestelle (Zuglimit)? Das Add-on prüft selbst; UTL lehnt sonst mit „station-full“ ab.
+local function free(stop)
+  local limit = stop.trains_limit
+  return limit == nil or limit >= 4294967295 or stop.trains_count < limit
+end
+
+--- Gleise einer Seite in fester Reihenfolge (oben → unten).
+local function sorted(t)
+  local list = {}
+  for y in pairs(t) do list[#list + 1] = y end
+  table.sort(list)
+  return list
+end
+
+--- Nächste Aufgabe: Gleis mit Wagen auf der einen Seite, freies Gleis auf der anderen. Die Richtung
+--- bleibt, bis dort nichts mehr geht (erst alle nach rechts, dann alle zurück) – sonst pendelten immer
+--- dieselben Wagen.
 local function pick(yard)
-  for _, dir in ipairs({ { "west", "east" }, { "east", "west" } }) do
-    local from_side, to_side = dir[1], dir[2]
-    for y in pairs(yard[from_side]) do
-      if #wagons_on(yard, from_side, y) > 0 then
-        for y2, t2 in pairs(yard[to_side]) do
-          if #wagons_on(yard, to_side, y2) == 0 and (t2.bay or t2.access) then
+  yard.dir = yard.dir or "west"
+  for _ = 1, 2 do
+    local from_side = yard.dir
+    local to_side = from_side == "west" and "east" or "west"
+    for _, y in ipairs(sorted(yard[from_side])) do
+      local from = yard[from_side][y]
+      if #wagons_on(yard, from_side, y) > 0 and free(from.access) then
+        for _, y2 in ipairs(sorted(yard[to_side])) do
+          local dest = yard[to_side][y2]
+          local stop = dest.bay or dest.access
+          if #wagons_on(yard, to_side, y2) == 0 and stop and free(stop) then
             return { from = from_side, from_y = y, to = to_side, to_y = y2 }
           end
         end
       end
     end
+    yard.dir = to_side -- in dieser Richtung nichts mehr zu tun: umdrehen
   end
   return nil
 end
@@ -85,8 +107,10 @@ local function send(train, stops)
   local yard = storage.yard
   local id, why = remote.call("utl", "send_job", train.id, MOD, stops)
   if not id then
-    note("Rangieren: Auftrag abgelehnt (" .. tostring(why) .. ")")
+    note("Rangieren: Auftrag abgelehnt (" .. tostring(why) .. "), neuer Versuch in 5 s")
     yard.phase = "idle"
+    storage.waiting = storage.waiting or {}
+    storage.waiting[train.id] = game.tick + 300
     return
   end
   storage.jobs = storage.jobs or {}
@@ -107,7 +131,12 @@ function Yard.idle(train)
   local yard = storage.yard
   if not yard or yard.phase ~= "idle" then return false end
   local task = pick(yard)
-  if not task then return true end
+  if not task then
+    -- nichts zu tun (alles belegt oder gesperrt): in 10 s noch einmal schauen
+    storage.waiting = storage.waiting or {}
+    storage.waiting[train.id] = game.tick + 600
+    return true
+  end
   yard.task, yard.loco = task, train.front_stock
   local access = yard[task.from][task.from_y].access
   note("Rangieren: Wagen holen von " .. (task.from == "west" and "Abstellgleis" or "Ladegleis") .. " (y " .. task.from_y

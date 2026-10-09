@@ -8,6 +8,9 @@ local Depot = require("scripts.trains.depot")
 local Held = require("scripts.trains.held")
 local PublicEvents = require("scripts.api.public-events")
 local Log = require("scripts.lib.log")
+local Pending = require("scripts.trains.pending")
+local Capacity = require("scripts.trains.capacity")
+local Registry = require("scripts.stations.registry")
 
 local Jobs = {}
 
@@ -25,9 +28,19 @@ function Jobs.info(job)
   return { id = job.id, mod = job.mod, train_id = job.train_id, stops = job.stops, started = job.started }
 end
 
+--- Platz für einen weiteren Zug an der Haltestelle (Zuglimit, „max. Züge“ der UTL-Station; Züge, die
+--- UTL per Wegpunkt hinschickt, zählen mit – wie bei Lieferungen, trains/capacity.lua).
+local function has_room(stop, heading)
+  local unit = storage.stations.by_stop[stop.unit_number]
+  local station = unit and Registry.get(unit)
+  return Capacity.has_room(stop, station and station.config or {}, heading)
+end
+
 --- Zug `train_id` für `mod` über `stops` schicken. `stops` = Liste { station = unit | stop =
---- Haltestelle | rail + rail_direction, wait = Wartebedingungen }. Liefert die Auftrags-ID oder nil
---- und einen Grund („unknown-train“, „busy“, „held-by-other“, „no-stops“, „bad-target“, „no-schedule“).
+--- Haltestelle | rail + rail_direction, wait = Wartebedingungen, ignore_limit = true (optional) }.
+--- Haltestellen ohne Platz (Zuglimit, „max. Züge“) lehnen den Auftrag ab, außer mit ignore_limit.
+--- Liefert die Auftrags-ID oder nil und einen Grund („unknown-train“, „busy“, „held-by-other“,
+--- „no-stops“, „bad-target“, „station-full“ – dazu die Nummer des Halts –, „no-schedule“).
 function Jobs.send(train_id, mod, stops)
   local train = type(train_id) == "number" and game.train_manager.get_train_by_id(train_id) or nil
   if not train then return nil, "unknown-train" end
@@ -36,10 +49,15 @@ function Jobs.send(train_id, mod, stops)
   local owner = Held.owner(train_id)
   if owner and owner ~= mod then return nil, "held-by-other" end
   if type(stops) ~= "table" or not stops[1] then return nil, "no-stops" end
-  local targets = {}
+  local targets, reserve = {}, {}
+  local heading = Pending.counts()
   for i, spec in ipairs(stops) do
     local target = type(spec) == "table" and ExtraStops.target_of(spec)
     if not target then return nil, "bad-target", i end
+    if target.object_name == "LuaEntity" then
+      if not spec.ignore_limit and not has_room(target, heading) then return nil, "station-full", i end
+      reserve[#reserve + 1] = target
+    end
     targets[i] = { target = target, wait = spec.wait }
   end
   local schedule = train.get_schedule()
@@ -58,6 +76,9 @@ function Jobs.send(train_id, mod, stops)
   jobs.active[id] = { id = id, mod = mod, train_id = train_id, train = train, stops = #targets, started = game.tick }
   jobs.by_train[train_id] = id
   storage.trains.held[train_id] = mod
+  -- vormerken: per Wegpunkt zählt das Spiel den Zug an der Haltestelle nicht mit (wie bei Lieferungen)
+  Pending.release(train_id)
+  Pending.reserve(train_id, reserve)
   Depot.remove(train_id)
   storage.trains.service[train_id] = nil
   storage.trains.cargo_waiting[train_id] = nil
@@ -71,6 +92,7 @@ function Jobs.finish(job, canceled, reason)
   jobs.active[job.id] = nil
   if jobs.by_train[job.train_id] == job.id then jobs.by_train[job.train_id] = nil end
   if Held.owner(job.train_id) == job.mod then storage.trains.held[job.train_id] = nil end
+  Pending.release(job.train_id)
   local train = job.train
   Log.debug("Auftrag " .. job.id .. (canceled and (" abgebrochen: " .. tostring(reason)) or " fertig") .. ".")
   PublicEvents.raise_data("on_job_finished", { job_id = job.id, mod = job.mod, train = train and train.valid and train or nil,
@@ -87,7 +109,11 @@ end
 function Jobs.state_changed(train)
   local job = Jobs.of_train(train.id)
   if not job then return end
-  if train.state == defines.train_state.wait_station then return end -- wartet noch an einem Halt
+  if train.state == defines.train_state.wait_station then
+    local stop = train.station
+    if stop then Pending.release(train.id, stop.unit_number) end -- angekommen: zählt jetzt das Zuglimit
+    return -- wartet noch an einem Halt
+  end
   local schedule = train.get_schedule()
   for _, record in pairs(schedule and schedule.get_records() or {}) do
     if record.temporary and not record.created_by_interrupt then return end
