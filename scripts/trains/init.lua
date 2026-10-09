@@ -20,6 +20,7 @@ local State = require("scripts.core.state")
 local TrainChange = require("scripts.trains.train-change")
 local TrainEvents = require("scripts.trains.train-events")
 local PublicEvents = require("scripts.api.public-events")
+local Jobs = require("scripts.trains.jobs")
 
 local S = defines.train_state
 
@@ -118,6 +119,7 @@ local function on_state_and_events(event)
   local delivery = storage.deliveries.by_train[event.train.id]
   on_state(event)
   TrainEvents.state_changed(event, delivery) -- Ankunft/Abfahrt für andere Mods
+  if storage.jobs.by_train[event.train.id] then Jobs.state_changed(event.train) end -- Auftrag eines Add-ons
 end
 
 Events.on(defines.events.on_train_changed_state, function(event)
@@ -198,10 +200,11 @@ Heartbeat.add_task("refuel-idle", 60, function() Depot.refuel_idle(3) end, 23)
 Heartbeat.add_task("pending-sweep", 600, function()
   Pending.sweep(10 * 60 * 60)
   Rekey.sweep(10 * 60 * 60) -- Aufzug-Fahrten, deren Ende nie gemeldet wurde
+  Jobs.sweep() -- Aufträge von Add-ons, deren Zug verschwunden ist
   -- Einträge zerstörter Züge (jeder Umbau erzeugt eine neue ID)
   local manager = game.train_manager
   for _, tbl in pairs({ storage.trains.home, storage.statistics and storage.statistics.trains, storage.trains.held,
-    storage.trains.waiting_at }) do
+    storage.trains.waiting_at, storage.trains.addon_idle }) do
     for id in pairs(tbl) do
       if not (manager.get_train_by_id(id) or Rekey.in_transfer(id)) then tbl[id] = nil end
     end

@@ -77,6 +77,15 @@ function Rekey.move(old_id, train)
   for _, at in pairs(deliveries.at_station) do
     if at.id == old_id then at.id = new_id end
   end
+  -- Auftrag eines Add-ons (trains/jobs.lua)
+  local jobs = storage.jobs
+  local job_id = jobs and move(jobs.by_train, old_id, new_id)
+  local job = job_id and jobs.active[job_id]
+  if job then
+    job.train_id = new_id
+    job.train = train
+  end
+  move(trains.addon_idle, old_id, new_id)
   local stats = storage.statistics
   move(stats and stats.trains, old_id, new_id)
 end

@@ -8,9 +8,15 @@ local Registry = require("scripts.stations.registry")
 local Depot = require("scripts.trains.depot")
 local Held = require("scripts.trains.held")
 local TrainChange = require("scripts.trains.train-change")
+local Jobs = require("scripts.trains.jobs")
+local AddonRegistry = require("scripts.api.addons")
+local CreateDelivery = require("scripts.api.create-delivery")
+local Roles = require("scripts.stations.roles")
+local util = require("util")
 
 -- Stand der Schnittstelle: steigt, wenn Funktionen oder Ereignisse dazukommen.
-local API_VERSION = 1
+-- 1: Umbau, Festhalten, Halte einfügen, Zug-Ereignisse · 2: Rollen, Aufträge, Daten, Fenster, Manager
+local API_VERSION = 2
 
 local Addons = {}
 
@@ -105,6 +111,93 @@ function Addons.get_trains_at_station(unit)
   table.sort(here)
   table.sort(coming)
   return { here = here, coming = coming }
+end
+
+-- ── Eigene Rollen, Fenster, Manager ──────────────────────────────────────────────────────────
+
+--- Eigene Rolle für Bahnhöfe: { mod, name, caption, tooltip, base, own_trains }.
+---   base nil = eigene Rolle, UTL vermittelt dort nichts (nur Ereignisse); sonst verhält sich die
+---   Station für den Dispatcher wie "provider" | "requester" | "provider_requester" | "depot" |
+---   "fuel" | "cleanup" | "storage". own_trains = true (nur mit base "depot"): Züge dort gehören dem
+---   Add-on, UTL nimmt sie nie (frei: get_idle_trains{ role = "mod/name" }, Ereignis on_train_idle).
+--- In on_init und on_configuration_changed aufrufen. Liefert true oder false und einen Grund.
+function Addons.register_role(spec)
+  return AddonRegistry.register_role(spec)
+end
+
+--- Station auf eine Add-on-Rolle setzen ("mod/name") oder mit nil zurück auf „ohne Aufgabe“.
+function Addons.set_station_role(unit, key)
+  local station = Registry.get(unit)
+  if not station then return false end
+  local role = key and AddonRegistry.role(key)
+  if key and not role then return false end
+  Roles.apply_addon(station.config, role)
+  Registry.config_changed(station)
+  return true
+end
+
+--- Abschnitt im Stationsfenster: { mod, interface, build }. UTL ruft
+--- remote.call(interface, build, flow, station_unit, player_index) mit einem leeren Flow; bleibt er
+--- leer, verschwindet er wieder. Eigene GUI-Ereignisse behandelt das Add-on selbst.
+function Addons.register_gui_section(spec)
+  return AddonRegistry.register_section(spec)
+end
+
+--- Reiter im UTL-Manager: { mod, interface, build, caption }. Wird der Reiter gewählt (oder ⟲),
+--- ruft UTL remote.call(interface, build, flow, player_index) mit dem geleerten Inhalt.
+function Addons.register_manager_tab(spec)
+  return AddonRegistry.register_tab(spec)
+end
+
+-- ── Daten je Station ────────────────────────────────────────────────────────────────────────
+
+--- Eigener Wert an einer Station (reist in Blaupausen und beim Einstellungen-Kopieren mit).
+--- `value` = Zahl, Text, Wahrheitswert, Tabelle daraus oder nil (löschen).
+function Addons.set_station_data(unit, mod, key, value)
+  local station = Registry.get(unit)
+  if not (station and type(mod) == "string" and key ~= nil) then return false end
+  local cfg = station.config
+  cfg.ext = cfg.ext or {}
+  local data = cfg.ext[mod] or {}
+  data[key] = util.table.deepcopy(value)
+  cfg.ext[mod] = next(data) and data or nil
+  if not next(cfg.ext) then cfg.ext = nil end
+  return true
+end
+
+--- Alle Werte eines Mods an einer Station (Kopie) oder nil.
+function Addons.get_station_data(unit, mod)
+  local station = Registry.get(unit)
+  local ext = station and station.config.ext
+  return ext and ext[mod] and util.table.deepcopy(ext[mod]) or nil
+end
+
+-- ── Aufträge ────────────────────────────────────────────────────────────────────────────────
+
+--- Zug über eigene Halte schicken: stops = { { station = unit | stop = Haltestelle | rail +
+--- rail_direction, wait = Wartebedingungen }, … }. Der Zug ist so lange festgehalten; am Ende kommt
+--- on_job_finished und er fährt mit seinem Fahrplan weiter. Liefert die Auftrags-ID oder nil + Grund.
+function Addons.send_job(train_id, mod, stops)
+  return Jobs.send(train_id, mod, stops)
+end
+
+function Addons.cancel_job(id)
+  local job = Jobs.get(id)
+  if not job then return false end
+  Jobs.cancel(job, "remote")
+  return true
+end
+
+--- { id, mod, train_id, stops, started } oder nil.
+function Addons.get_job(id)
+  local job = Jobs.get(id)
+  return job and Jobs.info(job) or nil
+end
+
+--- Normale UTL-Lieferung anstoßen: { provider = unit, requester = unit, type, name, quality, amount,
+--- train = Zug-ID (optional, sonst der nächste freie) }. Liefert die Lieferungs-ID oder nil + Grund.
+function Addons.create_delivery(spec)
+  return CreateDelivery.create(spec)
 end
 
 return Addons

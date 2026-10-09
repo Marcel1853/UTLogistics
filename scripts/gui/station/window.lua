@@ -12,6 +12,7 @@ local RequestsSection = require("scripts.gui.station.section-requests")
 local Goods = require("scripts.gui.station.section-goods")
 local CleanupSection = require("scripts.gui.station.section-cleanup")
 local StorageSection = require("scripts.gui.station.section-storage")
+local Addons = require("scripts.api.addons")
 local Registry = require("scripts.stations.registry")
 local Fields = require("scripts.stations.fields")
 
@@ -20,7 +21,8 @@ local Window = {}
 local NAME = "utl_station_window"
 -- Bei jedem Umbau des Fensters erhöhen: offene Fenster aus alten Spielständen werden dann
 -- geschlossen statt mit falschem Aufbau aufgefrischt.
-local GUI_VERSION = 18 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+local GUI_VERSION = 19 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+-- 19: Rollen und Abschnitte von Add-ons (Schnittstelle für andere Mods)
 -- 18: Position des Panels wählbar (links/rechts/frei), Tankstelle „Treibstoff anfordern“
 -- 17: Rolle „Aktiver Anbieter“, Rollen im Rahmen
 -- 16: Schalter „über den Weltraumaufzug liefern“ (nur mit Space Exploration)
@@ -198,6 +200,12 @@ function Window.open(player, station, standalone)
   local right = box(right_parent, is_stop and LEFT_WIDTH or RIGHT_WIDTH)
   Values.build(right, station)
   CleanupSection.build(right, station)
+  -- Abschnitte von Add-ons (register_gui_section): leeren Flow übergeben, das Add-on baut darin
+  for _, entry in ipairs(Addons.list("sections")) do
+    local flow = right.add({ type = "flow", direction = "vertical", tags = { utl_addon = entry.mod } })
+    Addons.call(entry.mod, entry.interface, entry.build, flow, station.unit, player.index)
+    if flow.valid and #flow.children == 0 then flow.destroy() end
+  end
 
   -- Beim Combinator ersetzt unser Fenster das Vanilla-Fenster.
   if standalone or not is_stop then player.opened = frame end

@@ -33,7 +33,8 @@ function State.init()
   trains.transfer = trains.transfer or {} -- [alte train_id] = Tick: fährt gerade durch einen Aufzug (SE)
   trains.held = trains.held or {} -- [train_id] = Mod, der ihn festhält (trains/held.lua, Schnittstelle hold_train)
   trains.change_records = trains.change_records or {} -- [alte train_id] = gesicherter Fahrplan beim Umbau (train-change.lua)
-  trains.waiting_at = trains.waiting_at or {} -- [train_id] = UTL-Station, an der er gerade wartet (Ereignis on_train_departed)
+  trains.waiting_at = trains.waiting_at or {}
+  trains.addon_idle = trains.addon_idle or {} -- [train_id] = { train, station, stop, role }: frei im Depot eines Add-ons -- [train_id] = UTL-Station, an der er gerade wartet (Ereignis on_train_departed)
   storage.trains = trains
 
   -- Dienst-Stationen: [rolle][station] = true (fuel, cleanup)
@@ -56,6 +57,13 @@ function State.init()
   -- [station] = { id, length, wagons }: Zug, der gerade an dieser Station steht (für die Ausgabe)
   deliveries.at_station = deliveries.at_station or {}
   storage.deliveries = deliveries
+
+  -- Aufträge von Add-ons (trains/jobs.lua, Schnittstelle send_job)
+  local jobs = storage.jobs or {}
+  jobs.next_id = jobs.next_id or 1
+  jobs.active = jobs.active or {}     -- [id] = { id, mod, train_id, train, started }
+  jobs.by_train = jobs.by_train or {} -- [train_id] = id
+  storage.jobs = jobs
 
   -- Verbundene Netze (Stern je Oberfläche), siehe scripts/stations/networks.lua
   storage.network_links = storage.network_links or {}

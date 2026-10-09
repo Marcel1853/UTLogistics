@@ -66,9 +66,9 @@ function Api.build(check)
   schedule.add_record({ station = "R41-Depot", wait_conditions = { { type = "inactivity", ticks = 120 } } })
   schedule.go_to_station(1)
   l1.train.manual_mode = false
-  check("R41 api_version", remote.call("utl", "api_version") == 1)
+  check("R41 api_version", remote.call("utl", "api_version") >= 1)
   return { start = game.tick, loco = l1, wagon = wagon, depot = depot.unit_number, extra = extra.unit_number,
-    req = req.unit_number }
+    req = req.unit_number, prov = prov.unit_number }
 end
 
 --- Lieferung an den Abnehmer R41: Halt einfügen, laden, umbauen, entladen.
@@ -141,6 +141,15 @@ function Api.watch(r, check)
         events.arrived["R41-Umbau"] == r.added and events.rebuilt[r.changed.old] == true and events.idle > 0,
         serpent.line({ ankunft = events.arrived["R41-Umbau"], lieferung = r.added, umbau = events.rebuilt[r.changed.old],
           frei = events.idle }))
+      -- Meilenstein 2: normale Lieferung auf Wunsch eines Add-ons anlegen (Abnehmer bestellt nichts)
+      local too_much, why = remote.call("utl", "create_delivery", { provider = r.prov, requester = r.req,
+        name = "iron-plate", amount = 999999 })
+      local id = remote.call("utl", "create_delivery", { provider = r.prov, requester = r.req, name = "iron-plate",
+        amount = 100, train = train.id })
+      local d = id and remote.call("utl", "get_delivery", id) --[[@as table?]]
+      check("R41 create_delivery", too_much == nil and why == "not-enough" and d ~= nil and d.to == "R41-Abnehmer"
+        and d.train_id == train.id and d.manifest["item|iron-plate|normal"] == 100, serpent.line({ why, id, d and d.manifest }))
+      if id then remote.call("utl", "cancel_delivery", id) end
       r.done = true
     end
   end

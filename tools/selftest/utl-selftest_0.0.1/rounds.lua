@@ -7,6 +7,7 @@ local Rounds = {}
 local Param = require("rounds-param") -- R40 (require nur beim Laden erlaubt)
 local Api = require("rounds-api") -- R41
 local NoRail = require("rounds-norail") -- R42
+local Api2 = require("rounds-api2") -- R43
 
 --- R36: UTL-Ereignisse mitzählen (Anmeldung in on_init und on_load, siehe control.lua).
 function Rounds.listen()
@@ -18,6 +19,7 @@ function Rounds.listen()
       storage.r36[key] = (storage.r36[key] or 0) + 1
       if name == "on_delivery_created" and not (event.train and event.train.valid) then storage.r36.bad = true end
       Api.record(name, event)
+      Api2.record(name, event)
     end)
   end
 end
@@ -211,6 +213,7 @@ function Rounds.build(check)
     train5 = r35_train, surface = s, r35 = {}, r37 = { req = req7.unit_number }, r38 = {},
     r41 = Api.build(check), -- R41: Schnittstelle für Add-ons (eigene Oberfläche)
     r42 = NoRail.build(check), -- R42: Haltestelle ohne Gleis (eigene Oberfläche)
+    r43 = Api2.build(check), -- R43: Add-on-Schnittstelle, Meilenstein 2
     far = far.backer_name, near = near.backer_name, chained = nil, loaded = {}, unloaded = {} }
 end
 
@@ -354,7 +357,7 @@ function Rounds.watch(r, check)
       and remote.call("utl", "get_delivery", id) == nil)
     local ev = storage.r36 or {}
     check("R36 ereignisse", (ev.on_delivery_created or 0) > 0 and (ev.on_delivery_state_changed or 0) > 0
-      and (ev.on_delivery_completed or 0) > 0 and (ev["on_delivery_canceled-remote"] or 0) == 1 and not ev.bad,
+      and (ev.on_delivery_completed or 0) > 0 and (ev["on_delivery_canceled-remote"] or 0) >= 1 and not ev.bad,
       serpent.line(ev))
   end
   -- R37: nach 30 s den Bedarf auf 3000 heben
@@ -370,8 +373,9 @@ function Rounds.watch(r, check)
   end
   local r41_done = Api.watch(r.r41, check)
   local r42_done = NoRail.watch(r.r42, check)
+  local r43_done = Api2.watch(r.r43, check)
   if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done
-      and r.r38.fill and r.r38.cleanup and r.r39 and r41_done and r42_done) or game.tick - r.start > 36000 then
+      and r.r38.fill and r.r38.cleanup and r.r39 and r41_done and r42_done and r43_done) or game.tick - r.start > 36000 then
     r.done = true
     if not r.r39 then check("R39 tankstelle fordert treibstoff an", false, "keine lieferung") end
     if not r.r38.fill then check("R38 aktiver anbieter füllt lager über dem mindest", false, "keine lieferung") end

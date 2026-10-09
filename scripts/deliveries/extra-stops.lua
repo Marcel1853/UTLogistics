@@ -23,7 +23,7 @@ end
 
 --- Ziel aus der Anfrage: `stop` = Haltestelle (LuaEntity oder unit_number) bzw. `station` = UTL-
 --- Station (unit), sonst `rail` + `rail_direction`.
-local function target_of(spec)
+function ExtraStops.target_of(spec)
   if spec.station then
     local station = Registry.get(spec.station)
     local stop = station and station.stop
@@ -57,7 +57,7 @@ function ExtraStops.add(delivery, spec)
   local where = spec.where or "after_provider"
   local allowed = ALLOWED[where]
   if not (allowed and allowed[delivery.state]) then return false, "bad-position" end
-  local target = target_of(spec)
+  local target = ExtraStops.target_of(spec)
   if not target then return false, "bad-target" end
   local train = delivery.train
   local schedule = train.get_schedule()

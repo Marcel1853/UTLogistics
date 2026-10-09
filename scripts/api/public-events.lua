@@ -9,6 +9,8 @@
 ---   on_train_departed          – Zug verlässt eine UTL-Station (dieselben Felder)
 ---   on_train_idle              – Zug steht frei im Depot (train, station, stop, network)
 ---   on_train_rebuilt           – Zug mit UTL-Daten umgebaut (train, old_train_ids, canceled, changing)
+---   on_job_finished            – Auftrag eines Add-ons fertig oder abgebrochen (job_id, mod, train,
+---                                train_id, canceled, reason)
 --- Daten: siehe `Events.info` (keine Tabellen aus storage, nur Kopien). Ausgelöst wird immer erst
 --- am Ende der eigenen Verarbeitung, damit ein Empfänger UTL nicht mitten im Ablauf stört.
 local util = require("util")
@@ -26,6 +28,7 @@ PublicEvents.ids = {
   on_train_departed = script.generate_event_name(),
   on_train_idle = script.generate_event_name(),
   on_train_rebuilt = script.generate_event_name(),
+  on_job_finished = script.generate_event_name(),
 }
 
 --- Öffentliche Sicht auf eine Lieferung (auch für get_deliveries/get_delivery).

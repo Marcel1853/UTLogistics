@@ -12,14 +12,15 @@ local Tabs = {
   settings = require("scripts.gui.manager.tab-settings"),
 }
 local Filter = require("scripts.gui.manager.surface-filter")
+local Addons = require("scripts.api.addons")
 
 local Manager = {}
 
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 12 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
--- 12: Aufzug-Häkchen im Reiter „Netzwerke“
+local GUI_VERSION = 13 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
+-- 12: Aufzug-Häkchen im Reiter „Netzwerke“ · 13: Reiter von Add-ons (register_manager_tab)
 local ORDER = { "depots", "stations", "networks", "inventory", "history", "statistics", "alerts", "settings" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste;
 -- Einstellungen nie, sonst überschriebe der Takt das Feld beim Tippen).
@@ -58,8 +59,19 @@ function Manager.close_all()
   for _, player in pairs(game.players) do Manager.close(player.index) end
 end
 
+local ADDON = "addon:" -- Reiter eines Add-ons: "addon:<mod>"
+
 local function selected_name(manager)
-  return ORDER[manager.tabs.selected_tab_index or 1] or ORDER[1]
+  local order = manager.order or ORDER
+  return order[manager.tabs.selected_tab_index or 1] or order[1]
+end
+
+--- Reiter eines Add-ons neu befüllen: leeren und das Add-on bauen lassen.
+local function refresh_addon(content, manager, name)
+  local entry = Addons.data().tabs[name:sub(#ADDON + 1)]
+  if not (content and content.valid) then return end
+  content.clear()
+  if entry then Addons.call(entry.mod, entry.interface, entry.build, content, manager.player_index) end
 end
 
 --- Sichtbaren Reiter neu befüllen. `auto` = Aufruf aus dem Takt.
@@ -71,6 +83,10 @@ function Manager.refresh(player_index, auto)
   end
   local name = selected_name(manager)
   if auto and not AUTO_REFRESH[name] then return end
+  if name:sub(1, #ADDON) == ADDON then
+    if not auto then refresh_addon(manager.refs[name], manager, name) end
+    return
+  end
   Filter.apply(manager, manager.surface_pick) -- gewählte Oberfläche für diesen Durchlauf
   Tabs[name].refresh(manager.refs[name], manager)
 end
@@ -114,15 +130,23 @@ function Manager.open(player)
   local tabs = frame.add({ type = "tabbed-pane", style = "tabbed_pane_with_no_side_padding",
     tags = { utl_mgr = "tabs" } })
   local refs = {}
-  for _, name in ipairs(ORDER) do
-    local tab = tabs.add({ type = "tab", caption = { "utl-manager.tab-" .. name } })
+  local order = {}
+  for _, name in ipairs(ORDER) do order[#order + 1] = name end
+  -- Reiter von Add-ons hinten an (Inhalt baut das Add-on, wenn der Reiter gewählt wird)
+  local captions = {}
+  for _, entry in ipairs(Addons.list("tabs")) do
+    order[#order + 1] = ADDON .. entry.mod
+    captions[ADDON .. entry.mod] = entry.caption or entry.mod
+  end
+  for _, name in ipairs(order) do
+    local tab = tabs.add({ type = "tab", caption = captions[name] or { "utl-manager.tab-" .. name } })
     local content = tabs.add({ type = "flow", direction = "vertical" })
     content.style.width = 880
     content.style.height = 560
     content.style.padding = 8
     content.style.vertical_spacing = 8
     tabs.add_tab(tab, content)
-    refs[name] = Tabs[name].build(content)
+    refs[name] = captions[name] and content or Tabs[name].build(content)
   end
   tabs.selected_tab_index = 1
 
@@ -131,6 +155,7 @@ function Manager.open(player)
     player_index = player.index,
     frame = frame,
     tabs = tabs,
+    order = order,
     search_field = search,
     surface_pick = surface_pick,
     search = "",
@@ -191,7 +216,7 @@ end
 function Manager.select(player_index, name)
   local manager = Manager.get(player_index)
   if not manager then return end
-  for index, tab in ipairs(ORDER) do
+  for index, tab in ipairs(manager.order or ORDER) do
     if tab == name then
       manager.tabs.selected_tab_index = index
       Manager.refresh(player_index)

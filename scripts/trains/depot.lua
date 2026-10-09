@@ -11,6 +11,7 @@ local Pending = require("scripts.trains.pending")
 local DepotRoute = require("scripts.trains.depot-route")
 local Held = require("scripts.trains.held")
 local PublicEvents = require("scripts.api.public-events")
+local Addons = require("scripts.api.addons")
 
 local Depot = {}
 
@@ -46,6 +47,7 @@ end
 --- Zug aus dem Pool nehmen (abgefahren, losgeschickt, ungültig).
 function Depot.remove(train_id)
   local trains = storage.trains
+  trains.addon_idle[train_id] = nil -- frei im Depot eines Add-ons
   local record = trains.by_id[train_id]
   if not record then return end
   trains.by_id[train_id] = nil
@@ -69,6 +71,18 @@ function Depot.arrive(train, stop, station)
   local id = train.id
   if Held.is(id) then return end -- ein anderer Mod hält ihn fest: nicht in den Pool
   Pending.release(id) -- angekommen: keine vorgemerkte Fahrt mehr offen
+  -- Depot eines Add-ons mit eigenen Zügen: Der Zug gehört dem Add-on, UTLs Dispatcher nimmt ihn
+  -- nie. Kein Tanken/Aufräumen durch UTL; das Add-on schickt ihn per send_job.
+  local role = Addons.role(station.config.addon_role)
+  if role and role.own_trains then
+    if storage.deliveries.by_train[id] then return end
+    storage.trains.home[id] = { train = train, depot = stop.backer_name, stop = stop }
+    storage.trains.addon_idle[id] = { train = train, station = station.unit, stop = stop, role = role.key }
+    Log.debug("Zug " .. id .. " steht frei im Depot " .. Log.stop_name(stop) .. " des Add-ons „" .. role.mod .. "“.")
+    PublicEvents.raise_data("on_train_idle", { train = train, train_id = id, station = station.unit, stop = stop,
+      network = station.config.network, role = role.key })
+    return
+  end
   local front = train.front_stock
   if front and stop.force_index ~= front.force_index then
     if not Depot.relocate(train, stop, nil) then Depot.no_free_depot(train, stop) end

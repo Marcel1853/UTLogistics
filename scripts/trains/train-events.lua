@@ -20,6 +20,7 @@ local function data(train, unit, stop, delivery_id)
     mode = cfg and cfg.mode or nil,
     roles = cfg and util.table.deepcopy(cfg.roles) or nil,
     delivery_id = delivery_id,
+    job_id = storage.jobs.by_train[train.id], -- Auftrag eines Add-ons (send_job)
     held_by = Held.owner(train.id),
   }
 end

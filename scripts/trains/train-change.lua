@@ -11,6 +11,7 @@ local Pending = require("scripts.trains.pending")
 local Rekey = require("scripts.trains.rekey")
 local Held = require("scripts.trains.held")
 local TeamConfig = require("scripts.core.team-config")
+local Jobs = require("scripts.trains.jobs")
 
 local TrainChange = {}
 
@@ -28,6 +29,9 @@ function TrainChange.retire(old)
   trains.held[old] = nil
   if trains.transfer then trains.transfer[old] = nil end
   Pending.release(old) -- vorgemerkte Fahrten der alten Zug-ID
+  local job_id = storage.jobs.by_train[old]
+  local job = job_id and storage.jobs.active[job_id]
+  if job then Jobs.finish(job, true, "rebuilt") end
   local delivery = Deliveries.of_train(old)
   if delivery then
     Deliveries.cancel(delivery, "rebuilt")

@@ -154,7 +154,12 @@ function Settings.read(station)
       local f = s2.get_slot(i)
       local name = f and f.value and f.value.name
       if name == ROLE_SIGNAL then
-        apply_role(cfg, f.min or 0)
+        -- Add-on-Rolle bleibt, solange die Zahl zur Grundrolle passt (sonst wurde sie geändert)
+        local code = f.min or 0
+        if not (cfg.addon_role and code == role_code(cfg)) then
+          cfg.addon_role = nil
+          apply_role(cfg, code)
+        end
       elseif name then
         local field = BY_SIGNAL[name]
         if field and f.min then cfg[field.key] = Fields.clamp(field, f.min) end

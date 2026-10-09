@@ -3,6 +3,7 @@ local Builder = require("scripts.gui.common.builder")
 local Roles = require("scripts.stations.roles")
 local Nets = require("scripts.gui.station.section-networks")
 local Unlocks = require("scripts.core.unlocks")
+local Addons = require("scripts.api.addons")
 
 local Main = {}
 
@@ -12,7 +13,11 @@ local ROLE_COLUMNS = {
   { "depot", "fuel", "cleanup", "storage" },
 }
 
+local ADDON = "addon:" -- Häkchen einer Add-on-Rolle: "addon:mod/name"
+
 local function role_checked(cfg, role)
+  if role:sub(1, #ADDON) == ADDON then return cfg.addon_role == role:sub(#ADDON + 1) end
+  if cfg.addon_role then return false end -- Add-on-Rolle gesetzt: eingebaute Häkchen aus
   -- „Anbieter“ und „Aktiver Anbieter“ schließen sich aus: nur ein Haken (aktiv ist intern auch Anbieter)
   if role == "provider" then return cfg.mode == "station" and cfg.provide and cfg.active_provider ~= true end
   if role == "requester" then return cfg.mode == "station" and cfg.request end
@@ -64,6 +69,22 @@ function Main.build(parent, station, with_preview)
       })
     end
   end
+  -- Rollen von Add-ons (andere Mods): eine Zeile darunter, Beschriftung kommt vom Add-on
+  local addon_roles = Addons.role_list()
+  if addon_roles[1] then
+    box.add({ type = "line" })
+    local flow = box.add({ type = "flow", direction = "vertical" })
+    flow.style.vertical_spacing = 4
+    for _, entry in ipairs(addon_roles) do
+      flow.add({
+        type = "checkbox",
+        state = cfg.addon_role == entry.key,
+        caption = entry.role.caption,
+        tooltip = entry.role.tooltip or { "utl-gui.role-addon-tooltip", entry.role.mod },
+        tags = { utl_action = "role", role = ADDON .. entry.key },
+      })
+    end
+  end
 
   return refs
 end
@@ -71,6 +92,11 @@ end
 --- Rolle umschalten. Depot/Tankstelle/Cleanup schließen sich gegenseitig und Anbieter/
 --- Abnehmer aus. Rückgabe: true (Fenster neu aufbauen, Abschnitte ändern sich).
 function Main.apply_role(cfg, role, state)
+  if role:sub(1, #ADDON) == ADDON then
+    Roles.apply_addon(cfg, state and Addons.role(role:sub(#ADDON + 1)) or nil)
+    return
+  end
+  cfg.addon_role = nil -- eingebaute Rolle gewählt: Add-on-Rolle fällt weg
   if role == "provider" or role == "requester" or role == "active_provider" then
     cfg.mode = "station"
     if role == "requester" then

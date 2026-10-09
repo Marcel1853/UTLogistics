@@ -71,6 +71,19 @@ end
 --- `filter` (optional): { surface = Index, force = Name, network = Name }.
 function More.get_idle_trains(filter)
   filter = filter or {}
+  -- Depot eines Add-ons mit eigenen Zügen: { role = "mod/name" }
+  if filter.role then
+    local list = {}
+    for id, entry in pairs(storage.trains.addon_idle) do
+      local stop = entry.stop
+      if entry.role == filter.role and entry.train.valid and stop and stop.valid then
+        list[#list + 1] = { id = id, station = entry.station, depot = stop.backer_name, length = #entry.train.carriages,
+          surface = stop.surface_index, force = stop.force.name, role = entry.role }
+      end
+    end
+    table.sort(list, function(a, b) return a.id < b.id end)
+    return list
+  end
   local wanted_force = filter.force and force_index(filter.force)
   if filter.force and not wanted_force then return {} end
   local list = {}
@@ -89,7 +102,7 @@ end
 
 --- UTL-Stationen: Liste { unit, stop (unit_number der Haltestelle), stop_name, network, roles,
 --- surface, force }. `filter` (optional): { surface = Index, force = Name, network = Name,
---- role = "provider" | "requester" | "depot" | "fuel" | "cleanup" | "storage" }.
+--- role = "provider" | "requester" | "depot" | "fuel" | "cleanup" | "storage", addon_role = "mod/name" }.
 function More.get_stations(filter)
   filter = filter or {}
   local wanted_force = filter.force and force_index(filter.force)
@@ -102,13 +115,15 @@ function More.get_stations(filter)
       and (not filter.surface or entity.surface_index == filter.surface)
       and (not wanted_force or entity.force_index == wanted_force)
       and (not filter.network or cfg.network == filter.network)
-      and (not filter.role or cfg.roles[filter.role]) then
+      and (not filter.role or cfg.roles[filter.role])
+      and (not filter.addon_role or cfg.addon_role == filter.addon_role) then
       list[#list + 1] = {
         unit = unit,
         stop = stop and stop.valid and stop.unit_number or nil,
         stop_name = stop and stop.valid and stop.backer_name or nil,
         network = cfg.network,
         roles = util.table.deepcopy(cfg.roles),
+        addon_role = cfg.addon_role,
         surface = entity.surface_index,
         force = entity.force.name,
       }
