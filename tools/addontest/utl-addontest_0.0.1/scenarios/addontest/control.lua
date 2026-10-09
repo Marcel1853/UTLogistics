@@ -1,6 +1,6 @@
 --- Testkarte für den Add-on-Test: zwei gerade Strecken.
----   oben (y = 1):  Rangierdepot (Add-on-Rolle, eigene Züge) – Rangierlok pendelt per Auftrag zum
----                  Abstellgleis (Add-on-Rolle ohne Grundrolle)
+---   oben (y = 1):  Rangierdepot (Add-on-Rolle, eigene Züge) – die Rangierlok holt einen Wagen vom
+---                  Abstellgleis, bringt ihn zum Ladegleis und stellt ihn wieder ab (shunting.lua)
 ---   unten (y = 21): normales UTL-Depot mit Zug, Ladebucht (Add-on-Rolle wie Anbieter) → Abnehmer
 --- Gebaut wird nach 1 s (dann hat sich das Add-on bei UTL angemeldet; Szenarien starten vor Mods).
 local MOD = "utl-addontest"
@@ -50,16 +50,21 @@ local function build()
   force.research_all_technologies()
   local set = function(e, changes) remote.call("utl", "configure_station", e.unit_number, changes) end
 
-  -- oben: Rangieren
+  -- oben: Rangieren (shunting.lua im Test-Add-on). Von West nach Ost:
+  --   Wagen (-66) · Abstellgleis (-58, Richtung West) · Zufahrt (-40, Richtung West) ·
+  --   Ladegleis (-15, Richtung Ost) · Rangierdepot (20, Richtung Ost)
   rails(s, force, 1)
-  local shunt_depot = stop(s, force, "Rangierdepot", 10, 1)
-  local siding = stop(s, force, "Abstellgleis", -60, 1, true)
-  set(shunt_depot, { network = "Test" })
-  set(siding, { network = "Test" })
+  local shunt_depot = stop(s, force, "Rangierdepot", 20, 1)
+  local siding = stop(s, force, "Abstellgleis", -58, 1, true)
+  local access = stop(s, force, "Zufahrt Abstellgleis", -40, 1, true)
+  local load = stop(s, force, "Ladegleis", -15, 1)
+  for _, e in ipairs({ shunt_depot, siding, access, load }) do set(e, { network = "Rangieren" }) end
   remote.call("utl", "set_station_role", shunt_depot.unit_number, MOD .. "/depot")
-  remote.call("utl", "set_station_role", siding.unit_number, MOD .. "/siding")
+  for _, e in ipairs({ siding, access, load }) do remote.call("utl", "set_station_role", e.unit_number, MOD .. "/siding") end
   remote.call("utl", "set_station_data", siding.unit_number, MOD, "tracks", 3)
-  loco_pair(s, force, 4, 1, "Rangierdepot")
+  local wagon = s.create_entity({ name = "cargo-wagon", position = { -66, 1 }, direction = 4, force = force })
+  remote.call(MOD, "setup", { wagon = wagon, access = access.unit_number, load = load.unit_number, siding = siding.unit_number })
+  loco_pair(s, force, 14, 1, "Rangierdepot")
 
   -- unten: Lieferung aus der Ladebucht
   rails(s, force, 21)
@@ -81,7 +86,8 @@ local function build()
 end
 
 local function welcome(player)
-  player.print("[font=default-bold]UTL Add-on-Test[/font]: oben pendelt eine Rangierlok (Auftrag) zum Abstellgleis, "
+  player.print("[font=default-bold]UTL Add-on-Test[/font]: oben holt eine Rangierlok einen Wagen vom Abstellgleis, "
+    .. "kuppelt an, bringt ihn zum Ladegleis und stellt ihn wieder ab; "
     .. "unten liefert ein UTL-Zug aus der Ladebucht. Zum Ansehen: Stationsfenster (Rollen-Häkchen, Abschnitt "
     .. "„Add-on-Test“ mit Gleise +/−) und UTL-Manager (Reiter „Add-on-Test“).")
 end

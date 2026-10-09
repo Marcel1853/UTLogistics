@@ -40,6 +40,7 @@ function TrainEvents.state_changed(event, delivery_id)
       PublicEvents.raise_data("on_train_departed", data(train, unit, station and station.stop, delivery_id))
     end
   end
+  if not train.valid then return end -- ein Empfänger hat den Zug umgebaut
   if train.state == WAIT then
     local stop = train.station
     local unit = stop and storage.stations.by_stop[stop.unit_number]

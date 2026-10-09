@@ -1,6 +1,7 @@
 --- Test-Add-on für die UTL-Schnittstelle (nur zum Ausprobieren, wird nicht veröffentlicht).
 --- Zeigt die sichtbaren Teile: eigene Rollen im Stationsfenster, eigener Abschnitt mit Daten je
 --- Station, eigener Reiter im Manager, Aufträge (Rangierlok pendelt zum Abstellgleis), Zugfilter.
+local Shunting = require("shunting")
 local MOD = "utl-addontest"
 local KEY = { depot = MOD .. "/depot", siding = MOD .. "/siding", bay = MOD .. "/bay" }
 
@@ -10,9 +11,13 @@ local function note(text)
   storage.log[13] = nil
   log("[ADDONTEST] " .. text)
 end
+Shunting.note = note
 
 -- ── Rückrufe für UTL ────────────────────────────────────────────────────────────────────────
 remote.add_interface(MOD, {
+  --- Testkarte: Wagen und Halte für die Rangier-Vorführung
+  setup = function(spec) Shunting.setup(spec) end,
+
   --- Abschnitt im Stationsfenster: nur an Stationen mit einer Rolle dieses Add-ons
   section = function(flow, unit)
     local info = remote.call("utl", "get_station", unit) --[[@as table?]]
@@ -72,12 +77,12 @@ end
 -- ── Ereignisse von UTL ──────────────────────────────────────────────────────────────────────
 local function listen()
   local ids = remote.call("utl", "get_event_ids") --[[@as table]]
-  -- Rangierlok frei im Rangierdepot: nach 5 s zum Abstellgleis schicken
+  -- Rangierlok frei im Rangierdepot: nach 3 s den Wagen holen (shunting.lua)
   script.on_event(ids.on_train_idle, function(event) ---@param event table
     if event.role ~= KEY.depot then return end
     note("frei im Rangierdepot: Zug " .. event.train_id)
     storage.waiting = storage.waiting or {}
-    storage.waiting[event.train_id] = game.tick + 300
+    storage.waiting[event.train_id] = game.tick + 180
   end)
   script.on_event(ids.on_job_finished, function(event) ---@param event table
     if event.mod ~= MOD then return end
@@ -87,6 +92,7 @@ local function listen()
   script.on_event(ids.on_train_arrived, function(event) ---@param event table
     note("Ankunft: Zug " .. event.train_id .. " an „" .. (event.stop and event.stop.backer_name or "?") .. "“"
       .. (event.job_id and (" (Auftrag " .. event.job_id .. ")") or "") .. (event.delivery_id and (" (Lieferung " .. event.delivery_id .. ")") or ""))
+    Shunting.arrived(event)
   end)
   -- Normale Lieferung von der Ladebucht: Laden und Entladen spielt das Script (keine Greifarme nötig)
   script.on_event(ids.on_delivery_state_changed, function(event) ---@param event table
@@ -110,26 +116,17 @@ end)
 script.on_configuration_changed(register)
 script.on_load(listen)
 
--- Wartende Rangierloks losschicken
+-- Wartende Rangierloks losschicken, Heranschieben beim Kuppeln
 script.on_nth_tick(60, function()
   for train_id, tick in pairs(storage.waiting or {}) do
     if game.tick >= tick then
       storage.waiting[train_id] = nil
-      local sidings = remote.call("utl", "get_stations", { addon_role = KEY.siding })
-      if sidings[1] then
-        local id, why = remote.call("utl", "send_job", train_id, MOD,
-          { { station = sidings[1].unit, wait = { { type = "time", ticks = 600 } } } })
-        if id then
-          storage.jobs = storage.jobs or {}
-          storage.jobs[id] = true
-          note("Auftrag " .. id .. ": Zug " .. train_id .. " → Abstellgleis")
-        else
-          note("Auftrag abgelehnt: " .. tostring(why))
-        end
-      end
+      local train = game.train_manager.get_train_by_id(train_id)
+      if train then Shunting.idle(train) end
     end
   end
 end)
+script.on_nth_tick(5, Shunting.tick)
 
 -- +/− im eigenen Abschnitt des Stationsfensters
 script.on_event(defines.events.on_gui_click, function(event)

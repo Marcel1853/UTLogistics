@@ -116,10 +116,14 @@ local function on_state(event)
 end
 
 local function on_state_and_events(event)
-  local delivery = storage.deliveries.by_train[event.train.id]
+  local train = event.train
+  local id = train.id
+  local delivery = storage.deliveries.by_train[id]
   on_state(event)
-  TrainEvents.state_changed(event, delivery) -- Ankunft/Abfahrt für andere Mods
-  if storage.jobs.by_train[event.train.id] then Jobs.state_changed(event.train) end -- Auftrag eines Add-ons
+  -- Ereignisse an andere Mods: Ein Empfänger darf den Zug dabei umbauen (an-/abkuppeln) – danach ist
+  -- `train` ungültig, also vor jedem weiteren Zugriff prüfen.
+  if train.valid then TrainEvents.state_changed(event, delivery) end -- Ankunft/Abfahrt für andere Mods
+  if train.valid and storage.jobs.by_train[id] then Jobs.state_changed(train) end -- Auftrag eines Add-ons
 end
 
 Events.on(defines.events.on_train_changed_state, function(event)

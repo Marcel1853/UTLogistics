@@ -174,7 +174,8 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   if not Select.full_enough(record, manifest, best.provider.station.config.locked_slots) then return nil end
   local delivery = Deliveries.create(record, best.provider.station, best.request.station, manifest, nil)
   if delivery then
-    Log.debug("Anschlussfahrt: Zug " .. train.id .. " übernimmt Lieferung " .. delivery.id .. " direkt ab "
+    -- delivery.train_id statt train.id: ein Empfänger von on_delivery_created darf den Zug umbauen
+    Log.debug("Anschlussfahrt: Zug " .. delivery.train_id .. " übernimmt Lieferung " .. delivery.id .. " direkt ab "
       .. Log.stop_name(from_stop) .. ".")
     delivery.chained = true
     storage.deliveries.chained = (storage.deliveries.chained or 0) + 1
