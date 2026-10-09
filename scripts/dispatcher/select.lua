@@ -15,6 +15,7 @@ local Fields = require("scripts.stations.fields")
 local Warn = require("scripts.dispatcher.no-train-alerts")
 local Elevators = require("scripts.compat.se-elevators")
 local ActivePush = require("scripts.dispatcher.active-push")
+local TrainFilter = require("scripts.api.train-filter")
 
 local Select = {}
 
@@ -343,6 +344,8 @@ local function find_train(request, provider, wanted)
       end
     end
   end
+  -- Add-ons dürfen bei Fahrten von/zu ihren Rollen mitreden (nur dann ein remote.call)
+  best = TrainFilter.apply(best, provider.station, request.station, request.key)
   for i = 1, #best do
     local record = best[i].record
     if not Depot.is_ready(record) then

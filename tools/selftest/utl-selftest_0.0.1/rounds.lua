@@ -214,6 +214,7 @@ function Rounds.build(check)
     r41 = Api.build(check), -- R41: Schnittstelle für Add-ons (eigene Oberfläche)
     r42 = NoRail.build(check), -- R42: Haltestelle ohne Gleis (eigene Oberfläche)
     r43 = Api2.build(check), -- R43: Add-on-Schnittstelle, Meilenstein 2
+    r44 = Api2.build_filter(check), -- R44: Zugfilter eines Add-ons
     far = far.backer_name, near = near.backer_name, chained = nil, loaded = {}, unloaded = {} }
 end
 
@@ -374,8 +375,9 @@ function Rounds.watch(r, check)
   local r41_done = Api.watch(r.r41, check)
   local r42_done = NoRail.watch(r.r42, check)
   local r43_done = Api2.watch(r.r43, check)
+  local r44_done = Api2.watch_filter(r.r44, check)
   if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done
-      and r.r38.fill and r.r38.cleanup and r.r39 and r41_done and r42_done and r43_done) or game.tick - r.start > 36000 then
+      and r.r38.fill and r.r38.cleanup and r.r39 and r41_done and r42_done and r43_done and r44_done) or game.tick - r.start > 36000 then
     r.done = true
     if not r.r39 then check("R39 tankstelle fordert treibstoff an", false, "keine lieferung") end
     if not r.r38.fill then check("R38 aktiver anbieter füllt lager über dem mindest", false, "keine lieferung") end

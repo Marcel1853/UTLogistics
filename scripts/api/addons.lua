@@ -21,6 +21,7 @@ function Addons.data()
   addons.roles = addons.roles or {}   -- ["mod/name"] = Rolle (siehe register_role)
   addons.sections = addons.sections or {} -- [mod] = { interface, build }
   addons.tabs = addons.tabs or {}     -- [mod] = { interface, build, caption }
+  addons.filters = addons.filters or {} -- [mod] = { interface, build = Filterfunktion }
   return addons
 end
 
@@ -93,6 +94,12 @@ end
 function Addons.register_section(spec) return register("sections", spec) end
 function Addons.register_tab(spec) return register("tabs", spec) end
 
+--- Zugfilter: { mod, interface, filter }; intern wie die anderen Einträge unter `build` abgelegt.
+function Addons.register_filter(spec)
+  if type(spec) ~= "table" then return false, "bad-spec" end
+  return register("filters", { mod = spec.mod, interface = spec.interface, build = spec.filter })
+end
+
 --- Sortierte Liste der Einträge einer Art („sections“ oder „tabs“).
 function Addons.list(kind)
   local list = {}
@@ -111,7 +118,7 @@ function Addons.forget_missing()
       gone[key] = true
     end
   end
-  for _, kind in ipairs({ "sections", "tabs" }) do
+  for _, kind in ipairs({ "sections", "tabs", "filters" }) do
     for mod in pairs(addons[kind]) do
       if not script.active_mods[mod] then addons[kind][mod] = nil end
     end

@@ -20,6 +20,7 @@ local Warn = require("scripts.dispatcher.no-train-alerts")
 local TopUp = require("scripts.dispatcher.top-up")
 local Held = require("scripts.trains.held")
 local Log = require("scripts.lib.log")
+local TrainFilter = require("scripts.api.train-filter")
 
 local Dispatch = {}
 
@@ -163,6 +164,10 @@ function Dispatch.chain(train, network, from_stop, depot_name)
     end
   end
   if not best then return nil end
+  -- Add-on-Rolle beteiligt: Darf dieser Zug die Fahrt übernehmen?
+  if not TrainFilter.apply({ { record = record } }, best.provider.station, best.request.station, best.request.key)[1] then
+    return nil
+  end
   if not (Reach.check(train, from_stop, best.provider.station.stop, true)
       and Reach.check(train, from_stop, best.request.station.stop, true)) then return nil end
   local manifest = Select.manifest(best.request, best.provider, record, best.amount)

@@ -16,7 +16,8 @@ local util = require("util")
 
 -- Stand der Schnittstelle: steigt, wenn Funktionen oder Ereignisse dazukommen.
 -- 1: Umbau, Festhalten, Halte einfügen, Zug-Ereignisse · 2: Rollen, Aufträge, Daten, Fenster, Manager
-local API_VERSION = 2
+-- 3: Zugfilter, remeasure_train
+local API_VERSION = 3
 
 local Addons = {}
 
@@ -147,6 +148,24 @@ end
 --- ruft UTL remote.call(interface, build, flow, player_index) mit dem geleerten Inhalt.
 function Addons.register_manager_tab(spec)
   return AddonRegistry.register_tab(spec)
+end
+
+--- Bei der Zugwahl mitreden: { mod, interface, filter }. Nur wenn Anbieter oder Abnehmer einer
+--- Fahrt eine Add-on-Rolle haben, ruft UTL einmal je Vermittlung
+--- remote.call(interface, filter, train_ids, { provider, requester, key, provider_role, requester_role })
+--- auf; Rückgabe = erlaubte Zug-IDs in Wunschreihenfolge (nil = alle wie bisher).
+function Addons.register_train_filter(spec)
+  return AddonRegistry.register_filter(spec)
+end
+
+--- Laderaum eines freien Zugs neu messen (z. B. nachdem das Add-on ihn im Depot umgebaut hat,
+--- ohne dass sich die Zug-ID geändert hat). Liefert true, wenn UTL den Zug als frei kennt.
+function Addons.remeasure_train(train_id)
+  local record = Depot.get(train_id)
+  if not (record and record.train.valid) then return false end
+  record.slots, record.wagons, record.fluid = Depot.measure(record.train)
+  record.length = #record.train.carriages
+  return true
 end
 
 -- ── Daten je Station ────────────────────────────────────────────────────────────────────────

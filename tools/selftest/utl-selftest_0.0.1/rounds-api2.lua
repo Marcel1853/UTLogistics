@@ -15,6 +15,13 @@ local LINE = 1
 remote.add_interface("utl-selftest-addon", {
   build_section = function(flow, unit) flow.add({ type = "label", caption = "Selbsttest-Abschnitt " .. unit }) end,
   build_tab = function(flow) flow.add({ type = "label", caption = "Selbsttest-Reiter" }) end,
+  -- R44: Zugfilter – erst alle ablehnen, nach dem Umschalten alle erlauben
+  filter = function(ids, info)
+    storage.r44_calls = (storage.r44_calls or 0) + 1
+    storage.r44_info = info
+    if storage.r44_allow then return ids end
+    return {}
+  end,
 })
 
 --- Ereignisse mitschreiben (aus Rounds.listen).
@@ -128,6 +135,71 @@ function Api2.watch(r, check)
     r.done = true
     check("R43 auftrag eines add-ons", false, serpent.line({ job = r.job, fertig = r.finished, zug = train.state,
       idle = storage.r43_idle }))
+  end
+  return r.done
+end
+
+-- ── R44: Zugfilter ──────────────────────────────────────────────────────────────────────────
+
+function Api2.build_filter(check)
+  local s = game.create_surface("utl-selftest-r44")
+  s.generate_with_lab_tiles = true
+  s.request_to_generate_chunks({ 0, 0 }, 4)
+  s.force_generate_chunk_requests()
+  local force = game.forces["player"]
+  for x = -85, 85, 2 do s.create_entity({ name = "straight-rail", position = { x, LINE }, direction = 4, force = force }) end
+  check("R44 zugfilter anmelden", remote.call("utl", "register_train_filter",
+    { mod = MOD, interface = "utl-selftest-addon", filter = "filter" }) == true)
+  local depot = stop(s, force, "R44-Depot", 10)
+  local bay = stop(s, force, "R44-Ladebucht", 60)
+  local req = stop(s, force, "R44-Abnehmer", -60, true)
+  local c = s.create_entity({ name = "constant-combinator", position = { 63.5, LINE + 5.5 }, force = force }) --[[@as LuaEntity]]
+  local behavior = c.get_or_create_control_behavior() --[[@as LuaConstantCombinatorControlBehavior]]
+  behavior.get_section(1).set_slot(1, { value = { type = "item", name = "iron-plate", quality = "normal", comparator = "=" }, min = 2000 })
+  c.get_wire_connector(defines.wire_connector_id.circuit_green, true).connect_to(
+    bay.get_wire_connector(defines.wire_connector_id.circuit_green, true))
+  local function cfg(e, changes) changes.network = "R44"; remote.call("utl", "configure_station", e.unit_number, changes) end
+  cfg(depot, { mode = "depot" })
+  cfg(bay, { network = "R44" })
+  remote.call("utl", "set_station_role", bay.unit_number, MOD .. "/ladebucht")
+  cfg(req, { mode = "station", provide = false, request = true, request_threshold = 100 })
+  remote.call("utl", "set_request", req.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
+  local l1 = s.create_entity({ name = "locomotive", position = { 4, LINE }, direction = 4, force = force }) --[[@as LuaEntity]]
+  local wagon = s.create_entity({ name = "cargo-wagon", position = { -3, LINE }, direction = 4, force = force }) --[[@as LuaEntity]]
+  local l2 = s.create_entity({ name = "locomotive", position = { -10, LINE }, direction = 12, force = force }) --[[@as LuaEntity]]
+  l1.insert({ name = "coal", count = 150 })
+  l2.insert({ name = "coal", count = 150 })
+  local schedule = l1.train.get_schedule()
+  schedule.add_record({ station = "R44-Depot", wait_conditions = { { type = "inactivity", ticks = 120 } } })
+  schedule.go_to_station(1)
+  l1.train.manual_mode = false
+  return { start = game.tick, loco = l1, wagon = wagon }
+end
+
+function Api2.watch_filter(r, check)
+  if not r or r.done then return true end
+  local seen = false
+  for _, d in pairs(remote.call("utl", "get_deliveries")) do
+    if d.to == "R44-Abnehmer" then seen = d end
+  end
+  if not r.opened then
+    if seen then r.early = true end
+    -- 15 s lang abgelehnt (der Zug steht längst im Depot): dann erlauben
+    if game.tick - r.start > 900 and (storage.r44_calls or 0) > 0 then
+      r.opened = game.tick
+      storage.r44_allow = true
+    end
+  elseif seen and not r.done then
+    r.done = true
+    local info = storage.r44_info or {}
+    check("R44 zugfilter: erst abgelehnt, dann erlaubt", not r.early and info.provider_role == MOD .. "/ladebucht",
+      serpent.line({ zu_frueh = r.early, aufrufe = storage.r44_calls, info = info }))
+    remote.call("utl", "cancel_delivery", seen.id)
+  end
+  if not r.done and game.tick - r.start > 20000 then
+    r.done = true
+    check("R44 zugfilter: erst abgelehnt, dann erlaubt", false, serpent.line({ zu_frueh = r.early, offen = r.opened,
+      aufrufe = storage.r44_calls }))
   end
   return r.done
 end

@@ -374,6 +374,12 @@ links, team and map values, tagging script-made blueprints, trains and stations 
 a delivery) and **events** for created, changed, completed and cancelled deliveries, plus own **icons for UTL signals** via `mod-data` "utl-signal-icons":
 [wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
 
+If you want to build a mod **on top of** UTL, there is an **add-on API**: own station roles, own trips
+over any stops, rebuilding trains (coupling and uncoupling) without losing the delivery, data on
+stations, own sections in the station window and tabs in the manager, a say in choosing the train and
+events for arrival and departure. The add-on plans, UTL drives:
+[wiki – Add-on API](https://github.com/Marcel1853/UTLogistics/wiki/Add-on-API).
+
 ## License
 
 [Apache License 2.0](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE). You may use, change

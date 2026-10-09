@@ -423,6 +423,12 @@ Stationen nach Filter, Lieferung abbrechen) und **Ereignisse** für angelegte, g
 abgebrochene Lieferungen, dazu eigene **Symbole für UTL-Signale** über `mod-data` „utl-signal-icons“:
 [Wiki – Für Mod-Autoren](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren).
 
+Wer eine Mod **auf** UTL aufbauen will, bekommt eine eigene **Add-on-Schnittstelle**: eigene
+Bahnhofsrollen, eigene Fahrten mit beliebigen Halten, Züge umbauen (an- und abkuppeln), ohne dass die
+Lieferung abbricht, Daten an Stationen, eigene Abschnitte im Stationsfenster und Reiter im Manager,
+Mitreden bei der Zugwahl und Ereignisse für Ankunft und Abfahrt. Das Add-on plant, UTL fährt:
+[Wiki – Add-on-Schnittstelle](https://github.com/Marcel1853/UTLogistics/wiki/Add-on-Schnittstelle).
+
 ## Lizenz
 
 [Apache License 2.0](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE). UTL darf benutzt,
