@@ -371,14 +371,14 @@ not cancel anything. Map setting in minutes, default 5, 0 = off.
 
 Remote interface `utl` (station data, deliveries, alerts, configuring stations and requests, network
 links, team and map values, tagging script-made blueprints, trains and stations by filter, cancelling
-a delivery) and **events** for created, changed, completed and cancelled deliveries, plus own **icons for UTL signals** via `mod-data` "utl-signal-icons":
+a delivery) and **events** for created, changed, completed and cancelled deliveries, plus own **icons for UTL signals** (also per signal style) via `mod-data` "utl-signal-icons":
 [wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
 
 If you want to build a mod **on top of** UTL, there is an **add-on API**: own station roles, own trips
 over any stops, rebuilding trains (coupling and uncoupling) without losing the delivery, data on
 stations, own sections in the station window and tabs in the manager, a say in choosing the train and
 events for arrival and departure. The add-on plans, UTL drives:
-[wiki – Add-on API](https://github.com/Marcel1853/UTLogistics/wiki/Add-on-API).
+[wiki – Add-ons: roles and data](https://github.com/Marcel1853/UTLogistics/wiki/API-Add-on-roles-and-data), all pages under [For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
 
 ## License
 

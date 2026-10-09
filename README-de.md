@@ -420,14 +420,14 @@ nichts ab. Map-Einstellung in Minuten, Standard 5, 0 = aus.
 Remote-Schnittstelle `utl` (Stationsdaten, Lieferungen, Warnungen, Stationen und Anforderungen
 einstellen, Netzverbindungen, Team- und Kartenwerte, per Script erstellte Blaupausen taggen, Züge und
 Stationen nach Filter, Lieferung abbrechen) und **Ereignisse** für angelegte, geänderte, fertige und
-abgebrochene Lieferungen, dazu eigene **Symbole für UTL-Signale** über `mod-data` „utl-signal-icons“:
+abgebrochene Lieferungen, dazu eigene **Symbole für UTL-Signale** (auch je Signal-Stil) über `mod-data` „utl-signal-icons“:
 [Wiki – Für Mod-Autoren](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren).
 
 Wer eine Mod **auf** UTL aufbauen will, bekommt eine eigene **Add-on-Schnittstelle**: eigene
 Bahnhofsrollen, eigene Fahrten mit beliebigen Halten, Züge umbauen (an- und abkuppeln), ohne dass die
 Lieferung abbricht, Daten an Stationen, eigene Abschnitte im Stationsfenster und Reiter im Manager,
 Mitreden bei der Zugwahl und Ereignisse für Ankunft und Abfahrt. Das Add-on plant, UTL fährt:
-[Wiki – Add-on-Schnittstelle](https://github.com/Marcel1853/UTLogistics/wiki/Add-on-Schnittstelle).
+[Wiki – Add-ons: Rollen und Daten](https://github.com/Marcel1853/UTLogistics/wiki/API-Add-on-Rollen-und-Daten), alle Seiten unter [Für Mod-Autoren](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren).
 
 ## Lizenz
 
