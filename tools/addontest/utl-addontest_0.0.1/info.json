@@ -1,0 +1,10 @@
+{
+    "name": "utl-addontest",
+    "version": "0.0.1",
+    "title": "UTL Add-on-Test (nur Test)",
+    "author": "UTL",
+    "factorio_version": "2.1",
+    "dependencies": [
+        "UTLogistics"
+    ]
+}
