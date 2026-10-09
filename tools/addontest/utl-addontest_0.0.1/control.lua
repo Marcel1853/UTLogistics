@@ -2,6 +2,7 @@
 --- Zeigt die sichtbaren Teile: eigene Rollen im Stationsfenster, eigener Abschnitt mit Daten je
 --- Station, eigener Reiter im Manager, Aufträge (Rangierlok pendelt zum Abstellgleis), Zugfilter.
 local Shunting = require("shunting")
+local Yard = require("yard")
 local MOD = "utl-addontest"
 local KEY = { depot = MOD .. "/depot", siding = MOD .. "/siding", bay = MOD .. "/bay" }
 
@@ -12,11 +13,14 @@ local function note(text)
   log("[ADDONTEST] " .. text)
 end
 Shunting.note = note
+Yard.note = note
 
 -- ── Rückrufe für UTL ────────────────────────────────────────────────────────────────────────
 remote.add_interface(MOD, {
   --- Testkarte: Wagen und Halte für die Rangier-Vorführung
   setup = function(spec) Shunting.setup(spec) end,
+  --- Testkarte „rangieren“: Bahnhof aus Marcels Blaupause erkennen
+  setup_yard = function(surface_index) Yard.setup(surface_index) end,
 
   --- Abschnitt im Stationsfenster: nur an Stationen mit einer Rolle dieses Add-ons
   section = function(flow, unit)
@@ -92,7 +96,7 @@ local function listen()
   script.on_event(ids.on_train_arrived, function(event) ---@param event table
     note("Ankunft: Zug " .. event.train_id .. " an „" .. (event.stop and event.stop.backer_name or "?") .. "“"
       .. (event.job_id and (" (Auftrag " .. event.job_id .. ")") or "") .. (event.delivery_id and (" (Lieferung " .. event.delivery_id .. ")") or ""))
-    Shunting.arrived(event)
+    if not Yard.arrived(event) then Shunting.arrived(event) end
   end)
   -- Normale Lieferung von der Ladebucht: Laden und Entladen spielt das Script (keine Greifarme nötig)
   script.on_event(ids.on_delivery_state_changed, function(event) ---@param event table
@@ -122,11 +126,14 @@ script.on_nth_tick(60, function()
     if game.tick >= tick then
       storage.waiting[train_id] = nil
       local train = game.train_manager.get_train_by_id(train_id)
-      if train then Shunting.idle(train) end
+      if train and not Yard.idle(train) then Shunting.idle(train) end
     end
   end
 end)
-script.on_nth_tick(5, Shunting.tick)
+script.on_nth_tick(5, function()
+  Shunting.tick()
+  Yard.tick()
+end)
 
 -- +/− im eigenen Abschnitt des Stationsfensters
 script.on_event(defines.events.on_gui_click, function(event)

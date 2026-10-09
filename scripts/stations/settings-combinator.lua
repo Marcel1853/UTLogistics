@@ -171,6 +171,47 @@ function Settings.read(station)
   return true
 end
 
+-- Lage des Kombinators: nicht auf der Mitte der Haltestelle, sondern 0,75 Felder davon weg auf der dem
+-- Gleis abgewandten Seite – noch auf der Fläche der Haltestelle, aber außerhalb ihres 1×1-Kollisions-
+-- kastens. Lag er genau darauf und wurde (Roboter, Blaupause) vor der Haltestelle gebaut, räumte
+-- Factorio den Geist der Haltestelle manchmal weg (Haltestelle fehlte danach; headless nachgestellt).
+-- Ältere Blaupausen haben ihn noch auf der Mitte; gefunden wird er in beiden Lagen.
+local OFFSET = 0.75
+local AWAY = { -- Richtung der Haltestelle → Richtung vom Gleis weg
+  [defines.direction.north] = { 1, 0 }, [defines.direction.east] = { 0, 1 },
+  [defines.direction.south] = { -1, 0 }, [defines.direction.west] = { 0, -1 },
+}
+
+--- Sollposition des Kombinators zu einer Haltestelle.
+function Settings.position_for(stop)
+  local away = AWAY[stop.direction] or { 0, 0 }
+  local p = stop.position
+  return { x = p.x + away[1] * OFFSET, y = p.y + away[2] * OFFSET }
+end
+
+--- Blaupause mit älterer Lage (Kombinator genau auf der Mitte) wird platziert: den Kombinator-Geist
+--- gleich neben die Mitte rücken, bevor gebaut wird. `ghost` = Geist des Kombinators oder der Haltestelle
+--- (die Reihenfolge der Geister beim Platzieren ist nicht festgelegt).
+function Settings.move_ghost(ghost)
+  local surface, p = ghost.surface, ghost.position
+  local stop, settings
+  if ghost.ghost_name == C.station_settings then
+    settings = ghost
+    stop = surface.find_entities_filtered({ position = p, radius = 0.3, ghost_type = "train-stop" })[1]
+      or surface.find_entities_filtered({ position = p, radius = 0.3, type = "train-stop" })[1]
+  else
+    stop = ghost
+    settings = surface.find_entities_filtered({ position = p, radius = 0.3, ghost_name = C.station_settings })[1]
+  end
+  if stop and settings then settings.teleport(Settings.position_for(stop)) end
+end
+
+--- Suchbereich um eine Haltestelle (Mitte und neue Lage).
+local function area_of(stop)
+  local p = stop.position
+  return { { p.x - 1, p.y - 1 }, { p.x + 1, p.y + 1 } }
+end
+
 --- Kombinator einer Station finden, aus einem Geist wiederbeleben oder neu bauen. Liefert ihn und
 --- `revived` = true, wenn er aus einer Blaupause kam (dann gelten seine Werte).
 function Settings.ensure(station)
@@ -180,7 +221,10 @@ function Settings.ensure(station)
     -- Station hat eine andere Haltestelle bekommen (Stations-Kombinator umverkabelt): mitziehen
     local p = existing.position
     if stop and stop.valid and existing.surface == stop.surface
-      and math.abs(p.x - stop.position.x) < 0.7 and math.abs(p.y - stop.position.y) < 0.7 then
+      and math.abs(p.x - stop.position.x) < 1 and math.abs(p.y - stop.position.y) < 1 then
+      -- noch auf der Mitte (älterer Stand): an die neue Stelle rücken
+      local want = Settings.position_for(stop)
+      if math.abs(p.x - want.x) > 0.05 or math.abs(p.y - want.y) > 0.05 then existing.teleport(want) end
       return existing, false
     end
     existing.destroy()
@@ -188,8 +232,8 @@ function Settings.ensure(station)
   station.settings = nil
   station.settings_sig = nil
   if not (stop and stop.valid) then return nil, false end
-  local surface, p = stop.surface, stop.position
-  local area = { { p.x - 0.6, p.y - 0.6 }, { p.x + 0.6, p.y + 0.6 } }
+  local surface, p = stop.surface, Settings.position_for(stop)
+  local area = area_of(stop)
   local entity = surface.find_entities_filtered({ area = area, name = C.station_settings })[1]
   -- vor der Haltestelle aus einer Blaupause gebaut (Settings.adopt): seine Werte gelten
   local pending = storage.settings_pending
@@ -205,6 +249,9 @@ function Settings.ensure(station)
   entity = entity or surface.create_entity({ name = C.station_settings, position = p, force = stop.force,
     raise_built = false })
   if not entity then return nil, false end
+  -- aus einer älteren Blaupause auf der Mitte gebaut: an die neue Stelle rücken
+  local q = entity.position
+  if math.abs(q.x - p.x) > 0.05 or math.abs(q.y - p.y) > 0.05 then entity.teleport(p) end
   entity.operable = false
   entity.minable_flag = false
   entity.destructible = false
@@ -233,7 +280,8 @@ end
 --- Ein Einstellungs-Kombinator wurde einzeln gebaut (Blaupause, Bau-Reihenfolge: Haltestelle zuerst):
 --- der Station darunter zuordnen und seine Werte übernehmen. Liefert die Station oder nil.
 function Settings.adopt(entity)
-  local stop = entity.surface.find_entities_filtered({ position = entity.position, radius = 0.6, type = "train-stop" })[1]
+  -- neue Lage 0,75 neben der Mitte, ältere Blaupausen genau auf der Mitte
+  local stop = entity.surface.find_entities_filtered({ position = entity.position, radius = 1, type = "train-stop" })[1]
   local unit = stop and storage.stations.by_stop[stop.unit_number]
   local station = unit and storage.stations.by_unit[unit]
   if not station then
