@@ -49,6 +49,9 @@ end
 --- Nur beim ersten Mal je Depot-Name wird wirklich gesucht. Liefert nil, wenn das
 --- Such-Budget dieses Laufs aufgebraucht ist (dann im nächsten Lauf erneut).
 function Reach.check(train, depot_stop, stop, ignore_budget)
+  -- Haltestelle ohne Gleis (z. B. Blaupause: Halt steht vor dem Gleis): kein Ziel. Nicht cachen,
+  -- das Gleis kann gleich dazukommen. request_train_path bräche hier mit einem Fehler ab.
+  if not (stop.valid and stop.connected_rail) then return false end
   local from = cache()
   -- Schlüssel mit Team: zwei Teams können gleichnamige Depots auf derselben Oberfläche haben.
   -- Nur Depots teilen sich den Eintrag über den Namen; andere Start-Halte (Anschlussfahrt ab dem
@@ -85,7 +88,7 @@ end
 --- Enden auch rückwärts. Gecacht je Start-Haltestelle wie `check`, gleiches Such-Budget.
 function Reach.between(train, from, to, ignore_budget)
   local rail = from.connected_rail
-  if not rail then return false end
+  if not (rail and to.valid and to.connected_rail) then return false end
   local both = #train.locomotives.front_movers > 0 and #train.locomotives.back_movers > 0
   local cached = cache()
   local key = "stop|" .. from.unit_number .. (both and "|2" or "|1")

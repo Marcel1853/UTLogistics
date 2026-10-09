@@ -34,7 +34,7 @@ local function find_free(train, name, surface, network, exclude)
   local heading = Pending.counts()
   for _, station in pairs(storage.stations.by_unit) do
     local stop, cfg = station.stop, station.config
-    if cfg.roles.depot and stop and stop.valid and stop ~= exclude and stop.backer_name == name
+    if cfg.roles.depot and stop and stop.valid and stop.connected_rail and stop ~= exclude and stop.backer_name == name
       and stop.surface_index == surface and stop.force_index == force
       and (network == nil or Networks.related(place, cfg.network, network))
       and length_ok(cfg, length)

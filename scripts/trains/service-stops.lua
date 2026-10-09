@@ -96,7 +96,9 @@ function ServiceStops.candidates(train, network, role)
       -- „max. Züge“ und Zuglimit der Haltestelle beachten: UTL fährt per Schienen-Wegpunkt direkt
       -- davor, da greift das Vanilla-Limit nicht von selbst – ein Stau würde sonst die Hauptstrecke
       -- blockieren.
-      if stop and stop.valid and cfg.roles[role] and stop.surface_index == surface and stop.force_index == force
+      -- ohne Gleis (Halt aus einer Blaupause, Gleis fehlt noch) kein Ziel: die Pfadsuche bräche ab
+      if stop and stop.valid and stop.connected_rail and cfg.roles[role] and stop.surface_index == surface
+        and stop.force_index == force
         and Networks.related(place, cfg.network, network) and length_ok(cfg, length)
         and Capacity.has_room(stop, cfg, heading) then
         list[#list + 1] = { stop = stop, config = cfg }
