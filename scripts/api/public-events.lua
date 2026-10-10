@@ -29,7 +29,7 @@ PublicEvents.ids = {
   on_delivery_state_changed = script.generate_event_name(),
   on_delivery_completed = script.generate_event_name(),
   on_delivery_canceled = script.generate_event_name(),
-  -- seit 0.0.16 (Schnittstelle für Add-ons, api/remote-addons.lua); neue IDs immer hinten anhängen
+  -- seit der API-Beta (Schnittstelle für Add-ons, api/remote-addons.lua); neue IDs immer hinten anhängen
   on_train_arrived = script.generate_event_name(),
   on_train_departed = script.generate_event_name(),
   on_train_idle = script.generate_event_name(),

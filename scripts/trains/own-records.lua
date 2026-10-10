@@ -42,7 +42,7 @@ local function take(own, record)
 end
 
 --- Alle temporären UTL-Einträge entfernen; Einträge anderer Mods und von Unterbrechungen bleiben.
---- Züge ohne Liste (Lieferung aus einem Spielstand vor 0.0.16) räumen wie früher alle temporären ab.
+--- Züge ohne Liste (Lieferung aus einem Spielstand vor der API-Beta) räumen wie früher alle temporären ab.
 function OwnRecords.clear(train)
   if not train.valid then return end
   local schedule = train.get_schedule()

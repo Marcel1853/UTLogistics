@@ -1,4 +1,4 @@
---- Schnittstelle „utl“ für Add-ons (seit 0.0.16), eingebunden in api/remote.lua: Züge umbauen,
+--- Schnittstelle „utl“ für Add-ons (seit der API-Beta), eingebunden in api/remote.lua: Züge umbauen,
 --- festhalten, Halte in Lieferungen einfügen, Züge an einer Station. UTL kuppelt selbst nie und
 --- plant nichts für das Add-on – es führt nur Fahrpläne aus und meldet, was passiert.
 --- Rückgaben sind Kopien; Züge über `train.id`, Stationen über die `unit_number` des Kombinators.
@@ -17,10 +17,8 @@ local Roles = require("scripts.stations.roles")
 local util = require("util")
 
 -- Stand der Schnittstelle: steigt, wenn Funktionen oder Ereignisse dazukommen.
--- 1: Umbau, Festhalten, Halte einfügen, Zug-Ereignisse · 2: Rollen, Aufträge, Daten, Fenster, Manager
--- 3: Zugfilter, remeasure_train · 4: Wegpunkte per Position, eigene temporäre Einträge bleiben
--- 5: Ereignisse für Stationen, Warnungen und Anfragen ohne Zug · 6: Signale für Netz-Kombinatoren
-local API_VERSION = 6
+-- 1: erste öffentliche Fassung (API-Beta 1, 10.10.2026)
+local API_VERSION = 1
 
 local Addons = {}
 
