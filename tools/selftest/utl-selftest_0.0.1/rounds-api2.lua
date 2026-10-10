@@ -103,12 +103,19 @@ function Api2.build(check)
   schedule.add_record({ station = "R43-Rangierdepot", wait_conditions = { { type = "inactivity", ticks = 120 } } })
   schedule.go_to_station(1)
   loco.train.manual_mode = false
+  -- Netz-Kombinator im Netz R43 mit einem zusätzlichen Signal des Add-ons (set_network_signals)
+  local readout = s.create_entity({ name = "utl-network-combinator", position = { 0, LINE + 20 }, force = force,
+    raise_built = true }) --[[@as LuaEntity]]
+  remote.call("utl", "configure_readout", readout.unit_number, { network = "R43", mode = "trains" })
+  check("R43 set_network_signals", remote.call("utl", "set_network_signals", s.index, "player", "R43", MOD,
+    { { signal = { type = "virtual", name = "signal-W" }, count = 7 } }) == true)
   -- abgetrenntes Gleisstück mit Haltestelle (anderes Gleisnetz)
   for x = -9, 9, 2 do s.create_entity({ name = "straight-rail", position = { x, LINE + 40 }, direction = 4, force = force }) end
   local island = s.create_entity({ name = "utl-train-stop", position = { 0, LINE + 42 }, direction = 4, force = force,
     raise_built = true }) --[[@as LuaEntity]]
   island.backer_name = "R43-Insel"
-  return { start = game.tick, loco = loco, siding = siding.unit_number, siding_stop = siding, island = island.unit_number }
+  return { start = game.tick, loco = loco, siding = siding.unit_number, siding_stop = siding, island = island.unit_number,
+    readout = readout.unit_number }
 end
 
 local function own_idle(train_id)
@@ -168,6 +175,9 @@ function Api2.watch(r, check)
     check("R43 on_job_finished", r.finished == "fertig" and remote.call("utl", "is_held", train.id) == nil
       and remote.call("utl", "get_job", r.job) == nil, r.finished)
   elseif r.finished and own_idle(train.id) then
+    local out = remote.call("utl", "get_readout", r.readout) --[[@as table?]]
+    local w = out and out.values["virtual|signal-W|normal"]
+    check("R43 netz-kombinator gibt das signal des add-ons aus", w == 7, serpent.line(out and out.values))
     check("R43 nach dem auftrag wieder frei im rangierdepot", (storage.r43_idle or 0) >= 2, tostring(storage.r43_idle))
     r.done = true
   end

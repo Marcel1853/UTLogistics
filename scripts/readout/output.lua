@@ -5,6 +5,7 @@ local Networks = require("scripts.stations.networks")
 local Aggregate = require("scripts.readout.aggregate")
 local Census = require("scripts.readout.census")
 local Readouts = require("scripts.readout.readouts")
+local AddonSignals = require("scripts.readout.addon-signals")
 
 local Output = {}
 
@@ -64,6 +65,7 @@ function Output.compute(entry)
       local counts = Census.net(place, name)
       for _, def in ipairs(TRAIN_SIGNALS) do add(values, "virtual|" .. def[1] .. "|normal", counts[def[2]] or 0) end
     end
+    AddonSignals.add_into(values, place, names, add) -- Signale von Add-ons (set_network_signals)
     return values
   end
   local provide, request = {}, {}
@@ -89,6 +91,7 @@ function Output.compute(entry)
       if missing > 0 then values[key] = missing end
     end
   end
+  AddonSignals.add_into(values, place, names, add) -- Signale von Add-ons (set_network_signals)
   return values
 end
 

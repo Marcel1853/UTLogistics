@@ -7,9 +7,11 @@ local Roles = require("scripts.stations.roles")
 local Addons = require("scripts.api.addons")
 local Jobs = require("scripts.trains.jobs")
 local Log = require("scripts.lib.log")
+local AddonSignals = require("scripts.readout.addon-signals")
 
 Events.on_configuration_changed(function()
   Addons.forget_missing()
+  AddonSignals.forget_missing()
   local roles = Addons.data().roles
   for _, station in pairs(storage.stations.by_unit) do
     local cfg = station.config

@@ -11,14 +11,16 @@ local TrainChange = require("scripts.trains.train-change")
 local Jobs = require("scripts.trains.jobs")
 local AddonRegistry = require("scripts.api.addons")
 local CreateDelivery = require("scripts.api.create-delivery")
+local AddonSignals = require("scripts.readout.addon-signals")
+local Networks = require("scripts.stations.networks")
 local Roles = require("scripts.stations.roles")
 local util = require("util")
 
 -- Stand der Schnittstelle: steigt, wenn Funktionen oder Ereignisse dazukommen.
 -- 1: Umbau, Festhalten, Halte einfügen, Zug-Ereignisse · 2: Rollen, Aufträge, Daten, Fenster, Manager
 -- 3: Zugfilter, remeasure_train · 4: Wegpunkte per Position, eigene temporäre Einträge bleiben
--- 5: Ereignisse für Stationen, Warnungen und Anfragen ohne Zug
-local API_VERSION = 5
+-- 5: Ereignisse für Stationen, Warnungen und Anfragen ohne Zug · 6: Signale für Netz-Kombinatoren
+local API_VERSION = 6
 
 local Addons = {}
 
@@ -167,6 +169,42 @@ function Addons.remeasure_train(train_id)
   record.slots, record.wagons, record.fluid = Depot.measure(record.train)
   record.length = #record.train.carriages
   return true
+end
+
+-- ── Signale für Netz-Kombinatoren ──────────────────────────────────────────────────────────
+
+--- Ort (Oberfläche + Team) eines Netzes.
+local function place_of(surface_index, force_name)
+  local force = game.forces[force_name or "player"]
+  if not (force and game.get_surface(surface_index)) then return nil end
+  return Networks.place(surface_index, force.index)
+end
+
+--- Zusätzliche Signale für alle Netz-Kombinatoren eines Netzes: `signals` = Liste { signal = SignalID,
+--- count = Zahl } oder nil zum Löschen. Gilt je Mod (mehrere Add-ons addieren sich). Liefert true/false.
+function Addons.set_network_signals(surface_index, force_name, network, mod, signals)
+  local place = place_of(surface_index, force_name)
+  if not (place and type(network) == "string" and type(mod) == "string") then return false end
+  local values = nil
+  if type(signals) == "table" then
+    values = {}
+    for _, s in ipairs(signals) do
+      local signal = s.signal
+      if type(signal) == "table" and type(signal.name) == "string" and type(s.count) == "number" then
+        local key = (signal.type or "item") .. "|" .. signal.name .. "|" .. (signal.quality or "normal")
+        values[key] = (values[key] or 0) + math.floor(s.count)
+      end
+    end
+  end
+  AddonSignals.set(place, network, mod, values)
+  return true
+end
+
+--- Zusätzliche Signale eines Netzes, je Mod: { [mod] = { [key] = Menge } } (Kopie) oder nil.
+function Addons.get_network_signals(surface_index, force_name, network)
+  local place = place_of(surface_index, force_name)
+  local by_net = place and AddonSignals.get(place, network)
+  return by_net and util.table.deepcopy(by_net) or nil
 end
 
 -- ── Daten je Station ────────────────────────────────────────────────────────────────────────

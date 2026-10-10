@@ -2,6 +2,7 @@
 --- Grundrolle). Hat ein Zug 2 Lieferungen geschafft und steht frei im Depot, schickt es ihn per Auftrag
 --- (send_job) 10 s in die Werkstatt; danach fährt er von selbst zurück. Jede 7. neue Lieferung bekommt einen
 --- Durchfahrts-Wegpunkt per Position (add_delivery_stop) – am Gleis des Anbieters, ändert den Weg nicht.
+--- Die Netz-Kombinatoren des Werkstatt-Netzes zeigen die Züge in Wartung als „Reparaturpaket“.
 --- Absagen von UTL (Werkstatt voll, Zug gehört einem anderen Add-on …) werden gezählt.
 local MOD = "utl-addon-workshop"
 local ROLE = MOD .. "/workshop"
@@ -56,6 +57,28 @@ local function setup()
   for _, st in ipairs(remote.call("utl", "get_stations") --[[@as table]]) do storage.stop_of[st.unit] = st.stop end
 end
 
+--- Netz-Kombinatoren: Züge in Wartung je Netz als Signal „Reparaturpaket“ (set_network_signals).
+local function publish()
+  local per_unit = {}
+  for _, unit in pairs(storage.jobs or {}) do per_unit[unit] = (per_unit[unit] or 0) + 1 end
+  -- je Netz zusammenzählen: je Mod und Netz gilt ein Satz Signale
+  local nets = {}
+  for _, unit in ipairs(storage.workshops or {}) do
+    local info = remote.call("utl", "get_station", unit) --[[@as table?]]
+    local stop = storage.stop_of and storage.stop_of[unit] and game.get_entity_by_unit_number(storage.stop_of[unit])
+    if info and stop and stop.valid then
+      local key = stop.surface_index .. "|" .. stop.force.name .. "|" .. info.config.network
+      local net = nets[key] or { surface = stop.surface_index, force = stop.force.name, network = info.config.network, count = 0 }
+      net.count = net.count + (per_unit[unit] or 0)
+      nets[key] = net
+    end
+  end
+  for _, net in pairs(nets) do
+    remote.call("utl", "set_network_signals", net.surface, net.force, net.network, MOD,
+      { { signal = { type = "item", name = "repair-pack" }, count = net.count } })
+  end
+end
+
 local function send_to_workshop(train_id)
   for _, unit in ipairs(storage.workshops or {}) do
     local id, why = remote.call("utl", "send_job", train_id, MOD, { { station = unit, wait = { { type = "time", ticks = 600 } } } })
@@ -63,6 +86,7 @@ local function send_to_workshop(train_id)
       storage.jobs = storage.jobs or {}
       storage.jobs[id] = unit
       stat("auftrag-gesendet")
+      publish()
       return true
     end
     stat("absage:" .. tostring(why))
@@ -85,6 +109,7 @@ local function listen()
     if event.mod ~= MOD then return end
     local unit = storage.jobs and storage.jobs[event.job_id]
     if storage.jobs then storage.jobs[event.job_id] = nil end
+    publish()
     if event.canceled then
       stat("auftrag-abgebrochen:" .. tostring(event.reason))
       return
