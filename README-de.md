@@ -4,6 +4,15 @@
 [![Version](https://img.shields.io/badge/version-0.0.15-orange)](https://mods.factorio.com/mod/UTLogistics)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
 
+> **🧪 Beta für Mod-Autoren: Add-on-Schnittstelle.** Es gibt eine **Testfassung** mit einer neuen
+> Schnittstelle für andere Mods – eigene Bahnhofsrollen, eigene Fahrten, Züge umbauen (an- und
+> abkuppeln), ohne dass die Lieferung abbricht, eigene Teile im Stationsfenster und im Manager,
+> zusätzliche Signale für Netz-Kombinatoren und viele Ereignisse. Sie ist **nicht im Mod-Portal**, sondern
+> ein Pre-Release auf GitHub: [API-Beta 1](https://github.com/Marcel1853/UTLogistics/releases/tag/api-beta-1) ·
+> [Doku](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren). Fehler und Wünsche zur Beta bitte
+> als [Issue auf GitHub](https://github.com/Marcel1853/UTLogistics/issues) melden, nicht in der Diskussion
+> hier. Die normale Version auf dieser Seite ist davon nicht betroffen.
+
 *English version: [README.md](https://github.com/Marcel1853/UTLogistics/blob/main/README.md).*
 
 > **📖 Wiki mit Bildern:** [github.com/Marcel1853/UTLogistics/wiki](https://github.com/Marcel1853/UTLogistics/wiki) – jede Funktion Schritt für Schritt erklärt,
@@ -19,15 +28,6 @@ Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
   (Lager-Stationen). Mit der
   Map-Einstellung „UTL-Funktionen brauchen Forschung“ = aus ist alles sofort frei.
 
-> **Stand der Tests.** UTL läuft durch einen automatischen Selbsttest (168 Prüfungen) und einen
-> headless-Lasttest mit 384 Zügen auf 12 × 12 City Blocks; Updates werden geprüft, indem ein
-> Spielstand der Vorversion geladen wird. Die wichtigsten Funktionen zeigen die Szenarien. Im
-> echten Spiel ist UTL bisher in kleinen Netzen gelaufen. Am neuesten: **Blaupausen-Parameter** mit dem
-> **Parameter-Planer** (0.0.13) und der **aktive Anbieter** (0.0.12); die **Team-Trennung** (0.0.6) ist
-> im echten Mehrspieler noch nicht erprobt. Wenn
-> etwas schiefgeht: bitte in der [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion)
-> melden, am besten mit Spielstand und dem, was du gemacht hast. Vor dem Einsatz in einem
-> gewachsenen Spielstand vorher sichern.
 
 ---
 
