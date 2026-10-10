@@ -26,15 +26,18 @@ local RAIL_TYPES = { "straight-rail", "curved-rail-a", "curved-rail-b", "half-di
   "legacy-curved-rail", "elevated-straight-rail", "elevated-curved-rail-a", "elevated-curved-rail-b",
   "elevated-half-diagonal-rail" }
 
---- Fahrtrichtung auf `rail`, in der `train` das Gleis erreicht (Pfadsuche), sonst „vorn“.
+-- Höchstens so viele Schritte je Pfadsuche (wie bei UTLs Lieferungen, dispatcher/reach.lua)
+local PATH_STEPS = 20000
+
+--- Fahrtrichtung auf `rail`, in der `train` das Gleis erreicht: EINE Pfadsuche mit beiden Richtungen als
+--- Ziel (liefert Richtung und Erreichbarkeit zugleich). Rückgabe: Richtung, erreichbar (true/false/nil).
 local function direction_for(train, rail)
-  if train and train.valid then
-    for _, dir in ipairs({ defines.rail_direction.front, defines.rail_direction.back }) do
-      local result = game.train_manager.request_train_path({ train = train, goals = { { rail = rail, direction = dir } } })
-      if result.found_path then return dir end
-    end
-  end
-  return defines.rail_direction.front
+  if not (train and train.valid) then return defines.rail_direction.front, nil end
+  local front, back = defines.rail_direction.front, defines.rail_direction.back
+  local result = game.train_manager.request_train_path({ train = train, steps_limit = PATH_STEPS,
+    goals = { { rail = rail, direction = front }, { rail = rail, direction = back } } })
+  if not result.found_path then return front, false end
+  return result.goal_index == 2 and back or front, true
 end
 
 --- Ziel aus der Anfrage: `stop` = Haltestelle (LuaEntity oder unit_number) bzw. `station` = UTL-
@@ -69,7 +72,10 @@ function ExtraStops.target_of(spec, train)
     end
   end
   if rail and rail.valid then
-    return { rail = rail, rail_direction = spec.rail_direction or direction_for(train, rail) }
+    if spec.rail_direction then return { rail = rail, rail_direction = spec.rail_direction } end
+    local dir, reached = direction_for(train, rail)
+    -- `reached`: Ergebnis der Pfadsuche vom Zug aus – ExtraStops.reachable braucht dann keine zweite
+    return { rail = rail, rail_direction = dir, reached = reached }
   end
   return nil
 end
@@ -85,7 +91,9 @@ end
 --- dass gültige Fahrten mit Wenden abgelehnt werden.
 function ExtraStops.reachable(train, from, target)
   if not (train and train.valid) then return false end
-  local request = { train = train, goals = { goal_of(target) }, steps_limit = 50000 }
+  -- Gleis-Ziel (Tabelle, keine Haltestelle): schon beim Bestimmen der Richtung gesucht
+  if not from and target.object_name ~= "LuaEntity" and target.reached ~= nil then return target.reached end
+  local request = { train = train, goals = { goal_of(target) }, steps_limit = PATH_STEPS }
   if from then
     local rail = from.object_name == "LuaEntity" and from.connected_rail or from.rail
     if not (rail and rail.valid) then return true end -- ohne Gleis keine Aussage: nicht ablehnen

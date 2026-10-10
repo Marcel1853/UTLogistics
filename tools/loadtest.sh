@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Lasttest: baut ein großes Netz (5 Depots × 40 Züge, 80 Stationen …) und misst headless die
+# Lasttest: baut ein großes Netz (12 × 12 City Blocks, 384 Züge, 880 Stationen …) und misst headless die
 # Zeit pro Tick (gesamt, Script = UTL, Züge, Zug-Pfadsuche). Eigener Datenordner.
 # Aufruf: tools/loadtest.sh [ticks]   (Standard 36000 = 10 Minuten Spielzeit)
+#         ADDONS=1 tools/loadtest.sh …  mit den drei Test-Add-ons ([ADDON-…]-Zeilen im Ergebnis)
 set -euo pipefail
 
 MOD_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,6 +14,10 @@ trap '[ -n "${KEEP:-}" ] || rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/mods" "$WORK/data"
 ln -s "$MOD_DIR" "$WORK/mods/$(basename "$MOD_DIR")"
 ln -s "$MOD_DIR/tools/loadtest/utl-loadtest_0.0.1" "$WORK/mods/utl-loadtest_0.0.1"
+# ADDONS=1: die drei Test-Add-ons (tools/addons) laufen mit – Statistik, Werkstatt, Reserve & Eilaufträge
+if [ -n "${ADDONS:-}" ]; then
+  for addon in "$MOD_DIR"/tools/addons/utl-addon-*; do ln -s "$addon" "$WORK/mods/$(basename "$addon")"; done
+fi
 for dep in "$MOD_DIR"/../flib_*.zip; do ln -s "$dep" "$WORK/mods/$(basename "$dep")"; done
 printf '[path]\nread-data=__PATH__executable__/../../data\nwrite-data=%s/data\n' "$WORK" > "$WORK/config.ini"
 
@@ -28,6 +33,7 @@ echo "Messe $TICKS Ticks …"
   > "$WORK/timings.txt"
 cp "$WORK/timings.txt" /tmp/claude-1000/last-timings.txt 2>/dev/null || true
 grep -o "\[LOAD\].*" "$WORK/data/factorio-current.log" || true
+grep -o "\[ADDON-[A-Z]*\].*" "$WORK/data/factorio-current.log" || true
 if grep -qE "Error" "$WORK/data/factorio-current.log"; then grep -E -A5 "Error" "$WORK/data/factorio-current.log" | head -20; exit 1; fi
 
 python3 - "$WORK/timings.txt" <<'PY'

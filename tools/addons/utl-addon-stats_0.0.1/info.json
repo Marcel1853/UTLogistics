@@ -1,0 +1,10 @@
+{
+    "name": "utl-addon-stats",
+    "version": "0.0.1",
+    "title": "UTL-Test-Add-on: Statistik",
+    "author": "UTL",
+    "factorio_version": "2.1",
+    "dependencies": [
+        "UTLogistics"
+    ]
+}
