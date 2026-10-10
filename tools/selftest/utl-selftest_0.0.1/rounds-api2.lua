@@ -100,7 +100,12 @@ function Api2.build(check)
   schedule.add_record({ station = "R43-Rangierdepot", wait_conditions = { { type = "inactivity", ticks = 120 } } })
   schedule.go_to_station(1)
   loco.train.manual_mode = false
-  return { start = game.tick, loco = loco, siding = siding.unit_number, siding_stop = siding }
+  -- abgetrenntes Gleisstück mit Haltestelle (anderes Gleisnetz)
+  for x = -9, 9, 2 do s.create_entity({ name = "straight-rail", position = { x, LINE + 40 }, direction = 4, force = force }) end
+  local island = s.create_entity({ name = "utl-train-stop", position = { 0, LINE + 42 }, direction = 4, force = force,
+    raise_built = true }) --[[@as LuaEntity]]
+  island.backer_name = "R43-Insel"
+  return { start = game.tick, loco = loco, siding = siding.unit_number, siding_stop = siding, island = island.unit_number }
 end
 
 local function own_idle(train_id)
@@ -119,6 +124,14 @@ function Api2.watch(r, check)
     local in_pool = false
     for _, t in pairs(remote.call("utl", "get_idle_trains", { network = "R43" })) do in_pool = in_pool or t.id == train.id end
     check("R43 zug im rangierdepot gehört dem add-on, nicht dem dispatcher", not in_pool)
+    -- Zug im Depot dieses Add-ons gehört ihm: ein anderer Mod bekommt ihn nicht
+    local other_job, other_why = remote.call("utl", "send_job", train.id, "anderer-mod", { { station = r.siding } })
+    check("R43 fremdes add-on bekommt den zug nicht", other_job == nil and other_why == "owned-by-other"
+      and remote.call("utl", "hold_train", train.id, "anderer-mod") == false, tostring(other_why))
+    -- Haltestelle auf einem abgetrennten Gleisstück: unerreichbar
+    local far_job, far_why, far_index = remote.call("utl", "send_job", train.id, MOD, { { station = r.island } })
+    check("R43 getrenntes gleisnetz wird abgelehnt", far_job == nil and far_why == "unreachable" and far_index == 1,
+      serpent.line({ far_job, far_why, far_index }))
     -- Zuglimit 0 am Ziel: Auftrag wird abgelehnt (UTL fährt per Wegpunkt, das Spiel zählte ihn sonst nicht)
     local siding = r.siding_stop
     siding.trains_limit = 0
@@ -127,7 +140,23 @@ function Api2.watch(r, check)
     siding.trains_limit = nil
     check("R43 send_job: zuglimit 0 am ziel wird abgelehnt", full == nil and full_why == "station-full" and full_index == 1,
       serpent.line({ full, full_why, full_index }))
-    local id, why = remote.call("utl", "send_job", train.id, MOD, { { station = r.siding, wait = { { type = "time", ticks = 60 } } } })
+    -- eigener temporärer Eintrag des Add-ons (an UTL vorbei) muss send_job überstehen
+    local schedule = train.get_schedule()
+    schedule.add_record({ station = "R43-Fremd", temporary = true, wait_conditions = {},
+      index = { schedule_index = schedule.get_record_count() + 1 } })
+    -- Wegpunkt per Position (Gleis am Abstellgleis), Richtung bestimmt UTL selbst
+    local id, why = remote.call("utl", "send_job", train.id, MOD,
+      { { position = r.siding_stop.connected_rail.position, wait = { { type = "time", ticks = 60 } } } })
+    local kept, rail_target = false, false
+    for _, record in pairs(schedule.get_records() or {}) do
+      if record.temporary and record.station == "R43-Fremd" then kept = true end
+      if record.temporary and record.rail then rail_target = true end
+    end
+    check("R43 eigener temporärer eintrag bleibt, wegpunkt per position", kept and rail_target, serpent.line({ kept, rail_target }))
+    for i = schedule.get_record_count(), 1, -1 do -- Eintrag wieder entfernen (nur für den Test)
+      local record = schedule.get_record({ schedule_index = i })
+      if record and record.station == "R43-Fremd" then schedule.remove_record({ schedule_index = i }) end
+    end
     check("R43 send_job", id ~= nil and remote.call("utl", "is_held", train.id) == MOD
       and remote.call("utl", "get_job", id) ~= nil, tostring(why))
     r.job = id or -1

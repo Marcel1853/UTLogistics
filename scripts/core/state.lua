@@ -34,6 +34,7 @@ function State.init()
   trains.held = trains.held or {} -- [train_id] = Mod, der ihn festhält (trains/held.lua, Schnittstelle hold_train)
   trains.change_records = trains.change_records or {} -- [alte train_id] = gesicherter Fahrplan beim Umbau (train-change.lua)
   trains.waiting_at = trains.waiting_at or {}
+  trains.own_records = trains.own_records or {} -- [train_id] = { [Schlüssel] = Anzahl }: temporäre Einträge von UTL (own-records.lua)
   trains.addon_idle = trains.addon_idle or {} -- [train_id] = { train, station, stop, role }: frei im Depot eines Add-ons -- [train_id] = UTL-Station, an der er gerade wartet (Ereignis on_train_departed)
   storage.trains = trains
 

@@ -5,6 +5,8 @@
 local Networks = require("scripts.stations.networks")
 local Elevators = require("scripts.compat.se-elevators")
 
+local OwnRecords = require("scripts.trains.own-records")
+
 local Home = {}
 
 --- Aufzug-Halt vor den nächsten festen Halt setzen, falls der Zug nicht auf der Seite seines
@@ -31,7 +33,7 @@ function Home.ensure(train)
     if record.station == route.here.backer_name then return false end -- schon eingeplant
     index = index + 1
   end
-  schedule.add_record({
+  OwnRecords.add(schedule, {
     station = route.here.backer_name,
     temporary = true,
     wait_conditions = {},

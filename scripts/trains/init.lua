@@ -208,7 +208,7 @@ Heartbeat.add_task("pending-sweep", 600, function()
   -- Einträge zerstörter Züge (jeder Umbau erzeugt eine neue ID)
   local manager = game.train_manager
   for _, tbl in pairs({ storage.trains.home, storage.statistics and storage.statistics.trains, storage.trains.held,
-    storage.trains.waiting_at, storage.trains.addon_idle }) do
+    storage.trains.waiting_at, storage.trains.addon_idle, storage.trains.own_records }) do
     for id in pairs(tbl) do
       if not (manager.get_train_by_id(id) or Rekey.in_transfer(id)) then tbl[id] = nil end
     end

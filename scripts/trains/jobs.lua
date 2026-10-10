@@ -37,26 +37,35 @@ local function has_room(stop, heading)
 end
 
 --- Zug `train_id` für `mod` über `stops` schicken. `stops` = Liste { station = unit | stop =
---- Haltestelle | rail + rail_direction, wait = Wartebedingungen, ignore_limit = true (optional) }.
---- Haltestellen ohne Platz (Zuglimit, „max. Züge“) lehnen den Auftrag ab, außer mit ignore_limit.
+--- Haltestelle | rail + rail_direction | position, wait = Wartebedingungen, ignore_limit = true,
+--- skip_path_check = true (beides optional) }. Haltestellen ohne Platz (Zuglimit, „max. Züge“) und
+--- unerreichbare Ziele (getrennte Gleisnetze) lehnen den Auftrag ab. Züge eines anderen Add-ons
+--- (festgehalten oder frei in dessen Depot) bleiben dessen.
 --- Liefert die Auftrags-ID oder nil und einen Grund („unknown-train“, „busy“, „held-by-other“,
---- „no-stops“, „bad-target“, „station-full“ – dazu die Nummer des Halts –, „no-schedule“).
+--- „owned-by-other“, „no-stops“, „bad-target“/„station-full“/„unreachable“ – dazu die Nummer des
+--- Halts –, „no-schedule“).
 function Jobs.send(train_id, mod, stops)
   local train = type(train_id) == "number" and game.train_manager.get_train_by_id(train_id) or nil
   if not train then return nil, "unknown-train" end
   if type(mod) ~= "string" then return nil, "bad-mod" end
   if storage.deliveries.by_train[train_id] or storage.jobs.by_train[train_id] then return nil, "busy" end
-  local owner = Held.owner(train_id)
-  if owner and owner ~= mod then return nil, "held-by-other" end
+  local owner = Held.belongs_to(train_id)
+  if owner and owner ~= mod then
+    return nil, Held.owner(train_id) and "held-by-other" or "owned-by-other" -- Zug eines anderen Add-ons
+  end
   if type(stops) ~= "table" or not stops[1] then return nil, "no-stops" end
   local targets, reserve = {}, {}
   local heading = Pending.counts()
   for i, spec in ipairs(stops) do
-    local target = type(spec) == "table" and ExtraStops.target_of(spec)
+    local target = type(spec) == "table" and ExtraStops.target_of(spec, train)
     if not target then return nil, "bad-target", i end
     if target.object_name == "LuaEntity" then
       if not spec.ignore_limit and not has_room(target, heading) then return nil, "station-full", i end
       reserve[#reserve + 1] = target
+    end
+    -- erreichbar? (getrennte Gleisnetze) – erster Halt vom Zug aus, weitere vom vorigen Halt
+    if not spec.skip_path_check and not ExtraStops.reachable(train, targets[i - 1] and targets[i - 1].target, target) then
+      return nil, "unreachable", i
     end
     targets[i] = { target = target, wait = spec.wait }
   end

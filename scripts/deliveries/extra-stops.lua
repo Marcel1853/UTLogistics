@@ -21,9 +21,27 @@ local function stop_name(unit)
   return stop and stop.valid and stop.backer_name or nil
 end
 
+-- Gleistypen für Wegpunkte per Position
+local RAIL_TYPES = { "straight-rail", "curved-rail-a", "curved-rail-b", "half-diagonal-rail", "legacy-straight-rail",
+  "legacy-curved-rail", "elevated-straight-rail", "elevated-curved-rail-a", "elevated-curved-rail-b",
+  "elevated-half-diagonal-rail" }
+
+--- Fahrtrichtung auf `rail`, in der `train` das Gleis erreicht (Pfadsuche), sonst „vorn“.
+local function direction_for(train, rail)
+  if train and train.valid then
+    for _, dir in ipairs({ defines.rail_direction.front, defines.rail_direction.back }) do
+      local result = game.train_manager.request_train_path({ train = train, goals = { { rail = rail, direction = dir } } })
+      if result.found_path then return dir end
+    end
+  end
+  return defines.rail_direction.front
+end
+
 --- Ziel aus der Anfrage: `stop` = Haltestelle (LuaEntity oder unit_number) bzw. `station` = UTL-
---- Station (unit), sonst `rail` + `rail_direction`.
-function ExtraStops.target_of(spec)
+--- Station (unit), `rail` (+ `rail_direction`) oder `position` = { x, y } (+ `surface`, Standard: die des
+--- Zugs) – UTL sucht dann das Gleis dort. Ohne `rail_direction` nimmt UTL die Richtung, in der `train`
+--- das Gleis erreicht. Alles optional: Haltestellen bekommen ihren Wegpunkt davor von UTL selbst.
+function ExtraStops.target_of(spec, train)
   if spec.station then
     local station = Registry.get(spec.station)
     local stop = station and station.stop
@@ -34,10 +52,49 @@ function ExtraStops.target_of(spec)
   if stop then
     return stop.valid and stop.type == "train-stop" and stop or nil
   end
-  if spec.rail and spec.rail.valid then
-    return { rail = spec.rail, rail_direction = spec.rail_direction or defines.rail_direction.front }
+  local rail = spec.rail
+  if not rail and spec.position then
+    local front = train and train.valid and train.front_stock
+    local surface = spec.surface and game.get_surface(spec.surface) or (front and front.surface)
+    local p = spec.position
+    local x, y = p.x or p[1], p.y or p[2]
+    if surface and x and y then
+      local found = surface.find_entities_filtered({ type = RAIL_TYPES, position = { x, y }, radius = 2 })
+      table.sort(found, function(a, b)
+        local da = (a.position.x - x) ^ 2 + (a.position.y - y) ^ 2
+        local db = (b.position.x - x) ^ 2 + (b.position.y - y) ^ 2
+        return da < db
+      end)
+      rail = found[1]
+    end
+  end
+  if rail and rail.valid then
+    return { rail = rail, rail_direction = spec.rail_direction or direction_for(train, rail) }
   end
   return nil
+end
+
+--- Ziel als Pfad-Ziel bzw. Start (Haltestelle oder Gleis + Richtung).
+local function goal_of(target)
+  if target.object_name == "LuaEntity" then return { train_stop = target } end
+  return { rail = target.rail, direction = target.rail_direction }
+end
+
+--- Erreicht `train` das Ziel `target`? Ohne `from`: vom Zug aus; mit `from` (vorheriges Ziel): von dort, in
+--- beide Richtungen (der Zug darf an einem Halt wenden) – so fallen getrennte Gleisnetze sicher auf, ohne
+--- dass gültige Fahrten mit Wenden abgelehnt werden.
+function ExtraStops.reachable(train, from, target)
+  if not (train and train.valid) then return false end
+  local request = { train = train, goals = { goal_of(target) }, steps_limit = 50000 }
+  if from then
+    local rail = from.object_name == "LuaEntity" and from.connected_rail or from.rail
+    if not (rail and rail.valid) then return true end -- ohne Gleis keine Aussage: nicht ablehnen
+    request.starts = {
+      { rail = rail, direction = defines.rail_direction.front, is_front = true },
+      { rail = rail, direction = defines.rail_direction.back, is_front = true },
+    }
+  end
+  return game.train_manager.request_train_path(request).found_path == true
 end
 
 --- Index des temporären Halts mit Namen `name` ab `from` (nil = nicht gefunden).
@@ -57,9 +114,10 @@ function ExtraStops.add(delivery, spec)
   local where = spec.where or "after_provider"
   local allowed = ALLOWED[where]
   if not (allowed and allowed[delivery.state]) then return false, "bad-position" end
-  local target = ExtraStops.target_of(spec)
-  if not target then return false, "bad-target" end
   local train = delivery.train
+  local target = ExtraStops.target_of(spec, train)
+  if not target then return false, "bad-target" end
+  if not spec.skip_path_check and not ExtraStops.reachable(train, nil, target) then return false, "unreachable" end
   local schedule = train.get_schedule()
   local records = schedule and schedule.get_records()
   if not records then return false, "no-schedule" end

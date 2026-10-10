@@ -64,6 +64,7 @@ function Rekey.move(old_id, train)
   if waiting then waiting.train = train end
   move(trains.pending, old_id, new_id)
   move(trains.waiting_at, old_id, new_id)
+  move(trains.own_records, old_id, new_id) -- welche Fahrplan-Einträge von UTL stammen (own-records.lua)
   move(trains.held, old_id, new_id)
   local filtered = move(trains.filtered, old_id, new_id)
   Filters.rehome(filtered, train)

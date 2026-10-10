@@ -6,6 +6,7 @@
 --- Pro Halt zwei Einträge: ein Schienen-Wegpunkt direkt vor der Haltestelle (ohne Warten), damit
 --- der Zug bei gleichnamigen Haltestellen genau diese anfährt, danach die Station selbst.
 local Util = require("scripts.lib.util")
+local OwnRecords = require("scripts.trains.own-records")
 
 local Schedule = {}
 
@@ -41,7 +42,7 @@ end
 --- Aufzug. SE löscht beim Durchfahren alle Schienen-Einträge; der Wegpunkt vor dem Abnehmer kommt
 --- nach der Ankunft drüben dazu (compat/space-exploration.lua).
 local function add_station(schedule, index, stop, wait_conditions)
-  schedule.add_record({
+  OwnRecords.add(schedule, {
     station = stop.backer_name,
     temporary = true,
     wait_conditions = wait_conditions,
@@ -53,7 +54,7 @@ end
 local function add_stop(schedule, index, stop, wait_conditions)
   local rail = stop.connected_rail
   if rail then
-    schedule.add_record({
+    OwnRecords.add(schedule, {
       rail = rail,
       rail_direction = stop.connected_rail_direction,
       temporary = true,
@@ -62,7 +63,7 @@ local function add_stop(schedule, index, stop, wait_conditions)
     })
     index = index + 1
   end
-  schedule.add_record({
+  OwnRecords.add(schedule, {
     station = stop.backer_name,
     temporary = true,
     wait_conditions = wait_conditions,
@@ -142,7 +143,7 @@ end
 --- Index hinter dem eingefügten Halt.
 function Schedule.insert(schedule, index, target, wait_conditions)
   if target.object_name == "LuaEntity" then return add_stop(schedule, index, target, wait_conditions or {}) end
-  schedule.add_record({
+  OwnRecords.add(schedule, {
     rail = target.rail,
     rail_direction = target.rail_direction,
     temporary = true,
@@ -220,7 +221,7 @@ function Schedule.send_waypoint(train, stop)
   local rail = stop.connected_rail
   if not (schedule and rail) then return false end
   local index = (schedule.current or 0) + 1
-  schedule.add_record({
+  OwnRecords.add(schedule, {
     rail = rail,
     rail_direction = stop.connected_rail_direction,
     temporary = true,
@@ -237,7 +238,7 @@ function Schedule.waypoint_before(train, stop, index)
   local schedule = train.get_schedule()
   local rail = stop.connected_rail
   if not (schedule and rail) then return false end
-  schedule.add_record({
+  OwnRecords.add(schedule, {
     rail = rail,
     rail_direction = stop.connected_rail_direction,
     temporary = true,
@@ -248,19 +249,10 @@ function Schedule.waypoint_before(train, stop, index)
   return true
 end
 
---- Alle von UTL angelegten (temporären, nicht von Interrupts stammenden) Halte entfernen.
+--- Alle von UTL angelegten temporären Halte entfernen (nicht die eines Add-ons oder einer
+--- Unterbrechung, siehe own-records.lua).
 function Schedule.clear(train)
-  if not train.valid then return end
-  local schedule = train.get_schedule()
-  if not schedule then return end
-  local records = schedule.get_records()
-  if not records then return end
-  for i = #records, 1, -1 do
-    local record = records[i]
-    if record.temporary and not record.created_by_interrupt then
-      schedule.remove_record({ schedule_index = i })
-    end
-  end
+  OwnRecords.clear(train)
 end
 
 return Schedule

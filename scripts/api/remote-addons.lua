@@ -16,8 +16,8 @@ local util = require("util")
 
 -- Stand der Schnittstelle: steigt, wenn Funktionen oder Ereignisse dazukommen.
 -- 1: Umbau, Festhalten, Halte einfügen, Zug-Ereignisse · 2: Rollen, Aufträge, Daten, Fenster, Manager
--- 3: Zugfilter, remeasure_train
-local API_VERSION = 3
+-- 3: Zugfilter, remeasure_train · 4: Wegpunkte per Position, eigene temporäre Einträge bleiben
+local API_VERSION = 4
 
 local Addons = {}
 
@@ -53,7 +53,7 @@ end
 --- geht nach release_train weiter. Liefert false, wenn ein anderer Mod ihn schon festhält.
 function Addons.hold_train(train_id, mod)
   if type(mod) ~= "string" or not train_by_id(train_id) then return false end
-  local owner = Held.owner(train_id)
+  local owner = Held.belongs_to(train_id) -- festgehalten oder im Depot eines anderen Add-ons
   if owner and owner ~= mod then return false end
   storage.trains.held[train_id] = mod
   Depot.remove(train_id)
