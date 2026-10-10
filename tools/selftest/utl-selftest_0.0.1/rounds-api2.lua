@@ -29,6 +29,9 @@ function Api2.record(name, event)
   if name == "on_job_finished" then
     storage.r43_jobs = storage.r43_jobs or {}
     storage.r43_jobs[event.job_id] = event.canceled and ("abgebrochen " .. tostring(event.reason)) or "fertig"
+  elseif name == "on_request_unserved" and event.reason then
+    storage.r44_unserved = storage.r44_unserved or {}
+    storage.r44_unserved[event.station] = event.reason
   elseif name == "on_train_idle" and event.role == MOD .. "/rangierdepot" then
     storage.r43_idle = (storage.r43_idle or 0) + 1
   end
@@ -185,6 +188,8 @@ function Api2.build_filter(check)
   s.force_generate_chunk_requests()
   local force = game.forces["player"]
   for x = -85, 85, 2 do s.create_entity({ name = "straight-rail", position = { x, LINE }, direction = 4, force = force }) end
+  -- „Anfrage ohne Zug“ sofort melden (Wartezeit 0), am Ende von R44 wieder zurück
+  remote.call("utl", "set_map_config", "utl-alert-no-train-minutes", 0)
   check("R44 zugfilter anmelden", remote.call("utl", "register_train_filter",
     { mod = MOD, interface = "utl-selftest-addon", filter = "filter" }) == true)
   local depot = stop(s, force, "R44-Depot", 10)
@@ -210,7 +215,12 @@ function Api2.build_filter(check)
   schedule.add_record({ station = "R44-Depot", wait_conditions = { { type = "inactivity", ticks = 120 } } })
   schedule.go_to_station(1)
   l1.train.manual_mode = false
-  return { start = game.tick, loco = l1, wagon = wagon }
+  -- Station bauen und gleich wieder abreißen: on_station_created/_removed
+  local temp = s.create_entity({ name = "utl-train-stop", position = { -30, LINE + 2 }, direction = 4, force = force,
+    raise_built = true }) --[[@as LuaEntity]]
+  local temp_unit = temp.unit_number
+  temp.destroy({ raise_destroy = true })
+  return { start = game.tick, loco = l1, wagon = wagon, req = req.unit_number, temp = temp_unit }
 end
 
 function Api2.watch_filter(r, check)
@@ -231,6 +241,14 @@ function Api2.watch_filter(r, check)
     local info = storage.r44_info or {}
     check("R44 zugfilter: erst abgelehnt, dann erlaubt", not r.early and info.provider_role == MOD .. "/ladebucht",
       serpent.line({ zu_frueh = r.early, aufrufe = storage.r44_calls, info = info }))
+    remote.call("utl", "set_map_config", "utl-alert-no-train-minutes", nil)
+    local unserved = (storage.r44_unserved or {})[r.req]
+    check("R44 on_request_unserved (filter lehnt alle züge ab)", unserved == "no-free-train" or unserved == "no-fitting-train",
+      tostring(unserved))
+    local ev = storage.r36 or {}
+    check("R44 stations-ereignisse und warnungen", (ev.on_station_created or 0) > 0 and (ev.on_station_changed or 0) > 0
+      and (ev.on_station_removed or 0) > 0 and (ev.on_alert or 0) > 0,
+      serpent.line({ ev.on_station_created, ev.on_station_changed, ev.on_station_removed, ev.on_alert }))
     remote.call("utl", "cancel_delivery", seen.id)
   end
   if not r.done and game.tick - r.start > 20000 then

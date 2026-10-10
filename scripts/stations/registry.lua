@@ -11,6 +11,7 @@ local Log = require("scripts.lib.log")
 local Roles = require("scripts.stations.roles")
 local Fields = require("scripts.stations.fields")
 local State = require("scripts.core.state")
+local PublicEvents = require("scripts.api.public-events")
 
 local Registry = {}
 
@@ -27,6 +28,7 @@ end
 
 function Registry.config_changed(station)
   notify(changed_listeners, station)
+  PublicEvents.raise_data("on_station_changed", PublicEvents.station_info(station))
 end
 
 local function new_config()
@@ -163,6 +165,7 @@ function Registry.on_destroyed(unit)
     if stations.cursor == unit then stations.cursor = nil end
     stations.count = stations.count - 1
     Log.debug("Station entfernt: " .. unit)
+    PublicEvents.raise_data("on_station_removed", { station = unit, kind = station.kind })
     Heartbeat.update_registration()
     return
   end

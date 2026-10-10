@@ -17,7 +17,8 @@ local util = require("util")
 -- Stand der Schnittstelle: steigt, wenn Funktionen oder Ereignisse dazukommen.
 -- 1: Umbau, Festhalten, Halte einfügen, Zug-Ereignisse · 2: Rollen, Aufträge, Daten, Fenster, Manager
 -- 3: Zugfilter, remeasure_train · 4: Wegpunkte per Position, eigene temporäre Einträge bleiben
-local API_VERSION = 4
+-- 5: Ereignisse für Stationen, Warnungen und Anfragen ohne Zug
+local API_VERSION = 5
 
 local Addons = {}
 

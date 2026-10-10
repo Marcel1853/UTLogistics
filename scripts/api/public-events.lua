@@ -11,6 +11,12 @@
 ---   on_train_rebuilt           – Zug mit UTL-Daten umgebaut (train, old_train_ids, canceled, changing)
 ---   on_job_finished            – Auftrag eines Add-ons fertig oder abgebrochen (job_id, mod, train,
 ---                                train_id, canceled, reason)
+---   on_station_created/_changed – Station gebaut bzw. Einstellungen geändert (station, kind, stop,
+---                                stop_name, network, mode, roles, addon_role)
+---   on_station_removed         – Station abgerissen (station, kind)
+---   on_alert                   – UTL-Warnung (group, icon, entity, message, key, force, surface)
+---   on_request_unserved        – Abnehmer wartet länger als eingestellt ohne Zug (station, key, network,
+---                                since, reason, provider) – höchstens einmal je Minute und Anfrage
 --- Daten: siehe `Events.info` (keine Tabellen aus storage, nur Kopien). Ausgelöst wird immer erst
 --- am Ende der eigenen Verarbeitung, damit ein Empfänger UTL nicht mitten im Ablauf stört.
 local util = require("util")
@@ -29,6 +35,11 @@ PublicEvents.ids = {
   on_train_idle = script.generate_event_name(),
   on_train_rebuilt = script.generate_event_name(),
   on_job_finished = script.generate_event_name(),
+  on_station_created = script.generate_event_name(),
+  on_station_removed = script.generate_event_name(),
+  on_station_changed = script.generate_event_name(),
+  on_alert = script.generate_event_name(),
+  on_request_unserved = script.generate_event_name(),
 }
 
 --- Öffentliche Sicht auf eine Lieferung (auch für get_deliveries/get_delivery).
@@ -61,6 +72,22 @@ function PublicEvents.raise(name, delivery, extra)
     for key, value in pairs(extra) do data[key] = value end
   end
   script.raise_event(PublicEvents.ids[name], data)
+end
+
+--- Öffentliche Sicht auf eine Station (Stations-Ereignisse).
+function PublicEvents.station_info(station)
+  local cfg = station.config
+  local stop = station.stop
+  return {
+    station = station.unit,
+    kind = station.kind,
+    stop = stop and stop.valid and stop or nil,
+    stop_name = stop and stop.valid and stop.backer_name or nil,
+    network = cfg.network,
+    mode = cfg.mode,
+    roles = util.table.deepcopy(cfg.roles),
+    addon_role = cfg.addon_role,
+  }
 end
 
 --- Ereignis `name` mit fertigen Daten auslösen (Zug-Ereignisse; nur Kopien bzw. LuaObjekte).

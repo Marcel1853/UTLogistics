@@ -10,6 +10,7 @@ local Output = require("scripts.stations.output")
 local Settings = require("scripts.stations.settings-combinator")
 local Unlocks = require("scripts.core.unlocks")
 local Config = require("scripts.core.config")
+local PublicEvents = require("scripts.api.public-events")
 
 -- UTL-Haltestelle ist ebenfalls vom Typ train-stop, der Typ-Filter deckt sie mit ab.
 local build_filter = {
@@ -39,6 +40,7 @@ local function on_built(event)
   if station then
     Output.refresh(station)
     if Settings.refresh(station) then settings_taken(station) end
+    PublicEvents.raise_data("on_station_created", PublicEvents.station_info(station))
   end
 end
 

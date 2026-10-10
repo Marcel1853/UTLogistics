@@ -80,6 +80,7 @@ function State.init()
   dispatch.active = dispatch.active or {}               -- [station] = true: aktiver Anbieter mit Angebot
   dispatch.starving = dispatch.starving or {}           -- [netzwerk][station|key] = Anfrage ohne freien Zug
   dispatch.waiting = dispatch.waiting or {}             -- [station][key] = { since, seen }: unbedient seit
+  dispatch.unserved = dispatch.unserved or {}           -- [station|key] = tick: zuletzt on_request_unserved gemeldet
   dispatch.return_block = dispatch.return_block or {}   -- [abnehmer][key] = tick: Rest blieb übrig, Cleanup liefert es ihm vorerst nicht zurück
   -- dispatch.cursor: Round-Robin-Position über die Abnehmer (darf nil sein)
   storage.dispatch = dispatch

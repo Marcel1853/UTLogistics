@@ -4,6 +4,8 @@
 ---   cargo     – Restladung, Fehlmenge beim Anbieter
 ---   train     – kein Weg, kein freies Depot, Tanken fehlgeschlagen, Lieferung abgebrochen, Zug steckt fest
 --- Gleiche Warnung (Schlüssel) höchstens alle REPEAT_TICKS, damit nichts flackert oder spammt.
+local PublicEvents = require("scripts.api.public-events")
+
 local Alerts = {}
 
 local REPEAT_TICKS = 600
@@ -35,6 +37,8 @@ function Alerts.raise(group, icon, entity, message, key)
     last[key] = game.tick
   end
   Alerts.log(group, icon, entity, message, key)
+  PublicEvents.raise_data("on_alert", { group = group, icon = icon, entity = entity, message = message, key = key,
+    force = entity.force.name, surface = entity.surface_index })
   local setting = SETTINGS[group]
   for _, player in pairs(entity.force.connected_players) do
     if player.mod_settings[setting].value then

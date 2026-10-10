@@ -4,6 +4,7 @@ local Deliveries = require("scripts.deliveries.deliveries")
 local Networks = require("scripts.stations.networks")
 local Util = require("scripts.lib.util")
 local Alerts = require("scripts.alerts.alerts")
+local PublicEvents = require("scripts.api.public-events")
 
 local Warn = {}
 
@@ -54,6 +55,14 @@ function Warn.no_train(request, provider, has_pools)
   local since = Warn.waiting_since(unit, key)
   if game.tick - since < storage.cfg.alert_no_train_minutes * 3600 then return end
   local cfg = requester.config
+  -- für andere Mods (z. B. Zug bauen oder leihen): höchstens einmal je Minute und Anfrage
+  local sent = storage.dispatch.unserved
+  local id = unit .. "|" .. key
+  if not sent[id] or game.tick - sent[id] >= 3600 then
+    sent[id] = game.tick
+    PublicEvents.raise_data("on_request_unserved", { station = unit, key = key, network = cfg.network, since = since,
+      reason = has_pools and "no-fitting-train" or "no-free-train", provider = provider and provider.station.unit })
+  end
   if not has_pools then
     -- Kein freier Zug im ganzen Netzwerk: nicht je Abnehmer warnen (sonst blinkt die halbe Karte),
     -- sondern sammeln – Dispatch.starving_alerts meldet eine Warnung je Netzwerk.
@@ -79,6 +88,10 @@ end
 --- wurden (Anfrage bedient/weg), fallen heraus.
 function Warn.starving_alerts()
   local now = game.tick
+  -- Sperre für on_request_unserved: alte Einträge wegräumen (Anfrage bedient oder weg)
+  for id, tick in pairs(storage.dispatch.unserved) do
+    if now - tick > 7200 then storage.dispatch.unserved[id] = nil end
+  end
   for net_key, by_net in pairs(storage.dispatch.starving) do
     local network = by_net.network or net_key
     local count = 0
