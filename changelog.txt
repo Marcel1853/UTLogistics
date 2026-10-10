@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.16
+Date: 2026-10-10
+  Bugfixes:
+    - Train stops built from a blueprint could go missing: if robots built UTL’s invisible settings combinator before the train stop, the game sometimes removed the train stop’s ghost. The settings combinator now sits next to the middle of the train stop; existing ones move there by themselves, and when an older blueprint is placed its combinator ghost is moved right away.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.15
 Date: 2026-10-09
   Bugfixes:

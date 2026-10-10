@@ -46,6 +46,13 @@ Events.on(defines.events.on_built_entity, on_built, build_filter)
 Events.on(defines.events.on_robot_built_entity, on_built, build_filter)
 Events.on(defines.events.script_raised_built, on_built, build_filter)
 Events.on(defines.events.script_raised_revive, on_built, build_filter)
+
+-- Blaupause platziert (Geister): Einstellungs-Kombinator aus älteren Blaupausen neben die Mitte der
+-- Haltestelle rücken – lag er darauf und wurde zuerst gebaut, verschwand manchmal die Haltestelle.
+Events.on(defines.events.on_built_entity, function(event)
+  local entity = event.entity
+  if entity and entity.valid and entity.type == "entity-ghost" then Settings.move_ghost(entity) end
+end, { { filter = "ghost_name", name = C.station_settings }, { filter = "ghost_type", type = "train-stop" } })
 -- Geklont (Editor, Plattformen …): Einstellungen der Quelle übernehmen.
 Events.on(defines.events.on_entity_cloned, function(event)
   local station = Registry.on_built(event.destination)
