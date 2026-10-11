@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.17
+Date: 2026-10-11
+  Bugfixes:
+    - Blueprints with UTL train stops could not be rotated: the job output, the depot output and the invisible settings combinator were not rotatable. They are now, so the whole blueprint turns with the train stop.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.16
 Date: 2026-10-10
   Bugfixes:

@@ -26,7 +26,8 @@ entity.draw_circuit_wires = false
 entity.draw_copper_wires = false
 entity.hidden = true
 entity.hidden_in_factoriopedia = true
-entity.flags = { "player-creation", "not-rotatable", "not-deconstructable", "placeable-off-grid",
+-- drehbar: sonst lassen sich Blaupausen mit UTL-Haltestellen nicht drehen
+entity.flags = { "player-creation", "not-deconstructable", "placeable-off-grid",
   "not-selectable-in-game", "not-on-map", "not-flammable" }
 -- wie bei der Ausgabe: nur mit Item kommt er in Blaupausen (prototypes/entities/station-output.lua)
 entity.placeable_by = { item = entity.name, count = 1 }
