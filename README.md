@@ -232,6 +232,8 @@ UTL never controls platforms or pads itself.
 
 *New in 0.0.19.*
 
+![Display panels at UTL stations, from left: blue = train on its way, green = train stopped, cyan = train waiting in the depot, yellow = nothing going on, red = disabled](https://raw.githubusercontent.com/wiki/Marcel1853/UTLogistics/images/utl-status-display.png)
+
 Wire a normal **display panel** (red or green wire) directly to a UTL train stop or station combinator –
 the same wire as the chests is fine, the panel only reads. UTL takes it over and shows the state: **blue** = a
 train is on its way, **green** = a train is stopped, **cyan** = a train waits in the depot, **yellow** =
