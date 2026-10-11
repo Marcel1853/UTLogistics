@@ -270,6 +270,8 @@ Frachtlandeplattform („Anforderungen setzen“). UTL steuert Plattformen nie s
 
 *Neu in 0.0.19.*
 
+![Anzeigefelder an UTL-Stationen, von links: blau = Zug kommt, grün = Zug steht da, türkis = Zug wartet im Depot, gelb = nichts los, rot = ausgeschaltet](https://raw.githubusercontent.com/wiki/Marcel1853/UTLogistics/images/utl-status-display.png)
+
 Verbinde ein normales **Anzeigefeld** per Kabel (rot oder grün) direkt mit einer UTL-Haltestelle oder einem
 Stations-Kombinator – dasselbe Kabel wie für die Kisten geht auch, das Feld liest nur mit. UTL übernimmt es
 und zeigt den Zustand: **blau** = ein Zug ist unterwegs hierher, **grün** = ein Zug steht da, **türkis** = ein
