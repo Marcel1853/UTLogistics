@@ -228,6 +228,23 @@ free, on the way, deliveries, low on fuel, without path, trains from linked netw
 wiring – a lamp, a display, or in Space Age the shortage to a cargo landing pad (“set requests”).
 UTL never controls platforms or pads itself.
 
+## Status display at the station
+
+*New in 0.0.19.*
+
+Wire a normal **display panel** (red or green wire) directly to a UTL train stop or station combinator –
+the same wire as the chests is fine, the panel only reads. UTL takes it over and shows the state: **blue** = a
+train is on its way, **green** = a train is stopped, **cyan** = a train waits in the depot, **yellow** =
+nothing going on, **red** = train stop disabled. Above the panel you see the train and its number, for UTL
+deliveries also the goods (e.g. “#134 iron ore 16k”). The colors can be changed in the map settings
+(“Display: …”). Panels with your own messages are left alone; remove the wire and UTL clears the panel.
+
+Optional: the startup setting **“Colored train stop lamps”** (off by default) colors the two small lamps on
+top of UTL train stops in the same way – best seen at night.
+
+The station window (“In transit”) and the UTL Manager also name the trains on their way, with the amount
+per train in the tooltip.
+
 ## Cargo Ships
 
 *Only with the [Cargo Ships](https://mods.factorio.com/mod/cargo-ships) mod. New in 0.0.9.*
@@ -298,6 +315,11 @@ Measured headless (no graphics, so no FPS) with the load test scenario:
 |---|---|---|---|---|
 | 9 × 9, 180 trains, 340 stations | 40 min, ~1300 deliveries | 0.045 ms | – | 0 |
 | 12 × 12, 384 trains (24 fluid), 496 stations incl. 8 storages, 3 linked networks, topping up | 10 min | 0.072 ms | 2.9 ms | 5 of 36,000 |
+| 12 × 12, 384 trains, 880 stations, 3 linked networks (0.0.19) | 10 min | 0.24 ms | 3.2 ms | 8 of 35,400 |
+| same, with a **display panel** at every one of the 880 stations (status display, 0.0.19) | 10 min | 0.28 ms | 3.4 ms | 41 of 35,400 |
+
+The 0.0.19 rows include the small script of the test scenario itself; 0.0.18 measured the same 0.24 ms on
+this map, so the new status display costs nothing as long as no display panel is wired to a station.
 
 UTL itself peaks at about 13 ms when it sends trains (sending triggers the game's pathfinding).
 Most of the time is spent by the game's own trains (movement and pathfinding).

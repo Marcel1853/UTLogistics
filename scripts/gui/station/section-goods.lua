@@ -2,6 +2,7 @@
 --- anbietet (grün) und braucht (rot) – nach Schwellen und Anforderungen – und was gerade
 --- unterwegs ist: kommt per Zug (blau) bzw. ist für einen Zug reserviert (gelb).
 local Widgets = require("scripts.gui.common.widgets")
+local Transit = require("scripts.gui.common.transit")
 
 local Goods = {}
 
@@ -29,9 +30,10 @@ function Goods.refresh(refs, station)
   local deliveries = storage.deliveries
   local unit = station.unit
   refs.transit.clear()
-  Widgets.add_slots(refs.transit, deliveries.incoming[unit], "incoming", "utl-gui.transit-incoming")
-  Widgets.add_slots(refs.transit, deliveries.outgoing[unit], "outgoing", "utl-gui.transit-outgoing")
-  refs.transit_label.caption = { "utl-gui.transit", deliveries.trains_at[unit] or 0 }
+  Transit.add_slots(refs.transit, unit)
+  local ids = Transit.ids_text(unit)
+  refs.transit_label.caption = ids and { "utl-gui.transit-ids", deliveries.trains_at[unit] or 0, ids }
+    or { "utl-gui.transit", deliveries.trains_at[unit] or 0 }
 end
 
 return Goods

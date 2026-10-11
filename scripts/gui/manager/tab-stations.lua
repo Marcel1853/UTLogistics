@@ -1,6 +1,7 @@
 --- Reiter „Stationen“ (wie LTN Manager): Name + Rolle | Angebot/Bedarf | Unterwegs | Züge.
 local List = require("scripts.gui.common.list")
 local Widgets = require("scripts.gui.common.widgets")
+local Transit = require("scripts.gui.common.transit")
 local Networks = require("scripts.stations.networks")
 local Filter = require("scripts.gui.manager.surface-filter")
 
@@ -83,10 +84,11 @@ local function fill(row, station)
 
   local deliveries = storage.deliveries
   local transit = Widgets.slot_grid(row, 5)
-  Widgets.add_slots(transit, deliveries.incoming[station.unit], "incoming", "utl-gui.transit-incoming")
-  Widgets.add_slots(transit, deliveries.outgoing[station.unit], "outgoing", "utl-gui.transit-outgoing")
+  Transit.add_slots(transit, station.unit)
 
-  List.cell(row, COLUMNS[4].width, { type = "label", caption = tostring(deliveries.trains_at[station.unit] or 0) })
+  local ids = Transit.ids_text(station.unit)
+  List.cell(row, COLUMNS[4].width, { type = "label", caption = tostring(deliveries.trains_at[station.unit] or 0),
+    tooltip = ids and { "utl-gui.transit-ids-tooltip", ids } or nil })
 end
 
 function Tab.refresh(refs, manager)

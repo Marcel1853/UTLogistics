@@ -81,6 +81,7 @@ function State.init()
   dispatch.starving = dispatch.starving or {}           -- [netzwerk][station|key] = Anfrage ohne freien Zug
   dispatch.waiting = dispatch.waiting or {}             -- [station][key] = { since, seen }: unbedient seit
   dispatch.unserved = dispatch.unserved or {}           -- [station|key] = tick: zuletzt on_request_unserved gemeldet
+  dispatch.fit_cache = dispatch.fit_cache or {}         -- [station|key] = { tick, fits }: passender Zug gerade unterwegs?
   dispatch.return_block = dispatch.return_block or {}   -- [abnehmer][key] = tick: Rest blieb übrig, Cleanup liefert es ihm vorerst nicht zurück
   -- dispatch.cursor: Round-Robin-Position über die Abnehmer (darf nil sein)
   storage.dispatch = dispatch
@@ -99,6 +100,13 @@ function State.init()
   storage.manager_prefs = storage.manager_prefs or {}
   storage.admin_windows = storage.admin_windows or {} -- offene Admin-Fenster (scripts/gui/admin)
   storage.map_config = storage.map_config or {} -- [Einstellung] = Wert, im UTL-Manager geändert (config.lua)
+  -- Farbige Haltestellen-Lampen (scripts/stations/lamps.lua)
+  storage.lamps = storage.lamps or {}
+  local lamps = storage.lamps
+  lamps.by_station = lamps.by_station or {} -- [station] = { stop, direction, state, ids = { Render-IDs } }
+  lamps.trains = lamps.trains or {}         -- [train_id] = { Haltestellen, an/zu denen er zuletzt war }
+  lamps.panels = lamps.panels or {}         -- [station] = { list = { Anzeigefelder am Kabel }, text, state }
+  lamps.adopted = lamps.adopted or {}       -- [Anzeigefeld unit_number] = true: von UTL übernommen
   storage.team_config = storage.team_config or {} -- [force_index] = { load_timeout = …, … }, siehe team-config.lua
 end
 

@@ -8,6 +8,9 @@ local Param = require("rounds-param") -- R40 (require nur beim Laden erlaubt)
 local Api = require("rounds-api") -- R41
 local NoRail = require("rounds-norail") -- R42
 local Api2 = require("rounds-api2") -- R43
+local Orphan = require("rounds-orphan") -- R45
+local BusyFit = require("rounds-busyfit") -- R46
+local LampRound = require("rounds-lamps") -- R47
 
 --- R36: UTL-Ereignisse mitzählen (Anmeldung in on_init und on_load, siehe control.lua).
 function Rounds.listen()
@@ -215,6 +218,9 @@ function Rounds.build(check)
     r42 = NoRail.build(check), -- R42: Haltestelle ohne Gleis (eigene Oberfläche)
     r43 = Api2.build(check), -- R43: Add-on-Schnittstelle, Meilenstein 2
     r44 = Api2.build_filter(check), -- R44: Zugfilter eines Add-ons
+    r45 = Orphan.build(), -- R45: verwaiste Lieferung (eigene Oberfläche)
+    r46 = BusyFit.build(), -- R46: „passt nicht“ nur bei echtem Einstellungsfehler (eigene Oberfläche)
+    r47 = LampRound.build(), -- R47: farbige Haltestellen-Lampen (eigene Oberfläche)
     far = far.backer_name, near = near.backer_name, chained = nil, loaded = {}, unloaded = {} }
 end
 
@@ -376,8 +382,12 @@ function Rounds.watch(r, check)
   local r42_done = NoRail.watch(r.r42, check)
   local r43_done = Api2.watch(r.r43, check)
   local r44_done = Api2.watch_filter(r.r44, check)
+  local r45_done = Orphan.watch(r.r45, check)
+  local r46_done = BusyFit.watch(r.r46, check)
+  local r47_done = LampRound.watch(r.r47, check)
   if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done
-      and r.r38.fill and r.r38.cleanup and r.r39 and r41_done and r42_done and r43_done and r44_done) or game.tick - r.start > 36000 then
+      and r.r38.fill and r.r38.cleanup and r.r39 and r41_done and r42_done and r43_done and r44_done
+      and r45_done and r46_done and r47_done) or game.tick - r.start > 36000 then
     r.done = true
     if not r.r39 then check("R39 tankstelle fordert treibstoff an", false, "keine lieferung") end
     if not r.r38.fill then check("R38 aktiver anbieter füllt lager über dem mindest", false, "keine lieferung") end

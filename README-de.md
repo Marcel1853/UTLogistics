@@ -266,6 +266,24 @@ oder **Züge** (gesamt, frei, unterwegs, Lieferungen, knapp an Treibstoff, ohne 
 bewirken, verdrahtest du selbst – eine Lampe, eine Anzeige oder in Space Age die Fehlmenge an eine
 Frachtlandeplattform („Anforderungen setzen“). UTL steuert Plattformen nie selbst.
 
+## Zustandsanzeige an der Station
+
+*Neu in 0.0.19.*
+
+Verbinde ein normales **Anzeigefeld** per Kabel (rot oder grün) direkt mit einer UTL-Haltestelle oder einem
+Stations-Kombinator – dasselbe Kabel wie für die Kisten geht auch, das Feld liest nur mit. UTL übernimmt es
+und zeigt den Zustand: **blau** = ein Zug ist unterwegs hierher, **grün** = ein Zug steht da, **türkis** = ein
+Zug wartet im Depot, **gelb** = nichts los, **rot** = Haltestelle ausgeschaltet. Über dem Feld stehen Zug und
+Nummer, bei UTL-Lieferungen auch die Ware (z. B. „#134 Eisenerz 16k“). Die Farben stellst du in den
+Karten-Einstellungen ein („Anzeige: …“). Felder mit eigenen Nachrichten lässt UTL in Ruhe; Kabel ab, und UTL
+leert das Feld wieder.
+
+Optional: Die Start-Einstellung **„Farbige Haltestellen-Lampen“** (Standard aus) färbt die zwei kleinen
+Lampen oben an UTL-Haltestellen genauso ein – am besten nachts zu sehen.
+
+Auch das Stationsfenster („Unterwegs“) und der UTL-Manager nennen die Züge, die gerade kommen, mit der Menge
+je Zug im Tooltip.
+
 ## Cargo Ships
 
 *Nur mit der Mod [Cargo Ships](https://mods.factorio.com/mod/cargo-ships). Neu in 0.0.9.*
@@ -343,6 +361,11 @@ Gemessen mit dem Lasttest-Szenario, headless (ohne Grafik, also ohne FPS):
 |---|---|---|---|---|
 | 9 × 9, 180 Züge, 340 Bahnhöfe | 40 min, ~1300 Lieferungen | 0,045 ms | – | 0 |
 | 12 × 12, 384 Züge (davon 24 Flüssigkeit), 496 Bahnhöfe mit 8 Lagern, 3 verbundene Netze, Nachladen | 10 min | 0,072 ms | 2,9 ms | 5 von 36 000 |
+| 12 × 12, 384 Züge, 880 Bahnhöfe, 3 verbundene Netze (0.0.19) | 10 min | 0,24 ms | 3,2 ms | 8 von 35 400 |
+| dasselbe, mit einem **Anzeigefeld** an jedem der 880 Bahnhöfe (Zustandsanzeige, 0.0.19) | 10 min | 0,28 ms | 3,4 ms | 41 von 35 400 |
+
+Die Zeilen von 0.0.19 enthalten auch das kleine Skript des Testszenarios; 0.0.18 brauchte auf dieser Karte
+dieselben 0,24 ms – die neue Zustandsanzeige kostet also nichts, solange kein Anzeigefeld an einer Station hängt.
 
 UTL selbst hat Spitzen bis etwa 13 ms, wenn es Züge losschickt (das Losschicken löst die
 Pfadsuche des Spiels aus). Den größten Teil der Zeit brauchen die Züge des Spiels selbst

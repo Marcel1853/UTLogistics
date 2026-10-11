@@ -72,6 +72,17 @@ end)
 Heartbeat.add_task("stations-read", 1, Reader.step)
 Heartbeat.add_task("station-output", 1, Output.step)
 
+-- Farbige Haltestellen-Lampen
+local Lamps = require("scripts.stations.lamps")
+Heartbeat.add_task("station-lamps", 3, Lamps.step, 2)
+Registry.on_config_changed(Lamps.refresh)
+Registry.on_lost(Lamps.destroy)
+Events.on_configuration_changed(Lamps.on_configuration_changed)
+Events.on(defines.events.on_train_changed_state, function(event) Lamps.on_train(event.train) end)
+Config.listen(function(name)
+  if name:find("^utl%-status%-color%-") then Lamps.colors_changed() end
+end)
+
 -- Auftrags-Ausgabe: anlegen, wenn eine Station eine Haltestelle bekommt, und mit ihr verschwinden.
 Registry.on_config_changed(Output.refresh)
 Registry.on_lost(Output.destroy)
