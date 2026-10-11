@@ -1,7 +1,7 @@
 # Unified Train Logistics (UTL) – Deutsch
 
 [![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
-[![Version](https://img.shields.io/badge/version-0.0.18-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![Version](https://img.shields.io/badge/version-0.0.19-orange)](https://mods.factorio.com/mod/UTLogistics)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
 
 > **🧪 Beta für Mod-Autoren: Add-on-Schnittstelle.** Es gibt eine **Testfassung** mit einer neuen
@@ -265,6 +265,24 @@ Wunsch mit den verbundenen Netzen) und den Modus: **Bestand** (was Anbieter anbi
 oder **Züge** (gesamt, frei, unterwegs, Lieferungen, knapp an Treibstoff, ohne Weg, Züge aus verbundenen Netzen, die aushelfen, und eigene Züge, die anderswo fahren). Was die Signale
 bewirken, verdrahtest du selbst – eine Lampe, eine Anzeige oder in Space Age die Fehlmenge an eine
 Frachtlandeplattform („Anforderungen setzen“). UTL steuert Plattformen nie selbst.
+
+## Zustandsanzeige an der Station
+
+*Neu in 0.0.19.*
+
+Verbinde ein normales **Anzeigefeld** per Kabel (rot oder grün) direkt mit einer UTL-Haltestelle oder einem
+Stations-Kombinator – dasselbe Kabel wie für die Kisten geht auch, das Feld liest nur mit. UTL übernimmt es
+und zeigt den Zustand: **blau** = ein Zug ist unterwegs hierher, **grün** = ein Zug steht da, **türkis** = ein
+Zug wartet im Depot, **gelb** = nichts los, **rot** = Haltestelle ausgeschaltet. Über dem Feld stehen Zug und
+Nummer, bei UTL-Lieferungen auch die Ware (z. B. „#134 Eisenerz 16k“). Die Farben stellst du in den
+Karten-Einstellungen ein („Anzeige: …“). Felder mit eigenen Nachrichten lässt UTL in Ruhe; Kabel ab, und UTL
+leert das Feld wieder.
+
+Optional: Die Start-Einstellung **„Farbige Haltestellen-Lampen“** (Standard aus) färbt die zwei kleinen
+Lampen oben an UTL-Haltestellen genauso ein – am besten nachts zu sehen.
+
+Auch das Stationsfenster („Unterwegs“) und der UTL-Manager nennen die Züge, die gerade kommen, mit der Menge
+je Zug im Tooltip.
 
 ## Cargo Ships
 

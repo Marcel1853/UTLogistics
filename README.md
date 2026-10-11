@@ -1,7 +1,7 @@
 # Unified Train Logistics (UTL)
 
 [![Factorio](https://img.shields.io/badge/Factorio-2.1-green)](https://factorio.com)
-[![Version](https://img.shields.io/badge/version-0.0.18-orange)](https://mods.factorio.com/mod/UTLogistics)
+[![Version](https://img.shields.io/badge/version-0.0.19-orange)](https://mods.factorio.com/mod/UTLogistics)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
 
 > **🧪 Beta for mod authors: add-on API.** There is a **test build** with a new interface for other
@@ -227,6 +227,23 @@ in storage stations), **demand** (what requesters request), **shortage** (what r
 free, on the way, deliveries, low on fuel, without path, trains from linked networks helping out and own trains working elsewhere). What the signals do is up to your own
 wiring – a lamp, a display, or in Space Age the shortage to a cargo landing pad (“set requests”).
 UTL never controls platforms or pads itself.
+
+## Status display at the station
+
+*New in 0.0.19.*
+
+Wire a normal **display panel** (red or green wire) directly to a UTL train stop or station combinator –
+the same wire as the chests is fine, the panel only reads. UTL takes it over and shows the state: **blue** = a
+train is on its way, **green** = a train is stopped, **cyan** = a train waits in the depot, **yellow** =
+nothing going on, **red** = train stop disabled. Above the panel you see the train and its number, for UTL
+deliveries also the goods (e.g. “#134 iron ore 16k”). The colors can be changed in the map settings
+(“Display: …”). Panels with your own messages are left alone; remove the wire and UTL clears the panel.
+
+Optional: the startup setting **“Colored train stop lamps”** (off by default) colors the two small lamps on
+top of UTL train stops in the same way – best seen at night.
+
+The station window (“In transit”) and the UTL Manager also name the trains on their way, with the amount
+per train in the tooltip.
 
 ## Cargo Ships
 

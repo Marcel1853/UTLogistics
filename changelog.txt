@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.19
+Date: 2026-10-11
+  Features:
+    - Status display: a vanilla display panel wired (red or green) directly to a UTL station shows its state – blue = a train is on its way, green = a train is stopped, cyan = a train waits in the depot, yellow = nothing going on, red = train stop disabled – together with the train number and, for UTL deliveries, the goods. UTL only takes over panels that have no messages of their own; remove the wire and the panel is cleared again.
+    - The colors of the status display can be changed in the map settings ("Display: …").
+    - Optional colored lamps on top of UTL train stops in the same colors (startup setting "Colored train stop lamps", off by default).
+    - The station window and the UTL Manager show which train is coming: "In transit (trains: 2 – no. 80, 134)", and the tooltip of each good lists "Train 134: 16k".
+  Bugfixes:
+    - A delivery whose train had lost its UTL stops (removed by hand or by another mod) stayed "on its way" forever and blocked the requester, so no more trains came. Such deliveries are now cancelled after one minute ("schedule lost"), the wagon filters are cleared and the train is free again.
+    - The alert "free trains do not fit (check train length or cargo space)" came constantly although fitting trains existed – they were only busy or on their way home (e.g. fluid trains driving while ore trains waited in the depot). It now only comes when no train in the network fits at all; otherwise the request joins the summary alert "N requests waiting for a free train".
+---------------------------------------------------------------------------------------------------
 Version: 0.0.18
 Date: 2026-10-11
   Bugfixes:
