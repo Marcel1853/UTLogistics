@@ -6,6 +6,7 @@
 local Rounds = {}
 local Param = require("rounds-param") -- R40 (require nur beim Laden erlaubt)
 local NoRail = require("rounds-norail") -- R42
+local Orphan = require("rounds-orphan") -- R45
 
 --- R36: UTL-Ereignisse mitzählen (Anmeldung in on_init und on_load, siehe control.lua).
 function Rounds.listen()
@@ -208,6 +209,7 @@ function Rounds.build(check)
     train4 = r34_train, wagon4 = r34_wagon, r34 = {},
     train5 = r35_train, surface = s, r35 = {}, r37 = { req = req7.unit_number }, r38 = {},
     r42 = NoRail.build(check), -- R42: Haltestelle ohne Gleis (eigene Oberfläche)
+    r45 = Orphan.build(), -- R45: verwaiste Lieferung (eigene Oberfläche)
     far = far.backer_name, near = near.backer_name, chained = nil, loaded = {}, unloaded = {} }
 end
 
@@ -366,8 +368,9 @@ function Rounds.watch(r, check)
     remote.call("utl", "set_map_config", "utl-multi-pickup-detour", 50)
   end
   local r42_done = NoRail.watch(r.r42, check)
+  local r45_done = Orphan.watch(r.r45, check)
   if (r.chained and r.storage and r.moved and r.moved.ok and r.r34.done and r.r35.done and r.r37.done
-      and r.r38.fill and r.r38.cleanup and r.r39 and r42_done) or game.tick - r.start > 36000 then
+      and r.r38.fill and r.r38.cleanup and r.r39 and r42_done and r45_done) or game.tick - r.start > 36000 then
     r.done = true
     if not r.r39 then check("R39 tankstelle fordert treibstoff an", false, "keine lieferung") end
     if not r.r38.fill then check("R38 aktiver anbieter füllt lager über dem mindest", false, "keine lieferung") end
