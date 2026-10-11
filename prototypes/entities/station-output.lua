@@ -19,7 +19,8 @@ entity.collision_box = { { -0.15, -0.15 }, { 0.15, 0.15 } }
 entity.collision_mask = { layers = { rail = true } }
 entity.hidden = true
 entity.hidden_in_factoriopedia = true
-entity.flags = { "player-creation", "not-rotatable", "not-deconstructable", "placeable-off-grid" }
+-- drehbar: sonst lassen sich Blaupausen mit UTL-Haltestellen nicht drehen
+entity.flags = { "player-creation", "not-deconstructable", "placeable-off-grid" }
 
 -- Depot-Ausgabe: dasselbe Bauteil neben Depots, eigener Name und eigene Farbe – dort liegen keine
 -- Aufträge an, sondern der Zug im Depot, freie Züge und Züge auf dem Heimweg.
