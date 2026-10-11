@@ -4,6 +4,7 @@ local Deliveries = require("scripts.deliveries.deliveries")
 local Networks = require("scripts.stations.networks")
 local Util = require("scripts.lib.util")
 local Alerts = require("scripts.alerts.alerts")
+local Depot = require("scripts.trains.depot")
 
 local Warn = {}
 
@@ -41,6 +42,58 @@ function Warn.waiting_since(unit, key, reset)
   return entry.since
 end
 
+local FIT_CACHE = 600 -- so lange gilt „ein passender Zug ist unterwegs“ je Anfrage (Ticks)
+
+local function length_ok(cfg, length)
+  return (cfg.min_train_length <= 0 or length >= cfg.min_train_length)
+    and (cfg.max_train_length <= 0 or length <= cfg.max_train_length)
+end
+
+--- Laderaum eines Lieferzugs, einmal gemessen und an der Lieferung gemerkt (ändert sich nur mit
+--- neuer Zug-ID, und dann gibt es eine neue Lieferung bzw. sie wird umgeschrieben).
+local function measured(delivery)
+  local m = delivery.measured
+  local train = delivery.train
+  if not m or m.id ~= train.id then
+    local slots, wagons, fluid = Depot.measure(train)
+    m = { id = train.id, slots = slots, wagons = wagons, fluid = fluid, length = #train.carriages }
+    delivery.measured = m
+  end
+  return m
+end
+
+--- Gibt es im Netz der Anfrage einen Zug, der die Ware fahren könnte, aber gerade eine Lieferung
+--- hat? Dann ist „kein passender Zug“ falsch – es ist nur keiner frei (Sammelwarnung statt
+--- Einstellungsfehler). Läuft nur, wenn sonst gewarnt würde; Ergebnis kurz gemerkt (Regel 5).
+local function busy_train_fits(request, provider)
+  local requester = request.station
+  local cache = storage.dispatch.fit_cache
+  local cache_key = requester.unit .. "|" .. request.key
+  local entry = cache[cache_key]
+  if entry and game.tick - entry.tick < FIT_CACHE then return entry.fits end
+  local kind = Util.split_key(request.key)
+  local stop = requester.stop
+  local place = Networks.place_of(stop)
+  local r_cfg, p_cfg = requester.config, provider.station.config
+  local locked = p_cfg.locked_slots or 0
+  local fits = false
+  for _, delivery in pairs(storage.deliveries.active) do
+    local train = delivery.train
+    local front = train and train.valid and train.front_stock
+    if front and front.surface_index == stop.surface_index and front.force_index == stop.force_index
+      and Networks.related(place, r_cfg.network, delivery.network or "default") then
+      local m = measured(delivery)
+      local capacity = kind == "fluid" and m.fluid or (m.slots - m.wagons * locked)
+      if capacity > 0 and length_ok(p_cfg, m.length) and length_ok(r_cfg, m.length) then
+        fits = true
+        break
+      end
+    end
+  end
+  cache[cache_key] = { tick = game.tick, fits = fits }
+  return fits
+end
+
 --- Anbieter da, aber kein Zug: warnen – erst wenn die Anfrage länger als die eingestellte
 --- Wartezeit unbedient ist und gerade kein Zug mit dieser Ware zu ihr unterwegs ist.
 --- `has_pools` = es stehen freie Züge im Netz (der Aufrufer weiß das schon).
@@ -54,7 +107,8 @@ function Warn.no_train(request, provider, has_pools)
   local since = Warn.waiting_since(unit, key)
   if game.tick - since < storage.cfg.alert_no_train_minutes * 3600 then return end
   local cfg = requester.config
-  if not has_pools then
+  -- Freie Züge passen nicht, aber ein passender ist gerade unterwegs: wie „kein freier Zug“ sammeln
+  if not has_pools or busy_train_fits(request, provider) then
     -- Kein freier Zug im ganzen Netzwerk: nicht je Abnehmer warnen (sonst blinkt die halbe Karte),
     -- sondern sammeln – Dispatch.starving_alerts meldet eine Warnung je Netzwerk.
     -- Schlüssel mit Ort: sonst unterdrückt die Warnung eines Teams die eines anderen
@@ -68,7 +122,8 @@ function Warn.no_train(request, provider, has_pools)
     by_net[unit .. "|" .. key] = { seen = game.tick, since = since, stop = requester.stop }
     return
   end
-  -- Züge frei, aber keiner passt (Länge/Laderaum): Einstellungsfehler an dieser Station.
+  -- Züge frei, aber keiner im Netz passt (Länge/Laderaum), auch kein beschäftigter:
+  -- Einstellungsfehler an dieser Station.
   local message = { "utl-alert.no-fitting-train", ware_icon(request.key), provider.station.stop.backer_name,
     requester.stop.backer_name, cfg.network }
   Alerts.raise("no_train", "no_train", requester.stop, message, "no-train:" .. requester.unit .. ":" .. request.key)
