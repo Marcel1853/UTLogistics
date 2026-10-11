@@ -361,6 +361,11 @@ Gemessen mit dem Lasttest-Szenario, headless (ohne Grafik, also ohne FPS):
 |---|---|---|---|---|
 | 9 × 9, 180 Züge, 340 Bahnhöfe | 40 min, ~1300 Lieferungen | 0,045 ms | – | 0 |
 | 12 × 12, 384 Züge (davon 24 Flüssigkeit), 496 Bahnhöfe mit 8 Lagern, 3 verbundene Netze, Nachladen | 10 min | 0,072 ms | 2,9 ms | 5 von 36 000 |
+| 12 × 12, 384 Züge, 880 Bahnhöfe, 3 verbundene Netze (0.0.19) | 10 min | 0,24 ms | 3,2 ms | 8 von 35 400 |
+| dasselbe, mit einem **Anzeigefeld** an jedem der 880 Bahnhöfe (Zustandsanzeige, 0.0.19) | 10 min | 0,28 ms | 3,4 ms | 41 von 35 400 |
+
+Die Zeilen von 0.0.19 enthalten auch das kleine Skript des Testszenarios; 0.0.18 brauchte auf dieser Karte
+dieselben 0,24 ms – die neue Zustandsanzeige kostet also nichts, solange kein Anzeigefeld an einer Station hängt.
 
 UTL selbst hat Spitzen bis etwa 13 ms, wenn es Züge losschickt (das Losschicken löst die
 Pfadsuche des Spiels aus). Den größten Teil der Zeit brauchen die Züge des Spiels selbst

@@ -114,6 +114,8 @@ end
 
 --- Anzeige einer Station auffrischen: Lampen (wenn eingeschaltet) und Anzeigefelder daneben.
 function Lamps.refresh(station)
+  -- Regel 5: ohne Lampen und ohne Anzeigefeld an dieser Station gibt es nichts zu zeigen
+  if not ENABLED and not storage.lamps.panels[station.unit] then return end
   local stop = station.stop
   local state = stop and stop.valid and state_of(station, stop) or nil
   if ENABLED then refresh_lamps(station, state) end
@@ -135,6 +137,7 @@ end
 --- Zugzustand gewechselt: Halt, an dem er steht, und sein Ziel – vorher und jetzt.
 function Lamps.on_train(train)
   if not train.valid then return end
+  if not ENABLED and next(storage.lamps.panels) == nil then return end -- nichts anzuzeigen
   local trains = storage.lamps.trains
   local id = train.id
   local before = trains[id]
