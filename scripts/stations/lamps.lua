@@ -50,7 +50,13 @@ local function state_of(station, stop)
   local behavior = stop.get_control_behavior() --[[@as LuaTrainStopControlBehavior?]]
   if behavior and behavior.disabled then return "off" end
   if stop.get_stopped_train() then return station.config.roles.depot and "depot" or "stopped" end
-  if stop.trains_count > 0 or (storage.deliveries.trains_at[station.unit] or 0) > 0 then return "incoming" end
+  -- UTL-Lieferung hierher (zählt auch während der Fahrt zum Schienen-Wegpunkt davor)
+  if (storage.deliveries.trains_at[station.unit] or 0) > 0 then return "incoming" end
+  -- sonst nur ein Zug, dessen aktuelles Fahrziel diese Haltestelle ist (trains_count zählt jeden Zug,
+  -- der sie irgendwo im Fahrplan hat – ein Pendelzug wäre nach der Abfahrt weiter „kommt“)
+  for _, train in pairs(stop.get_train_stop_trains()) do
+    if train.path_end_stop == stop then return "incoming" end
+  end
   return "idle"
 end
 
