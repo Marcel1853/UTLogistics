@@ -5,6 +5,7 @@
 --- released }` ist der zweite Ladehalt. `delivery.manifest` bleibt die Gesamtmenge; beim ersten
 --- Anbieter ist nur sein Anteil reserviert (Gesamtmenge minus Anteil des zweiten).
 local Output = require("scripts.stations.output")
+local Lamps = require("scripts.stations.lamps")
 
 local Reservations = {}
 
@@ -29,6 +30,7 @@ function Reservations.count_train(unit, delta)
   local trains_at = storage.deliveries.trains_at
   local value = (trains_at[unit] or 0) + delta
   trains_at[unit] = value > 0 and value or nil
+  Lamps.refresh_unit(unit) -- Lampe: blau, solange eine Lieferung hierher läuft
 end
 local count_train = Reservations.count_train
 
