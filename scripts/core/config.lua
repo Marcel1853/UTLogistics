@@ -34,6 +34,11 @@ Config.KEYS = {
   ["utl-storage"] = "storage_enabled",
   ["utl-leader-inactive-days"] = "leader_inactive_days",
   ["utl-debug-log"] = "debug_log",
+  ["utl-status-color-incoming"] = "status_color_incoming",
+  ["utl-status-color-stopped"] = "status_color_stopped",
+  ["utl-status-color-depot"] = "status_color_depot",
+  ["utl-status-color-idle"] = "status_color_idle",
+  ["utl-status-color-off"] = "status_color_off",
 }
 
 -- Wer auf geänderte Werte reagieren muss (z. B. Takt neu anmelden), meldet sich hier an.

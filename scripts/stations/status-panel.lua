@@ -1,7 +1,7 @@
 --- Anzeigefeld an der Station (Wunsch Marcel, 0.0.19): Ein Vanilla-Anzeigefeld, das per Kabel (rot oder
 --- grün) direkt an der UTL-Station hängt – Haltestelle oder Stations-Kombinator –, übernimmt UTL und
---- zeigt dort den Zustand: Symbol als farbiges Signal (blau = Zug kommt, grün = Zug steht da, gelb =
---- nichts los, rot = ausgeschaltet), Text ohne Wörter: Zug, Nummer und Ware als Rich-Text, z. B.
+--- zeigt dort den Zustand: Symbol als farbiges Signal (blau = Zug kommt, grün = Zug steht da, türkis =
+--- Zug wartet im Depot, gelb = nichts los, rot = ausgeschaltet; einstellbar), Text ohne Wörter: Zug, Nummer und Ware als Rich-Text, z. B.
 --- „[train=134] #134 [item=iron-ore]16k“. Wörter gehen nicht: der Text ist ein einfacher String für alle
 --- Spieler (keine Übersetzung).
 ---
@@ -17,12 +17,10 @@ local Panel = {}
 -- Bedingung, die immer stimmt: Signal ✓ gleich 0
 local ALWAYS = { first_signal = { type = "virtual", name = "signal-check" }, comparator = "=", constant = 0 }
 
-local ICONS = {
-  incoming = { type = "virtual", name = "signal-blue" },
-  stopped = { type = "virtual", name = "signal-green" },
-  idle = { type = "virtual", name = "signal-yellow" },
-  off = { type = "virtual", name = "signal-red" },
-}
+-- Symbol = Farbsignal des Spiels, Farbe je Zustand aus den Karten-Einstellungen
+local function icon(state)
+  return { type = "virtual", name = "signal-" .. (storage.cfg["status_color_" .. state] or "yellow") }
+end
 
 local function wares(manifest)
   local parts = {}
@@ -49,7 +47,7 @@ end
 --- Text zum Zustand: welcher Zug kommt bzw. steht da, mit welcher Ware.
 local function text_of(station, stop, state)
   local deliveries = storage.deliveries
-  if state == "stopped" then
+  if state == "stopped" or state == "depot" then
     local train = stop.get_stopped_train()
     if not train then return "" end
     local id = deliveries.by_train[train.id]
@@ -149,7 +147,7 @@ function Panel.refresh(station, stop, state)
   local text = state and text_of(station, stop, state) or ""
   if entry.text == text and entry.state == state then return end
   entry.text, entry.state = text, state
-  local records = state and { { text = text, icon = ICONS[state], condition = ALWAYS } } or {}
+  local records = state and { { text = text, icon = icon(state), condition = ALWAYS } } or {}
   for _, panel in ipairs(entry.list) do
     if panel.valid then
       local behavior = panel.get_control_behavior() --[[@as LuaDisplayPanelControlBehavior?]]

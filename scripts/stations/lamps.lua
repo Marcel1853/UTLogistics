@@ -3,8 +3,9 @@
 ---
 --- Über die zwei Lampen oben an der Haltestelle zeichnet UTL eingefärbte Lampen (Sprites aus
 --- prototypes/sprites/stop-lamps.lua):
----   rot   = Haltestelle per Schaltung ausgeschaltet,
----   grün  = ein Zug steht da (im Depot: Zug wartet frei),
+---   rot   = Haltestelle per Schaltung ausgeschaltet (alle Farben einstellbar, Karten-Einstellungen),
+---   grün  = ein Zug steht da,
+---   türkis = ein Zug wartet frei im Depot,
 ---   blau  = ein Zug ist hierher unterwegs (Fahrziel des Spiels oder UTL-Lieferung),
 ---   gelb  = nichts los.
 ---
@@ -18,12 +19,24 @@ local Lamps = {}
 
 local ENABLED = settings.startup["utl-station-lamps"].value
 
-local COLORS = {
-  off = { r = 1, g = 0.12, b = 0.08 },
-  stopped = { r = 0.15, g = 1, b = 0.25 },
-  incoming = { r = 0.2, g = 0.5, b = 1 },
-  idle = { r = 1, g = 0.78, b = 0.15 },
+-- Farbsignale des Spiels und ihr Farbton für die Lampen; welcher Zustand welche Farbe hat, steht in den
+-- Karten-Einstellungen („utl-status-color-…“)
+local TINTS = {
+  red = { r = 1, g = 0.12, b = 0.08 },
+  green = { r = 0.15, g = 1, b = 0.25 },
+  blue = { r = 0.2, g = 0.5, b = 1 },
+  cyan = { r = 0.1, g = 0.95, b = 0.95 },
+  yellow = { r = 1, g = 0.78, b = 0.15 },
+  pink = { r = 1, g = 0.4, b = 0.8 },
+  white = { r = 1, g = 1, b = 1 },
 }
+
+--- Farbname eines Zustands (incoming, stopped, depot, idle, off) laut Karten-Einstellung.
+function Lamps.color_name(state)
+  return storage.cfg["status_color_" .. state] or "yellow"
+end
+
+local function tint(state) return TINTS[Lamps.color_name(state)] or TINTS.yellow end
 
 local D = defines.direction
 local DIRECTIONS = { [D.north] = "north", [D.east] = "east", [D.south] = "south", [D.west] = "west" }
@@ -36,7 +49,7 @@ local BUDGET = 20 -- Stationen je Runde
 local function state_of(station, stop)
   local behavior = stop.get_control_behavior() --[[@as LuaTrainStopControlBehavior?]]
   if behavior and behavior.disabled then return "off" end
-  if stop.get_stopped_train() then return "stopped" end
+  if stop.get_stopped_train() then return station.config.roles.depot and "depot" or "stopped" end
   if stop.trains_count > 0 or (storage.deliveries.trains_at[station.unit] or 0) > 0 then return "incoming" end
   return "idle"
 end
@@ -83,12 +96,12 @@ local function refresh_lamps(station, state)
     entry = nil
   end
   if not entry then
-    by_station[station.unit] = { stop = stop, direction = direction, state = state, ids = draw(stop, direction, COLORS[state]) }
+    by_station[station.unit] = { stop = stop, direction = direction, state = state, ids = draw(stop, direction, tint(state)) }
   elseif entry.state ~= state then
     entry.state = state
     for _, id in pairs(entry.ids) do
       local object = rendering.get_object_by_id(id)
-      if object then object.color = COLORS[state] end
+      if object then object.color = tint(state) end
     end
   end
 end
@@ -160,6 +173,12 @@ function Lamps.step()
     if not game.train_manager.get_train_by_id(train_id) then lamps.trains[train_id] = nil end
   end
   lamps.train_cursor = train_id
+end
+
+--- Farb-Einstellung geändert: alles beim nächsten Auffrischen neu einfärben (Lampen-Runde).
+function Lamps.colors_changed()
+  for _, entry in pairs(storage.lamps.by_station) do entry.state = nil end
+  for _, entry in pairs(storage.lamps.panels) do entry.state = nil end
 end
 
 --- Nach Mod-Updates / geänderter Start-Einstellung: ausgeschaltet → alle Lampen entfernen. Lampen

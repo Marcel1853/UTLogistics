@@ -23,12 +23,13 @@ data:extend({
     order = "a-b",
   },
   -- Farbige Lampen oben an UTL-Haltestellen: blau = Zug kommt, grün = Zug steht da, gelb = nichts los,
-  -- rot = Haltestelle ausgeschaltet. Aus: keine Sprites, beim Laden werden alle Lampen entfernt.
+  -- rot = Haltestelle ausgeschaltet (Farben einstellbar). Standard aus: am Mast nur ein paar Pixel groß –
+  -- das Anzeigefeld am Kabel ist die Hauptanzeige. Aus: beim Laden werden alle Lampen entfernt.
   {
     type = "bool-setting",
     name = "utl-station-lamps",
     setting_type = "startup",
-    default_value = true,
+    default_value = false,
     order = "a-c",
   },
 })
