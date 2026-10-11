@@ -5,6 +5,7 @@ local Networks = require("scripts.stations.networks")
 local Util = require("scripts.lib.util")
 local Alerts = require("scripts.alerts.alerts")
 local Depot = require("scripts.trains.depot")
+local Log = require("scripts.lib.log")
 
 local Warn = {}
 
@@ -49,47 +50,51 @@ local function length_ok(cfg, length)
     and (cfg.max_train_length <= 0 or length <= cfg.max_train_length)
 end
 
---- Laderaum eines Lieferzugs, einmal gemessen und an der Lieferung gemerkt (ändert sich nur mit
---- neuer Zug-ID, und dann gibt es eine neue Lieferung bzw. sie wird umgeschrieben).
-local function measured(delivery)
-  local m = delivery.measured
-  local train = delivery.train
+--- Laderaum eines Zugs, einmal gemessen und am Heimat-Eintrag gemerkt (ändert sich nur mit neuer
+--- Zug-ID – dann gibt es einen neuen Eintrag).
+local function measured(home, train)
+  local m = home.measured
   if not m or m.id ~= train.id then
     local slots, wagons, fluid = Depot.measure(train)
     m = { id = train.id, slots = slots, wagons = wagons, fluid = fluid, length = #train.carriages }
-    delivery.measured = m
+    home.measured = m
   end
   return m
 end
 
---- Gibt es im Netz der Anfrage einen Zug, der die Ware fahren könnte, aber gerade eine Lieferung
---- hat? Dann ist „kein passender Zug“ falsch – es ist nur keiner frei (Sammelwarnung statt
---- Einstellungsfehler). Läuft nur, wenn sonst gewarnt würde; Ergebnis kurz gemerkt (Regel 5).
-local function busy_train_fits(request, provider)
+--- Gibt es im Netz der Anfrage einen UTL-Zug, der die Ware fahren könnte – frei, mit Lieferung oder
+--- auf dem Heimweg? Dann ist „kein passender Zug“ falsch, es ist nur gerade keiner frei
+--- (Sammelwarnung statt Einstellungsfehler). Gezählt werden Züge mit Heimatdepot (storage.trains.home)
+--- in einem Netz, das der Anfrage helfen darf. Läuft nur, wenn sonst gewarnt würde; Ergebnis kurz
+--- gemerkt (Regel 5).
+local function fitting_train_exists(request, provider)
   local requester = request.station
   local cache = storage.dispatch.fit_cache
   local cache_key = requester.unit .. "|" .. request.key
   local entry = cache[cache_key]
   if entry and game.tick - entry.tick < FIT_CACHE then return entry.fits end
   local kind = Util.split_key(request.key)
-  local stop = requester.stop
-  local place = Networks.place_of(stop)
+  local place = Networks.place_of(requester.stop)
+  local stations = storage.stations
   local r_cfg, p_cfg = requester.config, provider.station.config
   local locked = p_cfg.locked_slots or 0
   local fits = false
-  for _, delivery in pairs(storage.deliveries.active) do
-    local train = delivery.train
-    local front = train and train.valid and train.front_stock
-    if front and front.surface_index == stop.surface_index and front.force_index == stop.force_index
-      and Networks.related(place, r_cfg.network, delivery.network or "default") then
-      local m = measured(delivery)
-      local capacity = kind == "fluid" and m.fluid or (m.slots - m.wagons * locked)
-      if capacity > 0 and length_ok(p_cfg, m.length) and length_ok(r_cfg, m.length) then
-        fits = true
-        break
+  for _, home in pairs(storage.trains.home) do
+    local train, stop = home.train, home.stop
+    if train and train.valid and stop and stop.valid and Networks.place_of(stop) == place then
+      local unit = stations.by_stop[stop.unit_number]
+      local depot = unit and stations.by_unit[unit]
+      if depot and Networks.related(place, r_cfg.network, depot.config.network or "default") then
+        local m = measured(home, train)
+        local capacity = kind == "fluid" and m.fluid or (m.slots - m.wagons * locked)
+        if capacity > 0 and length_ok(p_cfg, m.length) and length_ok(r_cfg, m.length) then
+          fits = true
+          break
+        end
       end
     end
   end
+  if Log.on() then Log.debug("fitting_train_exists " .. cache_key .. " = " .. tostring(fits) .. " (Netz " .. r_cfg.network .. ")") end
   cache[cache_key] = { tick = game.tick, fits = fits }
   return fits
 end
@@ -108,7 +113,7 @@ function Warn.no_train(request, provider, has_pools)
   if game.tick - since < storage.cfg.alert_no_train_minutes * 3600 then return end
   local cfg = requester.config
   -- Freie Züge passen nicht, aber ein passender ist gerade unterwegs: wie „kein freier Zug“ sammeln
-  if not has_pools or busy_train_fits(request, provider) then
+  if not has_pools or fitting_train_exists(request, provider) then
     -- Kein freier Zug im ganzen Netzwerk: nicht je Abnehmer warnen (sonst blinkt die halbe Karte),
     -- sondern sammeln – Dispatch.starving_alerts meldet eine Warnung je Netzwerk.
     -- Schlüssel mit Ort: sonst unterdrückt die Warnung eines Teams die eines anderen
@@ -122,7 +127,11 @@ function Warn.no_train(request, provider, has_pools)
     by_net[unit .. "|" .. key] = { seen = game.tick, since = since, stop = requester.stop }
     return
   end
-  -- Züge frei, aber keiner im Netz passt (Länge/Laderaum), auch kein beschäftigter:
+  if Log.on() then
+    Log.debug("Kein passender Zug für " .. request.key .. " an " .. Log.stop_name(requester.stop) .. " (Netz „"
+      .. cfg.network .. "“, " .. table_size(storage.deliveries.active) .. " Lieferungen laufen).")
+  end
+  -- Züge frei, aber keiner im Netz passt (Länge/Laderaum), auch kein beschäftigter oder heimfahrender:
   -- Einstellungsfehler an dieser Station.
   local message = { "utl-alert.no-fitting-train", ware_icon(request.key), provider.station.stop.backer_name,
     requester.stop.backer_name, cfg.network }

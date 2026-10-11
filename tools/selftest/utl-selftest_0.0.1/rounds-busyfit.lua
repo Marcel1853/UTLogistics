@@ -60,7 +60,6 @@ function BusyFit.build()
     cfg(e, { mode = "station", provide = false, request = true, request_threshold = 100, max_train_length = i == 3 and 2 or 3 })
     remote.call("utl", "set_request", e.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
   end
-  remote.call("utl", "set_map_config", "utl-alert-no-train-minutes", 0)
   local short = train(s, force, 4, LINE, 1)  -- 3 Fahrzeuge
   train(s, force, 4, LINE + 20, 2)            -- 4 Fahrzeuge: passt bei keinem Abnehmer
   return { start = game.tick, short = short.id, a = reqs[1].unit_number, b = reqs[2].unit_number,
@@ -75,6 +74,9 @@ function BusyFit.watch(r, check)
       if d.train_id == r.short then
         r.busy = game.tick
         r.served = d.requester
+        -- erst jetzt sofort warnen lassen: vorher fuhren beide Züge noch ins Depot, und solange UTL
+        -- den kurzen nicht kennt, wäre „passt nicht“ richtig
+        remote.call("utl", "set_map_config", "utl-alert-no-train-minutes", 0)
       end
     end
   end
@@ -84,9 +86,10 @@ function BusyFit.watch(r, check)
     local waiting = r.served == r.a and r.b or r.a
     local single_waiting, single_c, collective = false, false, false
     for _, alert in ipairs(remote.call("utl", "get_alerts")) do
-      if alert.key:find("^no%-train:" .. waiting .. ":") then single_waiting = true end
-      if alert.key:find("^no%-train:" .. r.c .. ":") then single_c = true end
-      if alert.key:find("^no%-train%-net:.*|R46$") then collective = true end
+      local fresh = alert.tick > r.busy
+      if fresh and alert.key:find("^no%-train:" .. waiting .. ":") then single_waiting = true end
+      if fresh and alert.key:find("^no%-train:" .. r.c .. ":") then single_c = true end
+      if fresh and alert.key:find("^no%-train%-net:.*|R46$") then collective = true end
     end
     remote.call("utl", "set_map_config", "utl-alert-no-train-minutes", 5)
     check("R46 passender zug unterwegs: keine einzelwarnung „passt nicht“", not single_waiting)
