@@ -45,9 +45,10 @@ end
 -- Unsichtbares Item ohne Rezept: Factorio nimmt nur Gebäude mit Item in Blaupausen auf. So kommt
 -- die Ausgabe samt Kabeln mit; bauen kann den Geist niemand (das Item hat keiner) – UTL baut ihn
 -- selbst auf, sobald die Haltestelle steht (scripts/stations/output.lua, Output.ensure).
+-- Anzahl 0: Die Blaupause verlangt das Item nicht (sonst stand es dort als fehlend).
 local items = {}
 for _, e in ipairs({ entity, depot }) do
-  e.placeable_by = { item = e.name, count = 1 }
+  e.placeable_by = { item = e.name, count = 0 }
   items[#items + 1] = {
     type = "item",
     name = e.name,

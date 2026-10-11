@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.18
+Date: 2026-10-11
+  Bugfixes:
+    - Blueprints with UTL train stops showed the invisible settings combinator and the job/depot output as missing items. They no longer need an item; UTL builds them by itself as soon as the train stop stands.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.17
 Date: 2026-10-11
   Bugfixes:
