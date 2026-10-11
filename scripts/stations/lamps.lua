@@ -1,4 +1,5 @@
---- Farbige Haltestellen-Lampen (Wunsch Marcel, 0.0.19; Start-Einstellung „utl-station-lamps“).
+--- Zustandsanzeige an UTL-Haltestellen (Wunsch Marcel, 0.0.19): farbige Lampen (Start-Einstellung
+--- „utl-station-lamps“) und Anzeigefelder am Kabel der Station (status-panel.lua, immer aktiv).
 ---
 --- Über die zwei Lampen oben an der Haltestelle zeichnet UTL eingefärbte Lampen (Sprites aus
 --- prototypes/sprites/stop-lamps.lua):
@@ -11,6 +12,8 @@
 --- und nachher) und Lieferung gebucht/fertig (Reservations.count_train). Dazu eine langsame Runde mit
 --- festem Budget für das, was kein Ereignis hat (Schaltung an/aus, neue Stationen). Ein Wechsel setzt
 --- nur die Farbe der zwei vorhandenen Objekte; neu gezeichnet wird nur bei neuer Haltestelle/Richtung.
+local Panel = require("scripts.stations.status-panel")
+
 local Lamps = {}
 
 local ENABLED = settings.startup["utl-station-lamps"].value
@@ -53,7 +56,9 @@ local function draw(stop, direction, color)
       target = stop,
       surface = stop.surface,
       tint = color,
-      render_layer = "higher-object-above",
+      -- über den Lampen des Spiels: die leuchten gelb, sobald ein Zug kommt oder steht, und lägen in
+      -- „higher-object-above“ über unserer Farbe (im grafischen Test gesehen, 11.10.2026)
+      render_layer = "wires-above",
     })
     ids[n] = object.id
   end
@@ -61,8 +66,7 @@ local function draw(stop, direction, color)
 end
 
 --- Lampen einer Station anlegen, umfärben oder entfernen (kein Halt / andere Haltestellen-Art).
-function Lamps.refresh(station)
-  if not ENABLED then return end
+local function refresh_lamps(station, state)
   local by_station = storage.lamps.by_station
   local entry = by_station[station.unit]
   local stop = station.stop
@@ -78,7 +82,6 @@ function Lamps.refresh(station)
     destroy(entry)
     entry = nil
   end
-  local state = state_of(station, stop)
   if not entry then
     by_station[station.unit] = { stop = stop, direction = direction, state = state, ids = draw(stop, direction, COLORS[state]) }
   elseif entry.state ~= state then
@@ -90,9 +93,16 @@ function Lamps.refresh(station)
   end
 end
 
+--- Anzeige einer Station auffrischen: Lampen (wenn eingeschaltet) und Anzeigefelder daneben.
+function Lamps.refresh(station)
+  local stop = station.stop
+  local state = stop and stop.valid and state_of(station, stop) or nil
+  if ENABLED then refresh_lamps(station, state) end
+  Panel.refresh(station, stop, state)
+end
+
 --- Station per unit_number (z. B. aus den Reservierungen).
 function Lamps.refresh_unit(unit)
-  if not ENABLED then return end
   local station = storage.stations.by_unit[unit]
   if station then Lamps.refresh(station) end
 end
@@ -105,7 +115,7 @@ end
 
 --- Zugzustand gewechselt: Halt, an dem er steht, und sein Ziel – vorher und jetzt.
 function Lamps.on_train(train)
-  if not (ENABLED and train.valid) then return end
+  if not train.valid then return end
   local trains = storage.lamps.trains
   local id = train.id
   local before = trains[id]
@@ -120,6 +130,7 @@ end
 
 --- Station weg: Lampen entfernen (an einer abgerissenen Haltestelle verschwinden sie von selbst).
 function Lamps.destroy(station)
+  Panel.forget(station)
   local entry = storage.lamps.by_station[station.unit]
   if not entry then return end
   destroy(entry)
@@ -129,7 +140,6 @@ end
 --- Heartbeat-Aufgabe: einige Stationen reihum prüfen (Schaltung an/aus, neue Stationen) und
 --- Einträge abgerissener Züge vergessen.
 function Lamps.step()
-  if not ENABLED then return end
   local lamps = storage.lamps
   local by_unit = storage.stations.by_unit
   local unit = lamps.cursor
@@ -138,6 +148,7 @@ function Lamps.step()
     local station
     unit, station = next(by_unit, unit)
     if not unit then break end
+    Panel.scan(station)
     Lamps.refresh(station)
   end
   lamps.cursor = unit
@@ -160,10 +171,6 @@ function Lamps.on_configuration_changed()
       destroy(entry)
       lamps.by_station[unit] = nil
     end
-  end
-  if not ENABLED then
-    lamps.trains = {}
-    lamps.cursor, lamps.train_cursor = nil, nil
   end
 end
 

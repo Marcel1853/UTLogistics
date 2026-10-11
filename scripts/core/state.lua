@@ -92,6 +92,8 @@ function State.init()
   local lamps = storage.lamps
   lamps.by_station = lamps.by_station or {} -- [station] = { stop, direction, state, ids = { Render-IDs } }
   lamps.trains = lamps.trains or {}         -- [train_id] = { Haltestellen, an/zu denen er zuletzt war }
+  lamps.panels = lamps.panels or {}         -- [station] = { list = { Anzeigefelder am Kabel }, text, state }
+  lamps.adopted = lamps.adopted or {}       -- [Anzeigefeld unit_number] = true: von UTL übernommen
   storage.team_config = storage.team_config or {} -- [force_index] = { load_timeout = …, … }, siehe team-config.lua
 end
 
