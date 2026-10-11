@@ -8,7 +8,7 @@
 > Schnittstelle für andere Mods – eigene Bahnhofsrollen, eigene Fahrten, Züge umbauen (an- und
 > abkuppeln), ohne dass die Lieferung abbricht, eigene Teile im Stationsfenster und im Manager,
 > zusätzliche Signale für Netz-Kombinatoren und viele Ereignisse. Sie ist **nicht im Mod-Portal**, sondern
-> ein Pre-Release auf GitHub: [API-Beta 1](https://github.com/Marcel1853/UTLogistics/releases/tag/api-beta-1) ·
+> ein Pre-Release auf GitHub: [API-Beta 2](https://github.com/Marcel1853/UTLogistics/releases/tag/api-beta-2) ·
 > [Doku](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren). Fehler und Wünsche zur Beta bitte
 > als [Issue auf GitHub](https://github.com/Marcel1853/UTLogistics/issues) melden, nicht in der Diskussion
 > hier. Die normale Version auf dieser Seite ist davon nicht betroffen.

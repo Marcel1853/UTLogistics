@@ -8,7 +8,7 @@
 > mods – own station roles, own trips, rebuilding trains (coupling/uncoupling) without losing the
 > delivery, own parts in the station window and the manager, extra signals for network combinators and
 > many events. It is **not on the mod portal**; it is a pre-release on GitHub:
-> [API beta 1](https://github.com/Marcel1853/UTLogistics/releases/tag/api-beta-1) ·
+> [API beta 2](https://github.com/Marcel1853/UTLogistics/releases/tag/api-beta-2) ·
 > [documentation](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors). Please report bugs and
 > wishes for the beta as an [issue on GitHub](https://github.com/Marcel1853/UTLogistics/issues), not in
 > the discussion here. The normal version on this page is not affected.
