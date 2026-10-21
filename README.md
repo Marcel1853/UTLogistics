@@ -4,15 +4,6 @@
 [![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FMarcel1853%2FUTLogistics%2Fmain%2Finfo.json&query=%24.version&label=version&color=orange)](https://mods.factorio.com/mod/UTLogistics)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
 
-> **🧪 Beta for mod authors: add-on API.** There is a **test build** with a new interface for other
-> mods – own station roles, own trips, rebuilding trains (coupling/uncoupling) without losing the
-> delivery, own parts in the station window and the manager, extra signals for network combinators and
-> many events. It is **not on the mod portal**; it is a pre-release on GitHub:
-> [API beta 2](https://github.com/Marcel1853/UTLogistics/releases/tag/v0.0.19-api-beta-2) ·
-> [documentation](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors). Please report bugs and
-> wishes for the beta as an [issue on GitHub](https://github.com/Marcel1853/UTLogistics/issues), not in
-> the discussion here. The normal version on this page is not affected.
-
 Automatic train logistics for Factorio 2.1: **providers, requesters, depots, fuel stations,
 cleanup and an overview window in one mod**, built for high UPS.
 

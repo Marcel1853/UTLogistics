@@ -4,15 +4,6 @@
 [![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FMarcel1853%2FUTLogistics%2Fmain%2Finfo.json&query=%24.version&label=version&color=orange)](https://mods.factorio.com/mod/UTLogistics)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Marcel1853/UTLogistics/blob/main/LICENSE)
 
-> **🧪 Beta für Mod-Autoren: Add-on-Schnittstelle.** Es gibt eine **Testfassung** mit einer neuen
-> Schnittstelle für andere Mods – eigene Bahnhofsrollen, eigene Fahrten, Züge umbauen (an- und
-> abkuppeln), ohne dass die Lieferung abbricht, eigene Teile im Stationsfenster und im Manager,
-> zusätzliche Signale für Netz-Kombinatoren und viele Ereignisse. Sie ist **nicht im Mod-Portal**, sondern
-> ein Pre-Release auf GitHub: [API-Beta 2](https://github.com/Marcel1853/UTLogistics/releases/tag/v0.0.19-api-beta-2) ·
-> [Doku](https://github.com/Marcel1853/UTLogistics/wiki/Für-Mod-Autoren). Fehler und Wünsche zur Beta bitte
-> als [Issue auf GitHub](https://github.com/Marcel1853/UTLogistics/issues) melden, nicht in der Diskussion
-> hier. Die normale Version auf dieser Seite ist davon nicht betroffen.
-
 *English version: [README.md](https://github.com/Marcel1853/UTLogistics/blob/main/README.md).*
 
 > **📖 Wiki mit Bildern:** [github.com/Marcel1853/UTLogistics/wiki](https://github.com/Marcel1853/UTLogistics/wiki) – jede Funktion Schritt für Schritt erklärt,
