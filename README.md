@@ -390,7 +390,7 @@ links, team and map values, tagging script-made blueprints, trains and stations 
 a delivery) and **events** for created, changed, completed and cancelled deliveries, plus own **icons for UTL signals** (also per signal style) via `mod-data` "utl-signal-icons":
 [wiki – For mod authors](https://github.com/Marcel1853/UTLogistics/wiki/For-mod-authors).
 
-If you want to build a mod **on top of** UTL, there is an **add-on API**: own station roles, own trips
+If you want to build a mod **on top of** UTL, there is an **add-on API** (*new in 0.0.20*): own station roles, own trips
 over any stops, rebuilding trains (coupling and uncoupling) without losing the delivery, data on
 stations, own sections in the station window and tabs in the manager, a say in choosing the train and
 events for arrival and departure. The add-on plans, UTL drives:

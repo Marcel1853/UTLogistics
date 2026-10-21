@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.20
+Date: 2026-10-21
+  Features:
+    - Add-on API for other mods (was a test build on GitHub before): own station roles, own trips over any stops and rail positions, starting and extending deliveries, holding trains, rebuilding trains (coupling and uncoupling) without losing the delivery, data on stations that travels with blueprints, an own section in the station window and an own tab in the UTL Manager, a say in choosing the train, extra signals for network combinators. Interface level: remote.call("utl", "api_version") returns 1. Documentation: wiki "For mod authors".
+    - New events for add-ons: train arrived, departed, idle in the depot, rebuilt, job finished, station created, removed and changed, alert raised and request without a train.
+    - Icons of UTL signals can be replaced per signal style (classic/flat).
+  Changes:
+    - Several add-ons can work at the same time: a held train belongs to exactly one mod, roles, data and window sections are kept apart per mod, and separate rail networks are respected.
+    - Without any add-on nothing changes and nothing is called – no extra cost for normal play.
+  Bugfixes:
+    - Crash when an add-on rebuilt a train inside a UTL event.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.19
 Date: 2026-10-11
   Features:
