@@ -1,7 +1,10 @@
 # UTL-Haltestelle rendern: Modell aus utl_stop_model.py, Aufbau aus rig.py (Blender 5.x, headless):
 #   blender -b --factory-startup --python tools/grafik/render_stop.py -- <render_ordner> [--samples N] [--nur north] [--durchgang top] [--ohne-verteiler] [--ohne-render]
+# Schreibt zusätzlich wires_<richtung>.json (Klemmen auf dem Steuerschrank) für die Anschlusspunkte der Signalkabel.
 # Danach: python3 tools/grafik/sprites.py <render_ordner> <ziel_ordner> utl-train-stop
 import bpy
+import json
+import math
 import os
 import sys
 
@@ -23,14 +26,22 @@ rig.lights()
 # Ausleger gedreht bis ≈ 5,6 Felder hoch im Bild; sprites.py schneidet zu
 rig.camera(10, 12, shift=0.8)
 catcher = rig.shadow_catcher()
-# Je Richtung neu bauen, mit eigenem seed: die Kabel liegen dann in jeder Richtung etwas anders
+# Je Richtung neu bauen, mit eigenem seed: die Kabel liegen dann in jeder Richtung etwas anders. In Ost/West ist der
+# Ausleger wie bei Vanilla etwas verdreht, sonst sähe man ihn nur von vorn.
+ARM_YAW = {"east": 10.0, "west": 10.0}
+os.makedirs(out, exist_ok=True)
 for d in directions:
     old = bpy.data.objects.get("Drehpunkt")
     if old:
         bpy.data.objects.remove(old, do_unlink=True)
-    col = utl_stop_model.build(seed=rig.DIRECTIONS.index(d), distributor="--ohne-verteiler" not in a)
+    col = utl_stop_model.build(seed=rig.DIRECTIONS.index(d), distributor="--ohne-verteiler" not in a,
+                               arm_yaw=ARM_YAW.get(d, 0.0))
     meshes = [o for o in col.objects if o.type == "MESH"]
     root = rig.pivot(list(col.objects))
+    root.rotation_euler = (0, 0, -rig.DIRECTIONS.index(d) * math.pi / 2)
+    bpy.context.view_layer.update()
+    with open(os.path.join(out, f"wires_{d}.json"), "w") as f:
+        json.dump(rig.terminals(col), f)
     print("[STOP]", d, len(meshes), "Teile")
     if "--ohne-render" not in a:
         rig.render(out, root, meshes, catcher, samples=samples, directions=(d,), passes=passes)

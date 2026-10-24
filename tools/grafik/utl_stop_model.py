@@ -8,66 +8,17 @@ import random
 from mathutils import Vector, Matrix
 
 import rig
+from materials import material as _mat
 
 COLLECTION = "UTL-Haltestelle"
 
 
-def _mat(name, color, metallic=0.85, rough=0.5, rust=0.0, emission=None):
-    m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
-    m.use_nodes = True
-    nt = m.node_tree
-    for n in list(nt.nodes):
-        nt.nodes.remove(n)
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
-    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
-    nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
-    bsdf.inputs["Metallic"].default_value = metallic
-    bsdf.inputs["Roughness"].default_value = rough
-    base = (*color, 1)
-    # Umgebungsverdeckung: Ecken, Fugen und Kontaktstellen dunkler – das gibt den kräftigen Factorio-Look
-    ao = nt.nodes.new("ShaderNodeAmbientOcclusion")
-    ao.inputs["Distance"].default_value = 0.25
-    ao.samples = 16
-    ao.inputs["Color"].default_value = base
-    nt.links.new(ao.outputs["Color"], bsdf.inputs["Base Color"])
-    if rust > 0:
-        # Rost und Schmutz: großes Rauschen für Flecken, feines für Körnung
-        coord = nt.nodes.new("ShaderNodeTexCoord")
-        big = nt.nodes.new("ShaderNodeTexNoise")
-        big.inputs["Scale"].default_value = 6.0
-        big.inputs["Detail"].default_value = 10.0
-        big.inputs["Roughness"].default_value = 0.65
-        nt.links.new(coord.outputs["Object"], big.inputs["Vector"])
-        ramp = nt.nodes.new("ShaderNodeValToRGB")
-        # Anteil Rost ≈ `rust`: Rauschwerte liegen meist zwischen 0,3 und 0,7
-        ramp.color_ramp.elements[0].position = 0.28 + 0.4 * rust
-        ramp.color_ramp.elements[0].color = (0.16, 0.075, 0.035, 1)
-        ramp.color_ramp.elements[1].position = 0.36 + 0.4 * rust
-        ramp.color_ramp.elements[1].color = base
-        nt.links.new(big.outputs["Fac"], ramp.inputs["Fac"])
-        nt.links.new(ramp.outputs["Color"], ao.inputs["Color"])
-        rr = nt.nodes.new("ShaderNodeMapRange")
-        rr.inputs["To Min"].default_value = rough + 0.25
-        rr.inputs["To Max"].default_value = rough
-        nt.links.new(big.outputs["Fac"], rr.inputs["Value"])
-        nt.links.new(rr.outputs["Result"], bsdf.inputs["Roughness"])
-        bump = nt.nodes.new("ShaderNodeBump")
-        bump.inputs["Strength"].default_value = 0.15
-        fine = nt.nodes.new("ShaderNodeTexNoise")
-        fine.inputs["Scale"].default_value = 80.0
-        nt.links.new(coord.outputs["Object"], fine.inputs["Vector"])
-        nt.links.new(fine.outputs["Fac"], bump.inputs["Height"])
-        nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
-    if emission:
-        bsdf.inputs["Emission Color"].default_value = (*emission, 1)
-        bsdf.inputs["Emission Strength"].default_value = 8.0
-    return m
-
-
-def build(seed=0, name=COLLECTION, distributor=True):
+def build(seed=0, name=COLLECTION, distributor=True, arm_yaw=0.0):
     """Baut das Modell in die Sammlung `name`. seed: Zufallswert für die Kabelführung – je Richtung ein
     anderer, damit die Kabel nicht überall gleich liegen. distributor=False: ohne Verteiler hinter dem Gleis,
-    das Kabelbündel endet im Kabelkanal (im Spiel zeichnet dann die Vanilla-Haltestelle ihre Teile am Gleis)."""
+    das Kabelbündel endet im Kabelkanal (im Spiel zeichnet dann die Vanilla-Haltestelle ihre Teile am Gleis).
+    arm_yaw: Ausleger um so viele Grad um den Mast drehen (gegen den Uhrzeigersinn) – wie Vanilla in Ost/West, damit
+    man den Ausleger nicht nur von vorn sieht."""
     rng = random.Random(seed)
     # alte Fassung entfernen
     old = bpy.data.collections.get(name)
@@ -360,6 +311,12 @@ def build(seed=0, name=COLLECTION, distributor=True):
     sx, sy = MX + 0.47, MY + 0.02
     box("Steuerschrank", (0.2, 0.42, 0.62), (sx, sy, 0.49), STEEL, bevel=0.02)
     box("Steuerschrankdach", (0.24, 0.46, 0.03), (sx, sy, 0.815), DARK, bevel=0.006)
+    # Anschlussklemmen für die Signalkabel im Spiel (Spitzen = Anschlusspunkte, render_stop.py)
+    CERAMIC = _mat("Isolator", (0.55, 0.55, 0.52), 0.0, 0.3)
+    for label, dy, material in (("Anschluss rot", -0.11, WIRE[0]), ("Anschluss grün", 0.11, WIRE[1])):
+        for k in range(3):
+            cyl(f"{label} Isolator{k}", 0.03 - k * 0.004, 0.032, (sx, sy + dy, 0.845 + k * 0.04), CERAMIC, verts=12)
+        cyl(label, 0.027, 0.035, (sx, sy + dy, 0.98), material, verts=12)
     box("Steuerschranktür", (0.015, 0.36, 0.52), (sx + 0.105, sy, 0.48), DARK, bevel=0.004)
     for k in range(4):  # Lüftungsschlitze vorn
         box(f"Lüftung{k}", (0.14, 0.012, 0.018), (sx, sy - 0.215, 0.62 + k * 0.04), DARK, bevel=0.002)
@@ -394,4 +351,13 @@ def build(seed=0, name=COLLECTION, distributor=True):
     box("Abzweigkasten", (0.16, 0.08, 0.2), (cx, cy - 0.03, 1.9), STEEL, bevel=0.012)
     cyl("Abzweigleuchte", 0.016, 0.01, (cx, cy - 0.075, 1.96), LED_G, rot=(math.pi / 2, 0, 0), verts=10)
 
+    if arm_yaw:
+        # Ausleger samt Strebe, Zugstangen, Lampen und Lampenkabel um die Mastachse drehen; der Mast selbst bleibt
+        mast = ("Eckstiel", "Riegel", "Diagonale", "Stütze", "Schelle", "Abzweig")
+        turn = Matrix.Translation((MX, MY, 0)) @ Matrix.Rotation(math.radians(arm_yaw), 4, "Z") \
+            @ Matrix.Translation((-MX, -MY, 0))
+        for o in col.objects:
+            low = min((o.matrix_world @ Vector(c)).z for c in o.bound_box)
+            if o.name.startswith(("Strebe", "Lampenkabel", "Kabelhalter")) or (low > 2.4 and not o.name.startswith(mast)):
+                o.matrix_world = turn @ o.matrix_world
     return col

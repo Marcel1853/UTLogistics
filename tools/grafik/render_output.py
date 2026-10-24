@@ -33,6 +33,6 @@ for d in directions:
     root.rotation_euler = (0, 0, -rig.DIRECTIONS.index(d) * math.pi / 2)
     bpy.context.view_layer.update()
     with open(os.path.join(out, f"wires_{d}.json"), "w") as f:
-        json.dump(utl_output_model.terminals(col), f)
+        json.dump(rig.terminals(col), f)
     if "--ohne-render" not in a:
         rig.render(out, root, meshes, catcher, samples=samples, directions=(d,), passes=("color", "mask", "shadow"))

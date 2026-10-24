@@ -228,3 +228,14 @@ def tube(name, points, radius, resolution=10):
     obj = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(obj)
     return obj
+
+
+def terminals(col):
+    """Weltpunkte der Klemmenspitzen „Anschluss rot“/„Anschluss grün“ eines Modells (nach dem Drehen für die
+    Richtung abfragen) – daraus macht sprites.py die Anschlusspunkte der Signalkabel im Spiel."""
+    out = {}
+    for color, label in (("red", "Anschluss rot"), ("green", "Anschluss grün")):
+        o = col.objects[label]
+        p = o.matrix_world @ Vector((0, 0, 0.02))
+        out[color] = (p.x, p.y, p.z)
+    return out

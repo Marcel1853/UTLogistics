@@ -10,7 +10,7 @@ import math
 from mathutils import Vector
 
 import rig
-from utl_stop_model import _mat
+from materials import material as _mat
 
 # gebrochene Kennfarbe des Gehäuses je Art (stark ins Grau gezogen): Auftrags-Ausgabe blau, Depot grün
 KINDS = {"station": (0.075, 0.09, 0.12), "depot": (0.07, 0.095, 0.07)}
@@ -145,12 +145,3 @@ def build(kind="station", name=None):
     bolts("Seitenplatte", (0.412, 0.02, 0.26), 0.28, 0.13, "x")
     return col
 
-
-def terminals(col):
-    """Weltpunkte der Klemmenspitzen (rot, grün) – nach dem Drehen für die jeweilige Richtung abfragen."""
-    out = {}
-    for color, label in (("red", "Anschluss rot"), ("green", "Anschluss grün")):
-        o = col.objects[label]
-        p = o.matrix_world @ Vector((0, 0, 0.02))
-        out[color] = (p.x, p.y, p.z)
-    return out

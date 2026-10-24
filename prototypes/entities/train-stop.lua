@@ -22,6 +22,10 @@ if style ~= "vanilla" then
   entity.top_animations = sprites.top_animations
   entity.light1 = nil
   entity.light2 = nil
+  -- Signalkabel hängen an den Klemmen auf dem Steuerschrank des Modells; der Vanilla-Anschlusskasten säße am Gleis
+  local connector = {}
+  for i, points in ipairs(sprites.circuit_wire_connection_points) do connector[i] = { points = points } end
+  entity.circuit_connector = connector
   if style == "utl" then
     entity.rail_overlay_animations = nil
   else
