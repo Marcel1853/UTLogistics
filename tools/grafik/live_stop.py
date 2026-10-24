@@ -150,7 +150,7 @@ def outputs():
 
 rig.reset(live=True)
 rig.lights()
-rig.camera(10, 12, shift=0.8)
+rig.camera(13, 12, shift=0.8, shift_x=1.5)
 col = utl_stop_model.build()
 rig.shadow_catcher()
 rig.pivot(list(col.objects))

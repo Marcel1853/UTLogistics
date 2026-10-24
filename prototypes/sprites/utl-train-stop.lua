@@ -2,42 +2,42 @@
 return {
   animations = {
     north = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north.png", width = 597, height = 459, shift = { 0.3359, -3.2141 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-mask.png", width = 597, height = 459, shift = { 0.3359, -3.2141 }, scale = 0.5, apply_runtime_tint = true },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-shadow.png", width = 597, height = 459, shift = { 0.3359, -3.2141 }, scale = 0.5, draw_as_shadow = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north.png", width = 789, height = 459, shift = { 1.8359, -3.2141 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-mask.png", width = 789, height = 459, shift = { 1.8359, -3.2141 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-shadow.png", width = 789, height = 459, shift = { 1.8359, -3.2141 }, scale = 0.5, draw_as_shadow = true },
     } },
     east = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east.png", width = 348, height = 516, shift = { 2.2812, -2.7687 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-mask.png", width = 348, height = 516, shift = { 2.2812, -2.7687 }, scale = 0.5, apply_runtime_tint = true },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-shadow.png", width = 348, height = 516, shift = { 2.2812, -2.7687 }, scale = 0.5, draw_as_shadow = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east.png", width = 540, height = 516, shift = { 3.7812, -2.7687 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-mask.png", width = 540, height = 516, shift = { 3.7812, -2.7687 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-shadow.png", width = 540, height = 516, shift = { 3.7812, -2.7687 }, scale = 0.5, draw_as_shadow = true },
     } },
     south = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south.png", width = 398, height = 523, shift = { 1.8906, -2.7141 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-mask.png", width = 398, height = 523, shift = { 1.8906, -2.7141 }, scale = 0.5, apply_runtime_tint = true },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-shadow.png", width = 398, height = 523, shift = { 1.8906, -2.7141 }, scale = 0.5, draw_as_shadow = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south.png", width = 590, height = 523, shift = { 3.3906, -2.7141 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-mask.png", width = 590, height = 523, shift = { 3.3906, -2.7141 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-shadow.png", width = 590, height = 523, shift = { 3.3906, -2.7141 }, scale = 0.5, draw_as_shadow = true },
     } },
     west = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west.png", width = 407, height = 713, shift = { 1.8203, -1.2297 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-mask.png", width = 407, height = 713, shift = { 1.8203, -1.2297 }, scale = 0.5, apply_runtime_tint = true },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-shadow.png", width = 407, height = 713, shift = { 1.8203, -1.2297 }, scale = 0.5, draw_as_shadow = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west.png", width = 599, height = 713, shift = { 3.3203, -1.2297 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-mask.png", width = 599, height = 713, shift = { 3.3203, -1.2297 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-shadow.png", width = 599, height = 713, shift = { 3.3203, -1.2297 }, scale = 0.5, draw_as_shadow = true },
     } },
   },
   top_animations = {
     north = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-top.png", width = 206, height = 137, shift = { -0.7812, -3.3859 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-top-mask.png", width = 206, height = 137, shift = { -0.7812, -3.3859 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-top.png", width = 205, height = 137, shift = { -0.7734, -3.3859 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-top-mask.png", width = 205, height = 137, shift = { -0.7734, -3.3859 }, scale = 0.5, apply_runtime_tint = true },
     } },
     east = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-top.png", width = 66, height = 283, shift = { 0.3125, -3.6828 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-top-mask.png", width = 66, height = 283, shift = { 0.3125, -3.6828 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-top.png", width = 66, height = 270, shift = { 0.3125, -3.5812 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-top-mask.png", width = 66, height = 270, shift = { 0.3125, -3.5812 }, scale = 0.5, apply_runtime_tint = true },
     } },
     south = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-top.png", width = 206, height = 125, shift = { 0.7812, -2.4797 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-top-mask.png", width = 206, height = 125, shift = { 0.7812, -2.4797 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-top.png", width = 205, height = 125, shift = { 0.7734, -2.4797 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-top-mask.png", width = 205, height = 125, shift = { 0.7734, -2.4797 }, scale = 0.5, apply_runtime_tint = true },
     } },
     west = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-top.png", width = 66, height = 235, shift = { -0.3125, -2.5891 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-top-mask.png", width = 66, height = 235, shift = { -0.3125, -2.5891 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-top.png", width = 66, height = 250, shift = { -0.3125, -2.4719 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-top-mask.png", width = 66, height = 250, shift = { -0.3125, -2.4719 }, scale = 0.5, apply_runtime_tint = true },
     } },
   },
   circuit_wire_connection_points = {

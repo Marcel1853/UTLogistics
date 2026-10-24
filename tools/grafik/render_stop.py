@@ -23,8 +23,8 @@ passes = (a[a.index("--durchgang") + 1],) if "--durchgang" in a else rig.PASSES
 rig.reset()
 rig.lights()
 # Bildausschnitt großzügig: Verteiler ≈ 4,4 Felder neben der Mitte (gedreht auch nach Süden, also unten im Bild),
-# Ausleger gedreht bis ≈ 5,6 Felder hoch im Bild; sprites.py schneidet zu
-rig.camera(10, 12, shift=0.8)
+# Ausleger gedreht bis ≈ 5,6 Felder hoch im Bild, Schatten bis ≈ 7 Felder nach rechts; sprites.py schneidet zu
+rig.camera(13, 12, shift=0.8, shift_x=1.5)
 catcher = rig.shadow_catcher()
 # Je Richtung neu bauen, mit eigenem seed: die Kabel liegen dann in jeder Richtung etwas anders. In Ost/West ist der
 # Ausleger wie bei Vanilla etwas verdreht, sonst sähe man ihn nur von vorn.

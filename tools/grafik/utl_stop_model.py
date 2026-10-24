@@ -167,7 +167,7 @@ def build(seed=0, name=COLLECTION, distributor=True, arm_yaw=0.0):
     W = 0.2                    # halbe Mastbreite (schmaler Gitterturm wie Vanilla)
     H = 3.5                    # Masthöhe bis zum Ausleger
     ARM = 2.5                  # Ausleger nach Westen
-    RISE = 0.25                # Ausleger steigt zur Spitze leicht an (nicht kerzengerade)
+    RISE = 0.0                 # Ausleger waagerecht (Marcel: ansteigend sah aus, als knicke er nach oben ab)
 
     # ---- Fuß: Betonsockel, Konsole und schräge Stützen ----
     box("Sockel", (1.3, 1.3, 0.18), (MX, MY, 0.09), CONCRETE, bevel=0.035)

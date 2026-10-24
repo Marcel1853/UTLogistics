@@ -93,7 +93,8 @@ def main(render_dir, out_dir, name, tint):
         with open(os.path.join(render_dir, f"framing_{d}.json")) as f:
             framing = json.load(f)
         # Ursprung (Boden-Mitte des Modells) im verkleinerten Bild
-        origin = (framing["width"] * TILE_PX / 2, (framing["height"] / 2 + framing["shift"]) * TILE_PX)
+        origin = ((framing["width"] / 2 - framing.get("shift_x", 0)) * TILE_PX,
+                  (framing["height"] / 2 + framing["shift"]) * TILE_PX)
         ims = {k: load(render_dir, k, d, framing) for k in ("color", "mask", "shadow")}
         ims["mask"] = tint_mask(ims["color"], ims["mask"])
         bottom.append(f"    {d} = {{ layers = {{")

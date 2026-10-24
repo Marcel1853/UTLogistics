@@ -76,9 +76,10 @@ def lights():
     sun("Gegenlicht", (-0.6, 0.8, -0.8), 0.5, False)
 
 
-def camera(width, height, shift=0.0):
+def camera(width, height, shift=0.0, shift_x=0.0):
     """Kamera über dem Ursprung (Boden). width/height: Bildgröße in Feldern, wie später im Spiel;
-    shift: Bildmitte so viele Felder über dem Ursprung."""
+    shift: Bildmitte so viele Felder über dem Ursprung, shift_x: so viele Felder rechts davon (Schatten fallen
+    nach rechts)."""
     scene = bpy.context.scene
     data = bpy.data.cameras.new("Kamera")
     data.type = "ORTHO"
@@ -88,14 +89,14 @@ def camera(width, height, shift=0.0):
     look = Vector((0, math.cos(ELEVATION), -math.sin(ELEVATION)))
     up = Vector((0, math.sin(ELEVATION), math.cos(ELEVATION)))
     # Bodentiefe erscheint um sin(50°) gestaucht; sprites.py streckt das wieder, daher shift * sin
-    cam.location = -look * 50 + up * (shift * math.sin(ELEVATION))
+    cam.location = -look * 50 + up * (shift * math.sin(ELEVATION)) + Vector((shift_x, 0, 0))
     cam.rotation_euler = (math.pi / 2 - ELEVATION, 0, 0)
     scene.collection.objects.link(cam)
     scene.camera = cam
     scene.render.resolution_x = round(width * TILE_PX * SUPERSAMPLE)
     scene.render.resolution_y = round(height * math.sin(ELEVATION) * TILE_PX * SUPERSAMPLE)
     scene.render.resolution_percentage = 100
-    scene["framing"] = (width, height, shift)
+    scene["framing"] = (width, height, shift, shift_x)
     return cam
 
 
@@ -156,8 +157,8 @@ def render(out_dir, root, meshes, catcher, samples=96, directions=DIRECTIONS, pa
     """Rendert alle Richtungen und Durchgänge nach out_dir/<pass>_<richtung>.png."""
     os.makedirs(out_dir, exist_ok=True)
     scene = bpy.context.scene
-    w, h, shift = scene["framing"]
-    framing = {"width": w, "height": h, "shift": shift, "supersample": SUPERSAMPLE, "elevation": math.degrees(ELEVATION),
+    w, h, shift, shift_x = scene["framing"]
+    framing = {"width": w, "height": h, "shift": shift, "shift_x": shift_x, "supersample": SUPERSAMPLE, "elevation": math.degrees(ELEVATION),
                "sun": SUN}
     for d in directions:  # je Richtung, damit man einzelne Richtungen neu rendern kann
         with open(os.path.join(out_dir, f"framing_{d}.json"), "w") as f:
