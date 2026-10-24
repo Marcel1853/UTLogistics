@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.21
+Date: 2026-10-24
+  Features:
+    - New look for the UTL train stop (startup setting "UTL train stop look", default Vanilla): own model with a lattice mast, control cabinet with signal lamps and wire terminals, and braided cables into a cable duct. The station color can still be chosen freely, trains run under the arm, and red and green wires connect to the terminals on the cabinet.
+  Graphics:
+    - The order output and the depot output got their own look: a small switch box in the style of the train stop (blue for the order output, green for the depot output), with insulators for the red and green wires.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.20
 Date: 2026-10-21
   Features:

@@ -248,7 +248,7 @@ seiner Titelleiste).
 
 ## Netz-Kombinator
 
-*Braucht die Forschung „UTL: Netz-Kombinator“. Neu in 0.0.9.*
+*Braucht die Forschung „UTL: Netz-Kombinator“.*
 
 Gibt den Zustand eines UTL-Netzes als Schaltungssignale aus. Im Fenster wählst du das Netz (auf
 Wunsch mit den verbundenen Netzen) und den Modus: **Bestand** (was Anbieter anbieten),
@@ -272,14 +272,30 @@ Karten-Einstellungen ein („Anzeige: …“). Felder mit eigenen Nachrichten l�
 leert das Feld wieder.
 
 Optional: Die Start-Einstellung **„Farbige Haltestellen-Lampen“** (Standard aus) färbt die zwei kleinen
-Lampen oben an UTL-Haltestellen genauso ein – am besten nachts zu sehen.
+Lampen oben an UTL-Haltestellen genauso ein – am besten nachts zu sehen. Die Lampen sitzen dort, wo die
+Vanilla-Haltestelle sie hat, passen also zum Vanilla-Aussehen.
 
 Auch das Stationsfenster („Unterwegs“) und der UTL-Manager nennen die Züge, die gerade kommen, mit der Menge
 je Zug im Tooltip.
 
+## Aussehen der Haltestelle
+
+*Neu in 0.0.21.*
+
+![Das UTL-Aussehen der Haltestelle in allen vier Richtungen, rechts Auftrags-Ausgabe (blau) und Depot-Ausgabe (grün)](https://raw.githubusercontent.com/wiki/Marcel1853/UTLogistics/images/utl-stop-look.png)
+
+Standardmäßig sehen UTL-Haltestellen aus wie normale Haltestellen. In den **Start-Einstellungen** kannst du
+**„Aussehen der UTL-Haltestelle“** auf **UTL** stellen: ein eigenes Modell mit Gittermast, einem Steuerschrank
+mit Meldeleuchten und Anschlussklemmen und geflochtenen Kabeln in einen Kabelkanal neben dem Gleis. Die
+Stationsfarbe ist weiter frei wählbar, Züge fahren unter dem Ausleger durch, rote und grüne Kabel hängen an den
+Klemmen auf dem Steuerschrank. Die Einstellung braucht einen Neustart; zurück auf Vanilla geht jederzeit.
+
+**Auftrags-Ausgabe** und **Depot-Ausgabe** haben immer ein eigenes Aussehen: einen kleinen Schaltkasten im Stil
+der Haltestelle – blau die Auftrags-Ausgabe, grün die Depot-Ausgabe.
+
 ## Cargo Ships
 
-*Nur mit der Mod [Cargo Ships](https://mods.factorio.com/mod/cargo-ships). Neu in 0.0.9.*
+*Nur mit der Mod [Cargo Ships](https://mods.factorio.com/mod/cargo-ships).*
 
 Häfen werden zu UTL-Stationen, Schiffe fahren Lieferungen wie Züge. Mit Cargo Ships gibt es den
 **UTL-Hafen** (Forschung „Unified Train Logistics“) – ein Hafen mit eingebauter UTL-Logik, wie die
@@ -295,7 +311,7 @@ zweiter Klick tauscht zurück. Gebaut werden Wasserwege weiterhin nur auf Wasser
 ## Space Exploration (Weltraumaufzug)
 
 *Nur mit der Mod [Space Exploration](https://mods.factorio.com/mod/space-exploration) (läuft ohne
-Space Age). Neu in 0.0.10.*
+Space Age).*
 
 UTL liefert durch einen fertigen **Weltraumaufzug** mit Strom zwischen einem Planeten und seinem
 Orbit, in beide Richtungen. Einschalten je Netz mit **„Über den Weltraumaufzug liefern“**
@@ -379,7 +395,7 @@ auch ohne Space Age, nur der Planeten-Test braucht es:
 - **UTL-Nachladen (zum Anschauen)** – mit und ohne Nachladen, Runde für Runde, mit Erklärfenster.
 - **UTL-Aktiver-Anbieter (zum Anschauen)** – ein aktiver Anbieter wird leer: erst der Abnehmer, dann
   das Lager bis zum Höchstbestand, der Rest ins Cleanup, mit Erklärfenster.
-- **UTL-Lager (zum Anschauen)** – neu in 0.0.8: Lager, ein Cleanup, der zurückgibt, und vier kleine
+- **UTL-Lager (zum Anschauen)** – Lager, ein Cleanup, der zurückgibt, und vier kleine
   Beispiel-Strecken, mit Erklärfenster.
 - **UTL-Planeten-Test (Space Age)** – dasselbe Netz auf Nauvis, Vulcanus und Gleba.
 - **UTL-Lasttest (384 Züge)** – 12 × 12 City Blocks zum Messen, mit Lagern, Cleanups, die
@@ -419,7 +435,7 @@ Szenario „UTL-Nachladen“ zeigt es.
 
 ## Zweiter Anbieter (abschaltbar, Standard aus)
 
-*Neu in 0.0.10.* Hat der beste Anbieter nicht genug, holt der Zug den Rest bei einem **zweiten
+Hat der beste Anbieter nicht genug, holt der Zug den Rest bei einem **zweiten
 Anbieter** im selben Netz – eine Fahrt mit zwei Ladehalten statt zwei Fahrten. Nur auf derselben
 Oberfläche, nur wenn der Umweg (Luftlinie) höchstens der **höchste Umweg** ist (Standard 50 % der
 direkten Strecke) und der Zug erster → zweiter → Abnehmer fahren kann. Map-Einstellung oder Manager
@@ -427,7 +443,7 @@ direkten Strecke) und der Zug erster → zweiter → Abnehmer fahren kann. Map-E
 
 ## Warnung „Zug steckt fest“
 
-*Neu in 0.0.10.* Steht ein Lieferzug zu lange ohne Fortschritt – wartet an einem Signal, kein Weg,
+Steht ein Lieferzug zu lange ohne Fortschritt – wartet an einem Signal, kein Weg,
 Ziel voll –, kommt die Warnung **„Zug steckt fest“**, und der Manager zeigt es beim Zug an. UTL bricht
 nichts ab. Map-Einstellung in Minuten, Standard 5, 0 = aus.
 
