@@ -1,5 +1,5 @@
 # UTL-Haltestelle rendern: Modell aus utl_stop_model.py, Aufbau aus rig.py (Blender 5.x, headless):
-#   blender -b --factory-startup --python tools/grafik/render_stop.py -- <render_ordner> [--samples N] [--nur north] [--durchgang top] [--ohne-verteiler] [--ohne-render]
+#   blender -b --factory-startup --python tools/grafik/render_stop.py -- <render_ordner> [--samples N] [--nur north] [--durchgang top] [--ohne-verteiler] [--ohne-render] [--blend DATEI]
 # Schreibt zusätzlich wires_<richtung>.json (Klemmen auf dem Steuerschrank) für die Anschlusspunkte der Signalkabel.
 # Danach: python3 tools/grafik/sprites.py <render_ordner> <ziel_ordner> utl-train-stop
 import bpy
@@ -45,3 +45,5 @@ for d in directions:
     print("[STOP]", d, len(meshes), "Teile")
     if "--ohne-render" not in a:
         rig.render(out, root, meshes, catcher, samples=samples, directions=(d,), passes=passes)
+if "--blend" in a:  # Stand der zuletzt gebauten Richtung als Blender-Datei sichern (z. B. für docs)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(a[a.index("--blend") + 1]), compress=True)
