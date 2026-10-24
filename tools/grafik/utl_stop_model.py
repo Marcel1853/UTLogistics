@@ -1,10 +1,13 @@
 # Modell der UTL-Haltestelle (Blender 5.x). Maße in Factorio-Feldern, an der Vanilla-Haltestelle
 # gemessen: Höhe ≈ 4 Felder, Mast ≈ 0,6 Felder breit, Ausleger ≈ 2 Felder übers Gleis (Westen).
-# Wird von utl_train_stop.py (headless) benutzt und lässt sich in einem offenen Blender neu bauen:
-#   exec(open(".../utl_stop_model.py").read()); build()
+# Benutzt von render_stop.py (headless rendern) und live_stop.py (im offenen Blender ansehen).
 import bpy
 import math
+import random
+
 from mathutils import Vector, Matrix
+
+import rig
 
 COLLECTION = "UTL-Haltestelle"
 
@@ -61,18 +64,21 @@ def _mat(name, color, metallic=0.85, rough=0.5, rust=0.0, emission=None):
     return m
 
 
-def build():
+def build(seed=0, name=COLLECTION):
+    """Baut das Modell in die Sammlung `name`. seed: Zufallswert für die Kabelführung – je Richtung ein
+    anderer, damit die Kabel nicht überall gleich liegen."""
+    rng = random.Random(seed)
     # alte Fassung entfernen
-    old = bpy.data.collections.get(COLLECTION)
+    old = bpy.data.collections.get(name)
     if old:
         for o in list(old.objects):
             bpy.data.objects.remove(o, do_unlink=True)
     else:
-        old = bpy.data.collections.new(COLLECTION)
+        old = bpy.data.collections.new(name)
         bpy.context.scene.collection.children.link(old)
     for o in list(bpy.data.objects):  # Reste der ersten Fassung (ohne Sammlung)
         if o.type == "MESH" and o.users_collection and o.users_collection[0] == bpy.context.scene.collection \
-                and not o.name.startswith(("Boden", "Vanilla")):
+                and not o.name.startswith(("Boden", "Vanilla", "Schattenfänger")):
             bpy.data.objects.remove(o, do_unlink=True)
     col = old
 
@@ -84,8 +90,9 @@ def build():
     ORANGE = _mat("Ocker", (0.2542, 0.1441, 0.0423), 0.2, 0.6, rust=0.35)  # gedeckt statt Signalorange
     LAMP = _mat("Lampe", (0.9, 0.6, 0.1), 0.0, 0.2, emission=(1.0, 0.65, 0.15))  # gelb wie Vanilla
     # Elektrik: farbige Kabelmäntel (rot/grün wie Factorios Signalkabel, gelb für Strom), Meldeleuchten
-    WIRE = [_mat("Kabel rot", (0.32, 0.03, 0.02), 0.1, 0.4), _mat("Kabel grün", (0.03, 0.22, 0.04), 0.1, 0.4),
-            _mat("Kabel gelb", (0.42, 0.3, 0.02), 0.1, 0.4)]
+    # gedeckt statt grell (Marcel): wenig Sättigung, dunkel und matt wie verschmutzte Kabelmäntel
+    WIRE = [_mat("Kabel rot", (0.15, 0.045, 0.035), 0.05, 0.7), _mat("Kabel grün", (0.05, 0.1, 0.05), 0.05, 0.7),
+            _mat("Kabel gelb", (0.2, 0.15, 0.05), 0.05, 0.7)]
     LED_G = _mat("Meldeleuchte grün", (0.1, 0.8, 0.15), 0.0, 0.3, emission=(0.2, 1.0, 0.25))
     LED_R = _mat("Meldeleuchte rot", (0.8, 0.1, 0.05), 0.0, 0.3, emission=(1.0, 0.15, 0.05))
 
@@ -150,6 +157,51 @@ def build():
         o.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(d.normalized())
         bpy.ops.object.shade_smooth()
         return link(o, material)
+
+    def cable(name, points, r, material):
+        """Geschwungenes Kabel: glatte Kurve durch die Punkte (Bezier mit automatischen Griffen), als Mesh."""
+        cu = bpy.data.curves.new(name, "CURVE")
+        cu.dimensions = "3D"
+        cu.resolution_u = 10
+        cu.bevel_depth = r
+        cu.bevel_resolution = 2
+        cu.use_fill_caps = True
+        sp = cu.splines.new("BEZIER")
+        sp.bezier_points.add(len(points) - 1)
+        for bp, p in zip(sp.bezier_points, points):
+            bp.co = Vector(p)
+            bp.handle_left_type = bp.handle_right_type = "AUTO"
+        tmp = bpy.data.objects.new(name, cu)
+        bpy.context.scene.collection.objects.link(tmp)
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        me = bpy.data.meshes.new_from_object(tmp.evaluated_get(depsgraph))
+        bpy.data.objects.remove(tmp, do_unlink=True)
+        bpy.data.curves.remove(cu)
+        o = bpy.data.objects.new(name, me)
+        bpy.context.scene.collection.objects.link(o)
+        for poly in me.polygons:
+            poly.use_smooth = True
+        return link(o, material)
+
+    def braid(name, path, r, materials, spread=0.032, turns=2.2):
+        """Mehrere Adern umeinander gewunden (geflochten) entlang einer geschwungenen Bahn; turns: Windungen je
+        Feld. Die Adern bleiben über dem Boden."""
+        pts = rig.smooth(path, 10)
+        dist = [0.0]
+        for a, b in zip(pts, pts[1:]):
+            dist.append(dist[-1] + (b - a).length)
+        for k, material in enumerate(materials):
+            out = []
+            for i, p in enumerate(pts):
+                t = (pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]).normalized()
+                n = t.cross(Vector((0, 0, 1)))
+                n = n.normalized() if n.length > 1e-4 else Vector((1, 0, 0))
+                up = n.cross(t)
+                th = 2 * math.pi * (k / len(materials) + dist[i] * turns)
+                q = p + n * (math.cos(th) * spread) + up * (math.sin(th) * spread)
+                q.z = max(q.z, r)
+                out.append(q)
+            cable(f"{name}{k}", out, r, material)
 
     def cyl(name, r, h, loc, material, rot=(0, 0, 0), verts=24):
         bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=h, location=loc, rotation=rot, vertices=verts)
@@ -266,28 +318,35 @@ def build():
     box("Kastentür", (0.32, 0.02, 0.44), (MX - 0.05, MY - 0.61, 0.455), DARK, bevel=0.008)
 
     # ---- Kabel vom Kasten unter dem Gleis hindurch nach Westen (wie Vanilla) ----
-    for k, dy in enumerate((-0.06, 0.0, 0.06)):
-        pts = [Vector((MX - 0.25, MY - 0.45 + dy, 0.3)), Vector((MX - 0.5, MY - 0.55 + dy, 0.06)),
-               Vector((MX - 1.0, MY - 0.7 + dy, 0.03)), Vector((-1.6, MY - 0.7 + dy, 0.03)),
-               Vector((-2.0, MY - 0.4 + dy, 0.05))]
-        for i in range(len(pts) - 1):
-            bar(f"Kabel{k}_{i}", pts[i], pts[i + 1], 0.022, WIRE[k])
+    # Gleismitte liegt 2 Felder westlich der Haltestelle, Schotter bis ≈ −3,2: Verteiler erst dahinter
+    VX = -3.95
+    # verlegt wie echt: aus dem Kasten im Bogen nach unten, dann als geflochtenes Bündel in weiten Schwüngen
+    # über den Boden; die Schwünge kommen aus seed, je Richtung also anders
+    swing = [rng.uniform(-0.22, 0.22) for _ in range(6)]
+    braid("Kabel", [(MX - 0.25, MY - 0.45, 0.3), (MX - 0.38, MY - 0.58, 0.12), (MX - 0.62, MY - 0.7, 0.055),
+                    (MX - 1.05, MY - 0.72 + swing[0], 0.055), (-1.55, MY - 0.7 + swing[1], 0.055),
+                    (-2.05, MY - 0.72 + swing[2], 0.055), (-2.55, MY - 0.7 + swing[3], 0.055),
+                    (-3.05, MY - 0.72 + swing[4], 0.055), (-3.45, MY - 0.66 + swing[5] * 0.6, 0.055),
+                    (VX + 0.42, MY - 0.55, 0.06), (VX + 0.2, MY - 0.42, 0.08)], 0.02, WIRE)
     # Kabelkanal entlang des Gleises: durchgehende Betonrinne, eingelassen, mit Deckeln obendrauf
     box("Kabelrinne", (0.22, 1.7, 0.05), (MX - 0.85, MY, 0.015), CONCRETE, bevel=0.01)
     for k in range(5):
         box(f"Kanaldeckel{k}", (0.18, 0.31, 0.02), (MX - 0.85, MY + 0.7 - k * 0.35, 0.045), CONCRETE, bevel=0.008)
     # Verteilerkästen auf der anderen Gleisseite: auf einer gemeinsamen Betonplatte, mit Füßen und Dach
-    box("Verteilerplatte", (0.75, 0.6, 0.06), (-2.2, MY - 0.5, 0.02), CONCRETE, bevel=0.015)
-    for k, x in enumerate((-2.05, -2.35)):
+    box("Verteilerplatte", (0.75, 0.6, 0.06), (VX, MY - 0.5, 0.02), CONCRETE, bevel=0.015)
+    for k, x in enumerate((VX + 0.15, VX - 0.15)):
         box(f"Verteilerfuß{k}", (0.24, 0.42, 0.05), (x, MY - 0.5, 0.075), DARK, bevel=0.006)
         box(f"Verteiler{k}", (0.22, 0.4, 0.28), (x, MY - 0.5, 0.24), STEEL, bevel=0.025)
         box(f"Verteilerdach{k}", (0.26, 0.44, 0.03), (x, MY - 0.5, 0.395), DARK, bevel=0.008)
-    box("Kleinverteilerplatte", (0.36, 0.36, 0.05), (-2.1, MY + 0.5, 0.015), CONCRETE, bevel=0.012)
-    box("Kleinverteiler", (0.25, 0.25, 0.22), (-2.1, MY + 0.5, 0.15), DARK, bevel=0.02)
-    for k, x in enumerate((-2.05, -2.35)):
+    box("Kleinverteilerplatte", (0.36, 0.36, 0.05), (VX + 0.1, MY + 0.5, 0.015), CONCRETE, bevel=0.012)
+    box("Kleinverteiler", (0.25, 0.25, 0.22), (VX + 0.1, MY + 0.5, 0.15), DARK, bevel=0.02)
+    for k, x in enumerate((VX + 0.15, VX - 0.15)):
         cyl(f"Verteilerleuchte{k}", 0.02, 0.012, (x + 0.05, MY - 0.705, 0.32), (LED_G, LED_R)[k],
             rot=(math.pi / 2, 0, 0), verts=10)
-    bar("Kabel Kleinverteiler", (-2.12, MY - 0.29, 0.06), (-2.1, MY + 0.38, 0.06), 0.016, WIRE[1])
+    bend = rng.uniform(-0.2, 0.2)
+    cable("Kabel Kleinverteiler", [(VX + 0.08, MY - 0.29, 0.07), (VX + 0.02 - bend, MY - 0.14, 0.025),
+                                   (VX - 0.1 + bend, MY + 0.05, 0.025), (VX + 0.12 - bend, MY + 0.22, 0.025),
+                                   (VX + 0.1, MY + 0.38, 0.07)], 0.016, WIRE[1])
 
     # ---- Steuerschrank an der Ostseite des Sockels: steuert Halt und Signal, darum mit Meldeleuchten ----
     sx, sy = MX + 0.47, MY + 0.02
@@ -301,17 +360,26 @@ def build():
             verts=10)
     for k in range(3):  # Kabelbündel Steuerschrank → Schaltkasten, flach über den Sockel
         dz = 0.2 + k * 0.025
-        bar(f"Steuerkabel{k}", (sx - 0.09, sy - 0.12, dz), (MX + 0.16, MY - 0.4 + k * 0.03, dz), 0.012, WIRE[k])
+        cable(f"Steuerkabel{k}", [(sx - 0.09, sy - 0.12, dz + 0.05), (sx - 0.12, sy - 0.2, 0.2),
+                                  (MX + 0.28, MY - 0.33 + k * 0.03, 0.195), (MX + 0.16, MY - 0.4 + k * 0.03, dz)],
+              0.012, WIRE[k])
 
     # ---- Kabel am Mast hoch und unter dem Ausleger zu den Lampen, mit Schellen ----
     cx, cy = MX - W - 0.05, MY - W - 0.05
-    route = [Vector((MX - 0.2, MY - 0.42, 0.77)), Vector((cx, cy, 0.95)), Vector((cx, cy, H + 0.1)),
-             on_arm(-length / 2 + 0.1, -0.1, -0.2), on_arm(length / 2 - 0.25, -0.1, -0.2),
+    # Am Mast straff an den Schellen, unter dem Ausleger zwischen den Haltern durchhängend, am Ende im Bogen
+    # in den Lampenträger
+    def sag(a, b, depth):
+        return (a + b) / 2 - Vector((0, 0, depth))
+    a0, a1 = on_arm(-length / 2 + 0.1, -0.1, -0.2), on_arm(0, -0.1, -0.2)
+    a2 = on_arm(length / 2 - 0.25, -0.1, -0.2)
+    route = [Vector((MX - 0.2, MY - 0.42, 0.77)), Vector((MX - 0.3, MY - 0.38, 0.9)), Vector((cx, cy, 1.1)),
+             Vector((cx, cy, 2.5)), Vector((cx, cy, H - 0.1)), Vector((cx - 0.08, cy, H + 0.05)), a0,
+             sag(a0, a1, 0.09), a1, sag(a1, a2, 0.09), a2, Vector((lx + 0.2, MY - 0.08, lz + 0.05)),
              Vector((lx + 0.1, MY - 0.06, lz + 0.17))]
     for k, (dx, w) in enumerate(((-0.02, WIRE[0]), (0.02, WIRE[2]))):
-        for i in range(len(route) - 1):
-            off = Vector((dx, 0, 0))
-            bar(f"Lampenkabel{k}_{i}", route[i] + off, route[i + 1] + off, 0.012, w)
+        cable(f"Lampenkabel{k}", [p + Vector((dx, 0, 0)) for p in route], 0.012, w)
+    for k, p in enumerate((a0, a1, a2)):  # Kabelhalter unter dem Ausleger
+        box(f"Kabelhalter{k}", (0.05, 0.05, 0.06), p + Vector((0, 0, 0.03)), DARK, bevel=0.005)
     for k in range(6):
         box(f"Schelle{k}", (0.09, 0.05, 0.03), (cx, cy, 1.2 + k * 0.45), DARK, bevel=0.005)
     # Abzweigkasten auf halber Masthöhe, das Lampenkabel läuft hindurch

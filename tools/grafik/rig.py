@@ -156,9 +156,10 @@ def render(out_dir, root, meshes, catcher, samples=96, directions=DIRECTIONS, pa
     os.makedirs(out_dir, exist_ok=True)
     scene = bpy.context.scene
     w, h, shift = scene["framing"]
-    with open(os.path.join(out_dir, "framing.json"), "w") as f:
-        json.dump({"width": w, "height": h, "shift": shift, "supersample": SUPERSAMPLE,
-                   "elevation": math.degrees(ELEVATION)}, f)
+    framing = {"width": w, "height": h, "shift": shift, "supersample": SUPERSAMPLE, "elevation": math.degrees(ELEVATION)}
+    for d in directions:  # je Richtung, damit man einzelne Richtungen neu rendern kann
+        with open(os.path.join(out_dir, f"framing_{d}.json"), "w") as f:
+            json.dump(framing, f)
     white, hold = _pass_materials()
     original = {o.name: list(o.data.materials) for o in meshes}
     for d in directions:
@@ -185,3 +186,17 @@ def render(out_dir, root, meshes, catcher, samples=96, directions=DIRECTIONS, pa
         for i, m in enumerate(original[o.name]):
             o.data.materials[i] = m
         o.visible_camera = True
+
+
+def smooth(points, steps=10):
+    """Catmull-Rom-Kurve durch die Punkte, `steps` Zwischenpunkte je Abschnitt."""
+    pts = [Vector(p) for p in points]
+    out = []
+    for i in range(len(pts) - 1):
+        p0, p1, p2, p3 = pts[max(i - 1, 0)], pts[i], pts[i + 1], pts[min(i + 2, len(pts) - 1)]
+        for k in range(steps):
+            t = k / steps
+            out.append(0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t
+                              + (3 * p1 - p0 - 3 * p2 + p3) * t ** 3))
+    out.append(pts[-1])
+    return out

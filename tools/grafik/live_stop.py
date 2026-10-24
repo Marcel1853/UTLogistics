@@ -17,13 +17,54 @@ import utl_stop_model  # noqa: E402
 
 
 def rebuild():
+    importlib.reload(rig)
     importlib.reload(utl_stop_model)
     col = utl_stop_model.build()
     root = bpy.data.objects.get("Drehpunkt")
     for o in col.objects:
         if o.parent is None:
             o.parent = root
+    for i in range(1, 4):  # Kopien der anderen Richtungen (mit eigenem seed) mit neu bauen, falls sichtbar
+        name = f"{utl_stop_model.COLLECTION} {rig.DIRECTIONS[i]}"
+        if bpy.data.collections.get(name):
+            _direction_copy(i, name)
     print("[LIVE] Modell neu gebaut:", len(col.objects), "Teile")
+    return col
+
+
+def _direction_copy(i, name):
+    """Modell mit seed i in eigene Sammlung bauen, die nur als Kopie (Instanz) angezeigt wird."""
+    col = utl_stop_model.build(seed=i, name=name)
+    for parent in (bpy.context.scene.collection,):
+        if col.name in parent.children:
+            parent.children.unlink(col)
+    return col
+
+
+def rail_guide():
+    """Gleis als Hilfsstreifen (nur in der Ansicht, nicht im Render): Mitte 2 Felder westlich, 2 Felder breit,
+    dazu dunkler Schotter bis ±1,2 Felder."""
+    col = bpy.data.collections.get("Gleis (Vorschau)") or bpy.data.collections.new("Gleis (Vorschau)")
+    if not col.users:
+        bpy.context.scene.collection.children.link(col)
+    for o in list(col.objects):
+        bpy.data.objects.remove(o, do_unlink=True)
+    for name, width, z, color in (("Schotter", 2.4, 0.004, (0.2, 0.18, 0.16, 1)), ("Schiene West", 0.08, 0.02, (0.6, 0.6, 0.62, 1)),
+                                  ("Schiene Ost", 0.08, 0.02, (0.6, 0.6, 0.62, 1))):
+        x = {"Schiene West": -2.72, "Schiene Ost": -1.28}.get(name, -2.0)
+        bpy.ops.mesh.primitive_plane_add(size=1, location=(x, 0, z))
+        o = bpy.context.object
+        o.name = name
+        o.scale = (width, 9, 1)
+        m = bpy.data.materials.new(name)
+        m.diffuse_color = color
+        m.use_nodes = True
+        next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED").inputs["Base Color"].default_value = color
+        o.data.materials.append(m)
+        for c in o.users_collection:
+            c.objects.unlink(o)
+        col.objects.link(o)
+        o.hide_render = True
     return col
 
 
@@ -39,23 +80,26 @@ def view():
     return None
 
 
-def overview(step=7.0):
+def overview(step=10.0):
     """Alle vier Richtungen nebeneinander (Nord, Ost, Süd, West) als verknüpfte Kopien – ändern sich beim
     Neubau mit. Eigene Kamera „Übersicht“ nur für die Ansicht; gerendert wird weiter über „Kamera“."""
     import math
-    col = bpy.data.collections[utl_stop_model.COLLECTION]
-    for i in range(1, 4):
-        name = f"Richtung {rig.DIRECTIONS[i]}"
-        o = bpy.data.objects.get(name) or bpy.data.objects.new(name, None)
-        if not o.users_collection:
-            bpy.context.scene.collection.objects.link(o)
-        o.instance_type = "COLLECTION"
-        o.instance_collection = col
-        o.location = (i * step, 0, 0)
-        o.rotation_euler = (0, 0, -i * math.pi / 2)
+    guide = rail_guide()
+    for label in ("Richtung", "Gleis"):
+        for i in range(1, 4):
+            name = f"{label} {rig.DIRECTIONS[i]}"
+            col = guide if label == "Gleis" else _direction_copy(i, f"{utl_stop_model.COLLECTION} {rig.DIRECTIONS[i]}")
+            o = bpy.data.objects.get(name) or bpy.data.objects.new(name, None)
+            if not o.users_collection:
+                bpy.context.scene.collection.objects.link(o)
+            o.instance_type = "COLLECTION"
+            o.instance_collection = col
+            o.location = (i * step, 0, 0)
+            o.rotation_euler = (0, 0, -i * math.pi / 2)
+            o.hide_render = True
     catcher = bpy.data.objects.get("Schattenfänger")
     if catcher:
-        catcher.scale = (3, 1, 1)
+        catcher.scale = (4, 1, 1)
         catcher.location = (1.5 * step, 0, 0)
     cam = bpy.data.objects.get("Übersicht")
     if not cam:
@@ -78,7 +122,7 @@ def overview(step=7.0):
 
 rig.reset(live=True)
 rig.lights()
-rig.camera(8, 8, shift=1.5)
+rig.camera(10, 12, shift=0.8)
 col = utl_stop_model.build()
 rig.shadow_catcher()
 rig.pivot(list(col.objects))

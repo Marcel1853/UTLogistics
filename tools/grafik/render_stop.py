@@ -19,13 +19,18 @@ passes = (a[a.index("--durchgang") + 1],) if "--durchgang" in a else rig.PASSES
 
 rig.reset()
 rig.lights()
-# Bildausschnitt großzügig (Modell reicht ≈ 2,5 Felder nach Westen und ≈ 4 Felder hoch); sprites.py schneidet zu
-rig.camera(8, 8, shift=1.5)
-col = utl_stop_model.build()  # räumt lose Meshes weg – den Schattenfänger daher erst danach anlegen
+# Bildausschnitt großzügig: Verteiler ≈ 4,4 Felder neben der Mitte (gedreht auch nach Süden, also unten im Bild),
+# Ausleger gedreht bis ≈ 5,6 Felder hoch im Bild; sprites.py schneidet zu
+rig.camera(10, 12, shift=0.8)
 catcher = rig.shadow_catcher()
-meshes = [o for o in col.objects if o.type == "MESH"]
-root = rig.pivot(list(col.objects))
-print("[STOP]", len(meshes), "Teile, Richtungen:", ", ".join(directions))
-if "--ohne-render" in a:
-    sys.exit(0)
-rig.render(out, root, meshes, catcher, samples=samples, directions=directions, passes=passes)
+# Je Richtung neu bauen, mit eigenem seed: die Kabel liegen dann in jeder Richtung etwas anders
+for d in directions:
+    old = bpy.data.objects.get("Drehpunkt")
+    if old:
+        bpy.data.objects.remove(old, do_unlink=True)
+    col = utl_stop_model.build(seed=rig.DIRECTIONS.index(d))
+    meshes = [o for o in col.objects if o.type == "MESH"]
+    root = rig.pivot(list(col.objects))
+    print("[STOP]", d, len(meshes), "Teile")
+    if "--ohne-render" not in a:
+        rig.render(out, root, meshes, catcher, samples=samples, directions=(d,), passes=passes)
