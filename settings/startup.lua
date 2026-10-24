@@ -32,4 +32,14 @@ data:extend({
     default_value = false,
     order = "a-c",
   },
+  -- Aussehen der UTL-Haltestelle: „vanilla“ = Grafik der Spiel-Haltestelle, „utl“ = eigenes 3D-Modell
+  -- (Blender, tools/grafik); die Stationsfarbe bleibt bei beiden frei wählbar
+  {
+    type = "string-setting",
+    name = "utl-stop-style",
+    setting_type = "startup",
+    default_value = "vanilla",
+    allowed_values = { "vanilla", "utl" },
+    order = "a-d",
+  },
 })

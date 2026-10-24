@@ -11,4 +11,15 @@ entity.minable = { mining_time = 0.2, result = C.train_stop }
 entity.color = C.stop_color
 entity.next_upgrade = nil
 
+-- Aussehen (Start-Einstellung): eigenes 3D-Modell statt der Vanilla-Grafik. Der Ausleger liegt in
+-- top_animations, damit Züge darunter durchfahren. Die Vanilla-Lampen (light1/light2) säßen neben den
+-- Lampen des Modells und entfallen.
+if settings.startup["utl-stop-style"].value == "utl" then
+  local sprites = require("prototypes.sprites.utl-train-stop")
+  entity.animations = sprites.animations
+  entity.top_animations = sprites.top_animations
+  entity.light1 = nil
+  entity.light2 = nil
+end
+
 data:extend({ entity })
