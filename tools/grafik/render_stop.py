@@ -1,5 +1,5 @@
 # UTL-Haltestelle rendern: Modell aus utl_stop_model.py, Aufbau aus rig.py (Blender 5.x, headless):
-#   blender -b --factory-startup --python tools/grafik/render_stop.py -- <render_ordner> [--samples N] [--nur north] [--durchgang top] [--ohne-verteiler] [--ohne-render] [--blend DATEI]
+#   blender -b --factory-startup --python tools/grafik/render_stop.py -- <render_ordner> [--samples N] [--nur north] [--durchgang top] [--ohne-render] [--blend DATEI]
 # Schreibt zusätzlich wires_<richtung>.json (Klemmen auf dem Steuerschrank) für die Anschlusspunkte der Signalkabel.
 # Danach: python3 tools/grafik/sprites.py <render_ordner> <ziel_ordner> utl-train-stop
 import bpy
@@ -22,8 +22,8 @@ passes = (a[a.index("--durchgang") + 1],) if "--durchgang" in a else rig.PASSES
 
 rig.reset()
 rig.lights()
-# Bildausschnitt großzügig: Verteiler ≈ 4,4 Felder neben der Mitte (gedreht auch nach Süden, also unten im Bild),
-# Ausleger gedreht bis ≈ 5,6 Felder hoch im Bild, Schatten bis ≈ 7 Felder nach rechts; sprites.py schneidet zu
+# Bildausschnitt großzügig: Ausleger gedreht bis ≈ 5,6 Felder hoch im Bild, Schatten bis ≈ 7 Felder nach rechts;
+# sprites.py schneidet zu
 rig.camera(13, 12, shift=0.8, shift_x=1.5)
 catcher = rig.shadow_catcher()
 # Je Richtung neu bauen, mit eigenem seed: die Kabel liegen dann in jeder Richtung etwas anders. Ausleger in Ost/West
@@ -37,8 +37,7 @@ for d in directions:
     old = bpy.data.objects.get("Drehpunkt")
     if old:
         bpy.data.objects.remove(old, do_unlink=True)
-    col = utl_stop_model.build(seed=rig.DIRECTIONS.index(d), distributor="--ohne-verteiler" not in a,
-                               arm_yaw=ARM_YAW.get(d, 0.0))
+    col = utl_stop_model.build(seed=rig.DIRECTIONS.index(d), arm_yaw=ARM_YAW.get(d, 0.0))
     for o in col.objects:
         if o.parent is None:
             o.location = (o.location[0] + OFFSET[0], o.location[1] + OFFSET[1], o.location[2])

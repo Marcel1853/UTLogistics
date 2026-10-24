@@ -33,14 +33,13 @@ data:extend({
     order = "a-c",
   },
   -- Aussehen der UTL-Haltestelle: „vanilla“ = Grafik der Spiel-Haltestelle, „utl“ = eigenes 3D-Modell
-  -- (Blender, tools/grafik) mit Verteilern hinter dem Gleis, „utl-compact“ = dasselbe ohne Verteiler, dafür mit
-  -- den Vanilla-Teilen am Gleis; die Stationsfarbe bleibt bei allen frei wählbar
+  -- (Blender, tools/grafik) mit den Vanilla-Teilen am Gleis; die Stationsfarbe bleibt bei beiden frei wählbar
   {
     type = "string-setting",
     name = "utl-stop-style",
     setting_type = "startup",
     default_value = "vanilla",
-    allowed_values = { "vanilla", "utl", "utl-compact" },
+    allowed_values = { "vanilla", "utl" },
     order = "a-d",
   },
 })

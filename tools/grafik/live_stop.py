@@ -6,7 +6,6 @@
 #   bpy.app.driver_namespace["utl_rebuild"]()
 # Alle vier Richtungen nebeneinander: bpy.app.driver_namespace["utl_overview"]()
 # Ausgaben daneben: bpy.app.driver_namespace["utl_outputs"]()
-# Variante ohne Verteiler: bpy.app.driver_namespace["utl_distributor"] = False, dann neu bauen
 import bpy
 import importlib
 import os
@@ -21,7 +20,7 @@ import utl_stop_model  # noqa: E402
 def rebuild():
     importlib.reload(rig)
     importlib.reload(utl_stop_model)
-    col = utl_stop_model.build(distributor=_distributor())
+    col = utl_stop_model.build()
     root = bpy.data.objects.get("Drehpunkt")
     for o in col.objects:
         if o.parent is None:
@@ -34,13 +33,9 @@ def rebuild():
     return col
 
 
-def _distributor():
-    return bpy.app.driver_namespace.get("utl_distributor", True)
-
-
 def _direction_copy(i, name):
     """Modell mit seed i in eigene Sammlung bauen, die nur als Kopie (Instanz) angezeigt wird."""
-    col = utl_stop_model.build(seed=i, name=name, distributor=_distributor())
+    col = utl_stop_model.build(seed=i, name=name)
     for parent in (bpy.context.scene.collection,):
         if col.name in parent.children:
             parent.children.unlink(col)

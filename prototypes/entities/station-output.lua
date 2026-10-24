@@ -47,7 +47,7 @@ local function own_look(e, file)
   e.circuit_wire_connection_points = s.circuit_wire_connection_points
   e.activity_led_sprites = nil
 end
-if settings.startup["utl-stop-style"].value ~= "vanilla" then
+if settings.startup["utl-stop-style"].value == "utl" then
   own_look(entity, "utl-station-output")
   own_look(depot, "utl-depot-output")
 else

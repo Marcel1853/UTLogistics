@@ -2,14 +2,14 @@
 return {
   animations = {
     north = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north.png", width = 789, height = 459, shift = { 1.2859, -2.7141 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-mask.png", width = 789, height = 459, shift = { 1.2859, -2.7141 }, scale = 0.5, apply_runtime_tint = true },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-shadow.png", width = 789, height = 459, shift = { 1.2859, -2.7141 }, scale = 0.5, draw_as_shadow = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north.png", width = 666, height = 459, shift = { 2.2469, -2.7141 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-mask.png", width = 666, height = 459, shift = { 2.2469, -2.7141 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-north-shadow.png", width = 666, height = 459, shift = { 2.2469, -2.7141 }, scale = 0.5, draw_as_shadow = true },
     } },
     east = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east.png", width = 540, height = 516, shift = { 3.2812, -3.3187 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-mask.png", width = 540, height = 516, shift = { 3.2812, -3.3187 }, scale = 0.5, apply_runtime_tint = true },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-shadow.png", width = 540, height = 516, shift = { 3.2812, -3.3187 }, scale = 0.5, draw_as_shadow = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east.png", width = 535, height = 516, shift = { 3.3203, -3.3187 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-mask.png", width = 535, height = 516, shift = { 3.3203, -3.3187 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-east-shadow.png", width = 535, height = 516, shift = { 3.3203, -3.3187 }, scale = 0.5, draw_as_shadow = true },
     } },
     south = { layers = {
         { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south.png", width = 590, height = 523, shift = { 3.9406, -3.2141 }, scale = 0.5 },
@@ -17,9 +17,9 @@ return {
         { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-south-shadow.png", width = 590, height = 523, shift = { 3.9406, -3.2141 }, scale = 0.5, draw_as_shadow = true },
     } },
     west = { layers = {
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west.png", width = 599, height = 713, shift = { 3.8203, -0.6797 }, scale = 0.5 },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-mask.png", width = 599, height = 713, shift = { 3.8203, -0.6797 }, scale = 0.5, apply_runtime_tint = true },
-        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-shadow.png", width = 599, height = 713, shift = { 3.8203, -0.6797 }, scale = 0.5, draw_as_shadow = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west.png", width = 599, height = 606, shift = { 3.8203, -1.5156 }, scale = 0.5 },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-mask.png", width = 599, height = 606, shift = { 3.8203, -1.5156 }, scale = 0.5, apply_runtime_tint = true },
+        { filename = "__UTLogistics__/graphics/entity/utl-train-stop/utl-train-stop-west-shadow.png", width = 599, height = 606, shift = { 3.8203, -1.5156 }, scale = 0.5, draw_as_shadow = true },
     } },
   },
   top_animations = {
