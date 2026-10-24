@@ -1,5 +1,5 @@
 # UTL-Haltestelle rendern: Modell aus utl_stop_model.py, Aufbau aus rig.py (Blender 5.x, headless):
-#   blender -b --factory-startup --python tools/grafik/render_stop.py -- <render_ordner> [--samples N] [--nur north] [--durchgang top] [--ohne-render]
+#   blender -b --factory-startup --python tools/grafik/render_stop.py -- <render_ordner> [--samples N] [--nur north] [--durchgang top] [--ohne-verteiler] [--ohne-render]
 # Danach: python3 tools/grafik/sprites.py <render_ordner> <ziel_ordner> utl-train-stop
 import bpy
 import os
@@ -28,7 +28,7 @@ for d in directions:
     old = bpy.data.objects.get("Drehpunkt")
     if old:
         bpy.data.objects.remove(old, do_unlink=True)
-    col = utl_stop_model.build(seed=rig.DIRECTIONS.index(d))
+    col = utl_stop_model.build(seed=rig.DIRECTIONS.index(d), distributor="--ohne-verteiler" not in a)
     meshes = [o for o in col.objects if o.type == "MESH"]
     root = rig.pivot(list(col.objects))
     print("[STOP]", d, len(meshes), "Teile")

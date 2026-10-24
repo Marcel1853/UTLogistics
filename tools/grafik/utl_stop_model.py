@@ -64,9 +64,10 @@ def _mat(name, color, metallic=0.85, rough=0.5, rust=0.0, emission=None):
     return m
 
 
-def build(seed=0, name=COLLECTION):
+def build(seed=0, name=COLLECTION, distributor=True):
     """Baut das Modell in die Sammlung `name`. seed: Zufallswert für die Kabelführung – je Richtung ein
-    anderer, damit die Kabel nicht überall gleich liegen."""
+    anderer, damit die Kabel nicht überall gleich liegen. distributor=False: ohne Verteiler hinter dem Gleis,
+    das Kabelbündel endet im Kabelkanal (im Spiel zeichnet dann die Vanilla-Haltestelle ihre Teile am Gleis)."""
     rng = random.Random(seed)
     # alte Fassung entfernen
     old = bpy.data.collections.get(name)
@@ -323,30 +324,37 @@ def build(seed=0, name=COLLECTION):
     # verlegt wie echt: aus dem Kasten im Bogen nach unten, dann als geflochtenes Bündel in weiten Schwüngen
     # über den Boden; die Schwünge kommen aus seed, je Richtung also anders
     swing = [rng.uniform(-0.22, 0.22) for _ in range(6)]
-    braid("Kabel", [(MX - 0.25, MY - 0.45, 0.3), (MX - 0.38, MY - 0.58, 0.12), (MX - 0.62, MY - 0.7, 0.055),
-                    (MX - 1.05, MY - 0.72 + swing[0], 0.055), (-1.55, MY - 0.7 + swing[1], 0.055),
-                    (-2.05, MY - 0.72 + swing[2], 0.055), (-2.55, MY - 0.7 + swing[3], 0.055),
-                    (-3.05, MY - 0.72 + swing[4], 0.055), (-3.45, MY - 0.66 + swing[5] * 0.6, 0.055),
-                    (VX + 0.42, MY - 0.55, 0.06), (VX + 0.2, MY - 0.42, 0.08)], 0.02, WIRE)
+    if not distributor:
+        # kurz: im Bogen vom Kasten in die Kabelrinne, dort unter einem Deckel weiter
+        braid("Kabel", [(MX - 0.25, MY - 0.45, 0.3), (MX - 0.38, MY - 0.58, 0.12), (MX - 0.55, MY - 0.74, 0.055),
+                        (MX - 0.78 + swing[0] * 0.3, MY - 0.66, 0.05), (MX - 0.85, MY - 0.48, 0.035),
+                        (MX - 0.85, MY - 0.3, 0.0)], 0.02, WIRE)
+    else:
+        braid("Kabel", [(MX - 0.25, MY - 0.45, 0.3), (MX - 0.38, MY - 0.58, 0.12), (MX - 0.62, MY - 0.7, 0.055),
+                        (MX - 1.05, MY - 0.72 + swing[0], 0.055), (-1.55, MY - 0.7 + swing[1], 0.055),
+                        (-2.05, MY - 0.72 + swing[2], 0.055), (-2.55, MY - 0.7 + swing[3], 0.055),
+                        (-3.05, MY - 0.72 + swing[4], 0.055), (-3.45, MY - 0.66 + swing[5] * 0.6, 0.055),
+                        (VX + 0.42, MY - 0.55, 0.06), (VX + 0.2, MY - 0.42, 0.08)], 0.02, WIRE)
     # Kabelkanal entlang des Gleises: durchgehende Betonrinne, eingelassen, mit Deckeln obendrauf
     box("Kabelrinne", (0.22, 1.7, 0.05), (MX - 0.85, MY, 0.015), CONCRETE, bevel=0.01)
     for k in range(5):
         box(f"Kanaldeckel{k}", (0.18, 0.31, 0.02), (MX - 0.85, MY + 0.7 - k * 0.35, 0.045), CONCRETE, bevel=0.008)
-    # Verteilerkästen auf der anderen Gleisseite: auf einer gemeinsamen Betonplatte, mit Füßen und Dach
-    box("Verteilerplatte", (0.75, 0.6, 0.06), (VX, MY - 0.5, 0.02), CONCRETE, bevel=0.015)
-    for k, x in enumerate((VX + 0.15, VX - 0.15)):
-        box(f"Verteilerfuß{k}", (0.24, 0.42, 0.05), (x, MY - 0.5, 0.075), DARK, bevel=0.006)
-        box(f"Verteiler{k}", (0.22, 0.4, 0.28), (x, MY - 0.5, 0.24), STEEL, bevel=0.025)
-        box(f"Verteilerdach{k}", (0.26, 0.44, 0.03), (x, MY - 0.5, 0.395), DARK, bevel=0.008)
-    box("Kleinverteilerplatte", (0.36, 0.36, 0.05), (VX + 0.1, MY + 0.5, 0.015), CONCRETE, bevel=0.012)
-    box("Kleinverteiler", (0.25, 0.25, 0.22), (VX + 0.1, MY + 0.5, 0.15), DARK, bevel=0.02)
-    for k, x in enumerate((VX + 0.15, VX - 0.15)):
-        cyl(f"Verteilerleuchte{k}", 0.02, 0.012, (x + 0.05, MY - 0.705, 0.32), (LED_G, LED_R)[k],
-            rot=(math.pi / 2, 0, 0), verts=10)
-    bend = rng.uniform(-0.2, 0.2)
-    cable("Kabel Kleinverteiler", [(VX + 0.08, MY - 0.29, 0.07), (VX + 0.02 - bend, MY - 0.14, 0.025),
-                                   (VX - 0.1 + bend, MY + 0.05, 0.025), (VX + 0.12 - bend, MY + 0.22, 0.025),
-                                   (VX + 0.1, MY + 0.38, 0.07)], 0.016, WIRE[1])
+    if distributor:
+        # Verteilerkästen auf der anderen Gleisseite: auf einer gemeinsamen Betonplatte, mit Füßen und Dach
+        box("Verteilerplatte", (0.75, 0.6, 0.06), (VX, MY - 0.5, 0.02), CONCRETE, bevel=0.015)
+        for k, x in enumerate((VX + 0.15, VX - 0.15)):
+            box(f"Verteilerfuß{k}", (0.24, 0.42, 0.05), (x, MY - 0.5, 0.075), DARK, bevel=0.006)
+            box(f"Verteiler{k}", (0.22, 0.4, 0.28), (x, MY - 0.5, 0.24), STEEL, bevel=0.025)
+            box(f"Verteilerdach{k}", (0.26, 0.44, 0.03), (x, MY - 0.5, 0.395), DARK, bevel=0.008)
+        box("Kleinverteilerplatte", (0.36, 0.36, 0.05), (VX + 0.1, MY + 0.5, 0.015), CONCRETE, bevel=0.012)
+        box("Kleinverteiler", (0.25, 0.25, 0.22), (VX + 0.1, MY + 0.5, 0.15), DARK, bevel=0.02)
+        for k, x in enumerate((VX + 0.15, VX - 0.15)):
+            cyl(f"Verteilerleuchte{k}", 0.02, 0.012, (x + 0.05, MY - 0.705, 0.32), (LED_G, LED_R)[k],
+                rot=(math.pi / 2, 0, 0), verts=10)
+        bend = rng.uniform(-0.2, 0.2)
+        cable("Kabel Kleinverteiler", [(VX + 0.08, MY - 0.29, 0.07), (VX + 0.02 - bend, MY - 0.14, 0.025),
+                                       (VX - 0.1 + bend, MY + 0.05, 0.025), (VX + 0.12 - bend, MY + 0.22, 0.025),
+                                       (VX + 0.1, MY + 0.38, 0.07)], 0.016, WIRE[1])
 
     # ---- Steuerschrank an der Ostseite des Sockels: steuert Halt und Signal, darum mit Meldeleuchten ----
     sx, sy = MX + 0.47, MY + 0.02

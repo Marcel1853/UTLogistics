@@ -10,6 +10,7 @@
 # (Bild × 0,5 + Maske × Farbe). Bei weißer Farbe bleibt das Grau also unverändert, jede andere Farbe tönt es –
 # die Stationsfarbe bleibt im Spiel wie gewohnt frei wählbar (apply_runtime_tint).
 import json
+import math
 import os
 import sys
 
@@ -69,7 +70,9 @@ def masked(im, cover):
 
 
 def write_layers(out_dir, name, d, layers, origin, lua):
-    """Ebenen gemeinsam zuschneiden, speichern und als Lua-Zeilen anhängen."""
+    """Ebenen gemeinsam zuschneiden, speichern und als Lua-Zeilen anhängen; leere Ebenen (z. B. eine Maske ohne
+    Stationsfarbe) fallen weg."""
+    layers = [layer for layer in layers if layer[1].getchannel("A").getbbox()]
     box = bbox([im for _, im, _ in layers])
     for suffix, im, extra in layers:
         im = im.crop(box)
@@ -109,10 +112,42 @@ def main(render_dir, out_dir, name, tint):
            "  animations = {"] + bottom + ["  },"]
     if top:
         lua += ["  top_animations = {"] + top + ["  },"]
+    wires = wire_points(render_dir)
+    if wires:
+        lua += ["  circuit_wire_connection_points = {"] + wires + ["  },"]
     lua.append("}")
     with open(os.path.join(out_dir, f"{name}.lua"), "w") as f:
         f.write("\n".join(lua) + "\n")
     preview(previews, os.path.join(out_dir, "vorschau.png"), tint)
+
+
+def wire_points(render_dir):
+    """Anschlusspunkte der Signalkabel aus wires_<richtung>.json (Klemmenspitzen in Blender-Koordinaten, von
+    render_output.py): im Bild liegt eine Höhe z um z · cot(Blickwinkel) weiter oben, der Schatten der Spitze
+    dort, wo der Sonnenstrahl durch sie den Boden trifft. Reihenfolge wie Factorio: Nord, Ost, Süd, West."""
+    lines = []
+    for d in DIRECTIONS:
+        path = os.path.join(render_dir, f"wires_{d}.json")
+        if not os.path.exists(path):
+            return []
+        with open(path) as f:
+            tips = json.load(f)
+        with open(os.path.join(render_dir, f"framing_{d}.json")) as f:
+            framing = json.load(f)
+        lift = 1 / math.tan(math.radians(framing["elevation"]))
+        sx, sy, sz = framing["sun"]
+
+        def screen(x, y, z):
+            return f"{{ {x:.4f}, {-y - z * lift:.4f} }}"
+
+        def shadow(x, y, z):
+            t = z / -sz  # Strahl bis zum Boden
+            return f"{{ {x + sx * t:.4f}, {-(y + sy * t):.4f} }}"
+
+        r, g = tips["red"], tips["green"]
+        lines.append(f"    {{ wire = {{ red = {screen(*r)}, green = {screen(*g)} }}, "
+                     f"shadow = {{ red = {shadow(*r)}, green = {shadow(*g)} }} }}, -- {d}")
+    return lines
 
 
 def preview(previews, path, tint):

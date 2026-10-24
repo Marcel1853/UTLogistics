@@ -24,6 +24,7 @@ SUPERSAMPLE = 2
 ELEVATION = math.radians(50)
 DIRECTIONS = ("north", "east", "south", "west")
 PASSES = ("color", "mask", "shadow", "top")
+SUN = (1.0, -0.05, -0.9)  # Laufrichtung des Sonnenlichts: flach von links, Schatten lang nach rechts wie Vanilla
 TOP_Z = 2.4  # Teile, die ganz über dieser Höhe liegen, gehören zur oberen Ebene (über den Zügen)
 
 
@@ -71,7 +72,7 @@ def lights():
         # Die Sonne leuchtet entlang ihrer -Z-Achse: so drehen, dass -Z in Laufrichtung des Lichts zeigt
         obj.rotation_euler = Vector(travel).normalized().to_track_quat("-Z", "Y").to_euler()
         bpy.context.scene.collection.objects.link(obj)
-    sun("Sonne", (1.0, -0.05, -0.9), 4.0, True)  # flach von links: Schatten lang nach rechts wie Vanilla
+    sun("Sonne", SUN, 4.0, True)
     sun("Gegenlicht", (-0.6, 0.8, -0.8), 0.5, False)
 
 
@@ -156,7 +157,8 @@ def render(out_dir, root, meshes, catcher, samples=96, directions=DIRECTIONS, pa
     os.makedirs(out_dir, exist_ok=True)
     scene = bpy.context.scene
     w, h, shift = scene["framing"]
-    framing = {"width": w, "height": h, "shift": shift, "supersample": SUPERSAMPLE, "elevation": math.degrees(ELEVATION)}
+    framing = {"width": w, "height": h, "shift": shift, "supersample": SUPERSAMPLE, "elevation": math.degrees(ELEVATION),
+               "sun": SUN}
     for d in directions:  # je Richtung, damit man einzelne Richtungen neu rendern kann
         with open(os.path.join(out_dir, f"framing_{d}.json"), "w") as f:
             json.dump(framing, f)
@@ -200,3 +202,29 @@ def smooth(points, steps=10):
                               + (3 * p1 - p0 - 3 * p2 + p3) * t ** 3))
     out.append(pts[-1])
     return out
+
+
+def tube(name, points, radius, resolution=10):
+    """Glattes Rohr/Kabel durch die Punkte (Bezier mit automatischen Griffen), als Mesh-Objekt in der Szene.
+    Material und Sammlung setzt der Aufrufer."""
+    cu = bpy.data.curves.new(name, "CURVE")
+    cu.dimensions = "3D"
+    cu.resolution_u = resolution
+    cu.bevel_depth = radius
+    cu.bevel_resolution = 2
+    cu.use_fill_caps = True
+    sp = cu.splines.new("BEZIER")
+    sp.bezier_points.add(len(points) - 1)
+    for bp, p in zip(sp.bezier_points, points):
+        bp.co = Vector(p)
+        bp.handle_left_type = bp.handle_right_type = "AUTO"
+    tmp = bpy.data.objects.new(name, cu)
+    bpy.context.scene.collection.objects.link(tmp)
+    me = bpy.data.meshes.new_from_object(tmp.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(tmp, do_unlink=True)
+    bpy.data.curves.remove(cu)
+    for poly in me.polygons:
+        poly.use_smooth = True
+    obj = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(obj)
+    return obj

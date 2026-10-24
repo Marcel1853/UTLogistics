@@ -5,6 +5,8 @@
 # Modell nach Änderungen an utl_stop_model.py neu bauen (Python-Konsole oder MCP):
 #   bpy.app.driver_namespace["utl_rebuild"]()
 # Alle vier Richtungen nebeneinander: bpy.app.driver_namespace["utl_overview"]()
+# Ausgaben daneben: bpy.app.driver_namespace["utl_outputs"]()
+# Variante ohne Verteiler: bpy.app.driver_namespace["utl_distributor"] = False, dann neu bauen
 import bpy
 import importlib
 import os
@@ -19,7 +21,7 @@ import utl_stop_model  # noqa: E402
 def rebuild():
     importlib.reload(rig)
     importlib.reload(utl_stop_model)
-    col = utl_stop_model.build()
+    col = utl_stop_model.build(distributor=_distributor())
     root = bpy.data.objects.get("Drehpunkt")
     for o in col.objects:
         if o.parent is None:
@@ -32,9 +34,13 @@ def rebuild():
     return col
 
 
+def _distributor():
+    return bpy.app.driver_namespace.get("utl_distributor", True)
+
+
 def _direction_copy(i, name):
     """Modell mit seed i in eigene Sammlung bauen, die nur als Kopie (Instanz) angezeigt wird."""
-    col = utl_stop_model.build(seed=i, name=name)
+    col = utl_stop_model.build(seed=i, name=name, distributor=_distributor())
     for parent in (bpy.context.scene.collection,):
         if col.name in parent.children:
             parent.children.unlink(col)
@@ -120,6 +126,28 @@ def overview(step=10.0):
                 space.region_3d.view_perspective = "CAMERA"
 
 
+def outputs():
+    """Auftrags- und Depot-Ausgabe (utl_output_model.py) neben die Haltestelle stellen, in allen vier Richtungen
+    nebeneinander (Kopien); neu bauen nach Änderungen: erneut aufrufen."""
+    import math
+    import utl_output_model
+    importlib.reload(utl_output_model)
+    for row, kind in enumerate(("station", "depot")):
+        col = utl_output_model.build(kind)
+        if col.name in bpy.context.scene.collection.children:
+            bpy.context.scene.collection.children.unlink(col)
+        for i, d in enumerate(rig.DIRECTIONS):
+            name = f"Ausgabe {kind} {d}"
+            o = bpy.data.objects.get(name) or bpy.data.objects.new(name, None)
+            if not o.users_collection:
+                bpy.context.scene.collection.objects.link(o)
+            o.instance_type = "COLLECTION"
+            o.instance_collection = col
+            o.location = (2.5 + i * 1.6, -2.5 - row * 1.8, 0)
+            o.rotation_euler = (0, 0, -i * math.pi / 2)
+            o.hide_render = True
+
+
 rig.reset(live=True)
 rig.lights()
 rig.camera(10, 12, shift=0.8)
@@ -128,4 +156,5 @@ rig.shadow_catcher()
 rig.pivot(list(col.objects))
 bpy.app.driver_namespace["utl_rebuild"] = rebuild
 bpy.app.driver_namespace["utl_overview"] = overview
+bpy.app.driver_namespace["utl_outputs"] = outputs
 bpy.app.timers.register(view, first_interval=1.0)

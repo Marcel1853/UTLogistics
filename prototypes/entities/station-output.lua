@@ -38,8 +38,22 @@ local function tint_layers(sprite_def)
   end
   for _, child in pairs(sprite_def) do tint_layers(child) end
 end
-for key, value in pairs(depot) do
-  if type(key) == "string" and key:sub(-7) == "sprites" then tint_layers(value) end
+-- Eigenes Aussehen (Start-Einstellung utl-stop-style, wie die Haltestelle): Schaltkasten aus Blender, Kennfarbe
+-- im Bild (blau/grün), Anschlusspunkte der Signalkabel auf den Isolatoren des Modells. Die Leuchte des Vanilla-
+-- Kombinators säße woanders und entfällt.
+local function own_look(e, file)
+  local s = require("prototypes.sprites." .. file)
+  e.sprites = s.animations
+  e.circuit_wire_connection_points = s.circuit_wire_connection_points
+  e.activity_led_sprites = nil
+end
+if settings.startup["utl-stop-style"].value ~= "vanilla" then
+  own_look(entity, "utl-station-output")
+  own_look(depot, "utl-depot-output")
+else
+  for key, value in pairs(depot) do
+    if type(key) == "string" and key:sub(-7) == "sprites" then tint_layers(value) end
+  end
 end
 
 -- Unsichtbares Item ohne Rezept: Factorio nimmt nur Gebäude mit Item in Blaupausen auf. So kommt
