@@ -1,5 +1,7 @@
 # Macht aus den Renders von rig.py fertige Factorio-Bilder (normales Python mit Pillow, ohne Blender):
-#   python3 tools/grafik/sprites.py <render_ordner> <ziel_ordner> <name> [--tint RRGGBB]
+#   python3 tools/grafik/sprites.py <render_ordner> <ziel_ordner> <name> [--tint RRGGBB] [--versatz X Y]
+# --versatz: Modell nachträglich um X/Y Felder verschieben (Blender-Achsen, Richtung Nord; Y = nach Norden) – ohne
+# neu zu rendern, nur über shift und die Kabel-Anschlusspunkte.
 # Je Richtung: <name>-<richtung>.png, -mask.png, -shadow.png (untere Ebene, gemeinsam zugeschnitten) und – falls
 # der Durchgang „top“ gerendert ist – -top.png, -top-mask.png (obere Ebene: nur Ausleger und Lampen, das Spiel
 # zeichnet sie über Züge). Dazu <name>.lua mit animations / top_animations (Animation4Way wie bei der
@@ -83,7 +85,16 @@ def write_layers(out_dir, name, d, layers, origin, lua):
         lua.append(lua_layer(f"__UTLogistics__/graphics/entity/{name}/{file}", im, shift, extra))
 
 
-def main(render_dir, out_dir, name, tint):
+def offset_for(direction, offset):
+    """Versatz (Blender-Achsen, Modell in Nord) für eine Richtung als Bild-Verschiebung in Feldern."""
+    turns = DIRECTIONS.index(direction)
+    angle = -turns * math.pi / 2
+    x = offset[0] * math.cos(angle) - offset[1] * math.sin(angle)
+    y = offset[0] * math.sin(angle) + offset[1] * math.cos(angle)
+    return (x, -y)
+
+
+def main(render_dir, out_dir, name, tint, offset=(0.0, 0.0)):
     os.makedirs(out_dir, exist_ok=True)
     bottom, top = [], []
     previews = []
@@ -93,8 +104,10 @@ def main(render_dir, out_dir, name, tint):
         with open(os.path.join(render_dir, f"framing_{d}.json")) as f:
             framing = json.load(f)
         # Ursprung (Boden-Mitte des Modells) im verkleinerten Bild
-        origin = ((framing["width"] / 2 - framing.get("shift_x", 0)) * TILE_PX,
-                  (framing["height"] / 2 + framing["shift"]) * TILE_PX)
+        ox, oy = offset_for(d, offset)
+        # Ursprung im Bild; ein Versatz verschiebt das Bild, also den Ursprung entgegengesetzt
+        origin = ((framing["width"] / 2 - framing.get("shift_x", 0) - ox) * TILE_PX,
+                  (framing["height"] / 2 + framing["shift"] - oy) * TILE_PX)
         ims = {k: load(render_dir, k, d, framing) for k in ("color", "mask", "shadow")}
         ims["mask"] = tint_mask(ims["color"], ims["mask"])
         bottom.append(f"    {d} = {{ layers = {{")
@@ -113,7 +126,7 @@ def main(render_dir, out_dir, name, tint):
            "  animations = {"] + bottom + ["  },"]
     if top:
         lua += ["  top_animations = {"] + top + ["  },"]
-    wires = wire_points(render_dir)
+    wires = wire_points(render_dir, offset)
     if wires:
         lua += ["  circuit_wire_connection_points = {"] + wires + ["  },"]
     lua.append("}")
@@ -122,7 +135,7 @@ def main(render_dir, out_dir, name, tint):
     preview(previews, os.path.join(out_dir, "vorschau.png"), tint)
 
 
-def wire_points(render_dir):
+def wire_points(render_dir, offset=(0.0, 0.0)):
     """Anschlusspunkte der Signalkabel aus wires_<richtung>.json (Klemmenspitzen in Blender-Koordinaten, von
     render_output.py): im Bild liegt eine Höhe z um z · cot(Blickwinkel) weiter oben, der Schatten der Spitze
     dort, wo der Sonnenstrahl durch sie den Boden trifft. Reihenfolge wie Factorio: Nord, Ost, Süd, West."""
@@ -145,7 +158,8 @@ def wire_points(render_dir):
             t = z / -sz  # Strahl bis zum Boden
             return f"{{ {x + sx * t:.4f}, {-(y + sy * t):.4f} }}"
 
-        r, g = tips["red"], tips["green"]
+        ox, oy = offset_for(d, offset)
+        r, g = [(p[0] + ox, p[1] - oy, p[2]) for p in (tips["red"], tips["green"])]
         lines.append(f"    {{ wire = {{ red = {screen(*r)}, green = {screen(*g)} }}, "
                      f"shadow = {{ red = {shadow(*r)}, green = {shadow(*g)} }} }}, -- {d}")
     return lines
@@ -183,7 +197,12 @@ def preview(previews, path, tint):
 if __name__ == "__main__":
     a = sys.argv[1:]
     tint = a[a.index("--tint") + 1] if "--tint" in a else "4a90d9"
+    offset = (0.0, 0.0)
+    if "--versatz" in a:
+        i = a.index("--versatz")
+        offset = (float(a[i + 1]), float(a[i + 2]))
+        a = a[:i] + a[i + 3:]
     a = [x for i, x in enumerate(a) if x != "--tint" and (i == 0 or a[i - 1] != "--tint")]
     if len(a) != 3:
-        sys.exit(__doc__ or "python3 sprites.py <render_ordner> <ziel_ordner> <name> [--tint RRGGBB]")
-    main(*a, tint)
+        sys.exit("python3 sprites.py <render_ordner> <ziel_ordner> <name> [--tint RRGGBB] [--versatz X Y]")
+    main(*a, tint, offset)

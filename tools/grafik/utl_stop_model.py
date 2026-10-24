@@ -163,7 +163,8 @@ def build(seed=0, name=COLLECTION, distributor=True, arm_yaw=0.0):
         return link(o, material)
 
     # ---- Maße (gemessen an Vanilla, Felder) ----
-    MX, MY = 0.55, 0.5         # Mastmitte (rechts im 2×2-Feld, Gleis links/Westen)
+    MX, MY = 0.55, 0.5         # Mastmitte (rechts im 2×2-Feld, Gleis links/Westen); render_stop.py schiebt das Modell
+                               # um OFFSET zurück, damit der Mast mittig im Auswahlrahmen steht
     W = 0.2                    # halbe Mastbreite (schmaler Gitterturm wie Vanilla)
     H = 3.5                    # Masthöhe bis zum Ausleger
     ARM = 2.5                  # Ausleger nach Westen

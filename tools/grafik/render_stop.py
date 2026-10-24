@@ -29,6 +29,9 @@ catcher = rig.shadow_catcher()
 # Je Richtung neu bauen, mit eigenem seed: die Kabel liegen dann in jeder Richtung etwas anders. Ausleger in Ost/West
 # verdrehen (wie Vanilla) ginge über ARM_YAW = {"east": 10.0, "west": 10.0} – Marcel wollte ihn gerade (24.10.2026).
 ARM_YAW = {}
+# Modell so verschieben, dass der Mast mittig im Auswahlrahmen der Haltestelle steht (Marcel, 24.10.2026). Renders
+# von davor bekommen dieselbe Verschiebung über sprites.py --versatz -0.55 -0.5.
+OFFSET = (-0.55, -0.5)
 os.makedirs(out, exist_ok=True)
 for d in directions:
     old = bpy.data.objects.get("Drehpunkt")
@@ -36,6 +39,9 @@ for d in directions:
         bpy.data.objects.remove(old, do_unlink=True)
     col = utl_stop_model.build(seed=rig.DIRECTIONS.index(d), distributor="--ohne-verteiler" not in a,
                                arm_yaw=ARM_YAW.get(d, 0.0))
+    for o in col.objects:
+        if o.parent is None:
+            o.location = (o.location[0] + OFFSET[0], o.location[1] + OFFSET[1], o.location[2])
     meshes = [o for o in col.objects if o.type == "MESH"]
     root = rig.pivot(list(col.objects))
     root.rotation_euler = (0, 0, -rig.DIRECTIONS.index(d) * math.pi / 2)
