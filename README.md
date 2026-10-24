@@ -210,7 +210,7 @@ its title bar).
 
 ## Network combinator
 
-*Needs research: “UTL: Network combinator”. New in 0.0.9.*
+*Needs research: “UTL: Network combinator”.*
 
 Outputs the state of a UTL network as circuit signals. In its window pick the network (optionally
 with its linked networks) and the mode: **stock** (what providers offer), **storage stock** (what is
@@ -233,14 +233,30 @@ deliveries also the goods (e.g. “#134 iron ore 16k”). The colors can be chan
 (“Display: …”). Panels with your own messages are left alone; remove the wire and UTL clears the panel.
 
 Optional: the startup setting **“Colored train stop lamps”** (off by default) colors the two small lamps on
-top of UTL train stops in the same way – best seen at night.
+top of UTL train stops in the same way – best seen at night. The lamps sit where the vanilla train stop has
+them, so they go with the Vanilla look.
 
 The station window (“In transit”) and the UTL Manager also name the trains on their way, with the amount
 per train in the tooltip.
 
+## Train stop look
+
+*New in 0.0.21.*
+
+![The UTL look of the train stop in all four directions, on the right the order output (blue) and the depot output (green)](https://raw.githubusercontent.com/wiki/Marcel1853/UTLogistics/images/utl-stop-look.png)
+
+By default UTL train stops look like normal train stops. In the **startup settings** you can switch
+**“UTL train stop look”** to **UTL**: an own model with a lattice mast, a control cabinet with signal lamps and
+wire terminals, and braided cables into a cable duct next to the track. The station color can still be chosen
+freely, trains run under the arm, and red and green wires connect to the terminals on the cabinet. The setting
+needs a restart; you can switch back to Vanilla at any time.
+
+The **order output** and the **depot output** always have their own look: a small switch box in the style of
+the train stop – blue for the order output, green for the depot output.
+
 ## Cargo Ships
 
-*Only with the [Cargo Ships](https://mods.factorio.com/mod/cargo-ships) mod. New in 0.0.9.*
+*Only with the [Cargo Ships](https://mods.factorio.com/mod/cargo-ships) mod.*
 
 Ports become UTL stations, and ships run deliveries like trains. With Cargo Ships there is the
 **UTL port** (research “Unified Train Logistics”) – a port with built-in UTL logic, like the UTL train
@@ -255,7 +271,7 @@ click swaps back. Waterways can still only be built on water.
 ## Space Exploration (space elevator)
 
 *Only with the [Space Exploration](https://mods.factorio.com/mod/space-exploration) mod (which runs
-without Space Age). New in 0.0.10.*
+without Space Age).*
 
 UTL delivers through a finished, powered **space elevator** between a planet and its orbit, in both
 directions. Switch it on per network with **“Deliver via space elevator”** (station window, network
@@ -332,7 +348,7 @@ also run without Space Age, only the planet test needs it:
 - **UTL top up (to watch)** – with and without topping up, round by round, with an explanation window.
 - **UTL active provider (to watch)** – an active provider is emptied: first the requester, then the
   storage up to its maximum, the rest to the cleanup, with an explanation window.
-- **UTL storage (to watch)** – new in 0.0.8: storage, a cleanup that gives back and four small
+- **UTL storage (to watch)** – storage, a cleanup that gives back and four small
   example lines, with an explanation window.
 - **UTL planet test (Space Age)** – the same network on Nauvis, Vulcanus and Gleba.
 - **UTL load test (384 trains)** – 12 × 12 city blocks for measuring, with storages, cleanups that
@@ -371,7 +387,7 @@ shows it.
 
 ## Second provider (optional, off by default)
 
-*New in 0.0.10.* If the best provider does not have enough, the train picks up the rest at a
+If the best provider does not have enough, the train picks up the rest at a
 **second provider** in the same network – one trip with two loading stops instead of two trips. Only
 on the same surface, only if the detour (straight line) is at most the **maximum detour** (default
 50 % of the direct way) and the train can drive first → second → requester. Map setting or manager
@@ -379,7 +395,7 @@ on the same surface, only if the detour (straight line) is at most the **maximum
 
 ## Train stuck alert
 
-*New in 0.0.10.* If a delivery train stands too long without progress – waiting at a signal, no path,
+If a delivery train stands too long without progress – waiting at a signal, no path,
 destination full – the alert **“train stuck”** appears and the manager shows it at the train. UTL does
 not cancel anything. Map setting in minutes, default 5, 0 = off.
 

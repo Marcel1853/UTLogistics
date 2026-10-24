@@ -12,3 +12,6 @@ dist/
 CLAUDE.md
 .claude/
 *.blend1
+
+# Python-Zwischendateien der Grafik-Werkzeuge
+__pycache__/

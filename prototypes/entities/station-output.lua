@@ -27,20 +27,17 @@ entity.flags = { "player-creation", "not-deconstructable", "placeable-off-grid" 
 local depot = table.deepcopy(entity)
 depot.name = C.depot_output
 depot.icons = { { icon = "__base__/graphics/icons/constant-combinator.png", tint = C.depot_tint } }
--- auch in der Welt grün (nur Grafik-Felder, keine Schatten/Leuchten)
-local function tint_layers(sprite_def)
-  if type(sprite_def) ~= "table" then return end
-  if sprite_def.filename or sprite_def.filenames then
-    if not sprite_def.draw_as_shadow and not sprite_def.draw_as_glow and not sprite_def.draw_as_light then
-      sprite_def.tint = C.depot_tint
-    end
-    return
-  end
-  for _, child in pairs(sprite_def) do tint_layers(child) end
+-- Eigenes Aussehen (immer, unabhängig von der Haltestellen-Einstellung): Schaltkasten aus Blender mit Kennfarbe
+-- im Bild (Auftrags-Ausgabe blau, Depot-Ausgabe grün), Anschlusspunkte der Signalkabel auf den Isolatoren des
+-- Modells. Die Leuchte des Vanilla-Kombinators säße woanders und entfällt.
+local function own_look(e, file)
+  local s = require("prototypes.sprites." .. file)
+  e.sprites = s.animations
+  e.circuit_wire_connection_points = s.circuit_wire_connection_points
+  e.activity_led_sprites = nil
 end
-for key, value in pairs(depot) do
-  if type(key) == "string" and key:sub(-7) == "sprites" then tint_layers(value) end
-end
+own_look(entity, "utl-station-output")
+own_look(depot, "utl-depot-output")
 
 -- Unsichtbares Item ohne Rezept: Factorio nimmt nur Gebäude mit Item in Blaupausen auf. So kommt
 -- die Ausgabe samt Kabeln mit; bauen kann den Geist niemand (das Item hat keiner) – UTL baut ihn
