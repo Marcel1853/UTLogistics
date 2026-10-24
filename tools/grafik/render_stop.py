@@ -26,9 +26,9 @@ rig.lights()
 # Ausleger gedreht bis ≈ 5,6 Felder hoch im Bild, Schatten bis ≈ 7 Felder nach rechts; sprites.py schneidet zu
 rig.camera(13, 12, shift=0.8, shift_x=1.5)
 catcher = rig.shadow_catcher()
-# Je Richtung neu bauen, mit eigenem seed: die Kabel liegen dann in jeder Richtung etwas anders. In Ost/West ist der
-# Ausleger wie bei Vanilla etwas verdreht, sonst sähe man ihn nur von vorn.
-ARM_YAW = {"east": 10.0, "west": 10.0}
+# Je Richtung neu bauen, mit eigenem seed: die Kabel liegen dann in jeder Richtung etwas anders. Ausleger in Ost/West
+# verdrehen (wie Vanilla) ginge über ARM_YAW = {"east": 10.0, "west": 10.0} – Marcel wollte ihn gerade (24.10.2026).
+ARM_YAW = {}
 os.makedirs(out, exist_ok=True)
 for d in directions:
     old = bpy.data.objects.get("Drehpunkt")
