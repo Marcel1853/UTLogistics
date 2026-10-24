@@ -14,7 +14,7 @@ entity.next_upgrade = nil
 -- Aussehen (Start-Einstellung): eigenes 3D-Modell statt der Vanilla-Grafik. Der Ausleger liegt in
 -- top_animations, damit Züge darunter durchfahren. Die Vanilla-Lampen (light1/light2) säßen neben den
 -- Lampen des Modells und entfallen. „utl“ bringt eigene Kabel und Verteiler hinter dem Gleis mit, daher ohne
--- die Vanilla-Teile am Gleis (rail_overlay_animations); „utl-compact“ hat keine Verteiler und behält sie.
+-- die Vanilla-Teile am Gleis (rail_overlay_animations); „utl-compact“ hat keine Verteiler und behält sie, ohne den Mastfuß der Vanilla-Haltestelle.
 local style = settings.startup["utl-stop-style"].value
 if style ~= "vanilla" then
   local sprites = require("prototypes.sprites." .. (style == "utl" and "utl-train-stop" or "utl-train-stop-compact"))
@@ -22,7 +22,11 @@ if style ~= "vanilla" then
   entity.top_animations = sprites.top_animations
   entity.light1 = nil
   entity.light2 = nil
-  if style == "utl" then entity.rail_overlay_animations = nil end
+  if style == "utl" then
+    entity.rail_overlay_animations = nil
+  else
+    entity.rail_overlay_animations = require("prototypes.sprites.rail-overlay-compact")
+  end
 end
 
 data:extend({ entity })
