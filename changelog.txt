@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.22
+Date: 2026-11-01
+  Bugfixes:
+    - Crash when a number above 2,147,483,647 was entered, e.g. a minimum train length of 5555555555. Values of a station, requests, storage limits and blueprint parameters are now capped at the largest signal value.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.21
 Date: 2026-10-24
   Features:

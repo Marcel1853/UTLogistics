@@ -21,7 +21,7 @@ end
 
 function Requests.set(cfg, slot, signal, count)
   if signal then
-    cfg.requests[slot] = { signal = signal, count = count }
+    cfg.requests[slot] = { signal = signal, count = type(count) == "number" and Util.clamp_signal(count) or 0 } -- landet im Einstellungs-Kombinator
   else
     cfg.requests[slot] = nil
   end

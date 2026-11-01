@@ -317,7 +317,7 @@ function Windows.answers(player)
           signal = { type = v.type or "item", name = v.name, quality = v.quality }
           if not Util.signal_key(signal) then signal = nil end
         end
-        rows[#rows + 1] = { signal = signal, count = tonumber(el["c" .. i].text) or 0 }
+        rows[#rows + 1] = { signal = signal, count = Util.clamp_signal(tonumber(el["c" .. i].text) or 0) }
         i = i + 1
       end
       answers.request = rows
@@ -343,13 +343,14 @@ function Windows.answers(player)
         local v = el["s" .. slot].elem_value --[[@as SignalID?]]
         if v and v.name and (v.type == "item" or v.type == "fluid" or v.type == nil) then
           limits[#limits + 1] = { signal = { type = v.type or "item", name = v.name, quality = v.quality },
-            min = math.max(0, tonumber(el["min" .. slot].text) or 0), max = math.max(0, tonumber(el["max" .. slot].text) or 0) }
+            min = Util.clamp_signal(math.max(0, tonumber(el["min" .. slot].text) or 0)),
+            max = Util.clamp_signal(math.max(0, tonumber(el["max" .. slot].text) or 0)) }
         end
       end
       answers[el.name] = limits
       answers.storage_rows = shown -- für „+“: wie viele Zeilen gerade stehen
     elseif entry and el.type == "textfield" then
-      answers[el.name] = tonumber(el.text) or 0
+      answers[el.name] = Util.clamp_signal(tonumber(el.text) or 0) -- landet als Signal im Kombinator
     end
   end
   return answers

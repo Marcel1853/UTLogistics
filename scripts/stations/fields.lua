@@ -1,6 +1,7 @@
 --- Alle Zahlenwerte einer Station an einer Stelle: Gruppe, Symbol, Standard, Grenzen.
 --- Fenster, Standardwerte, Migration und Remote-API lesen nur diese Liste.
 local Config = require("scripts.core.config")
+local Util = require("scripts.lib.util")
 
 local Fields = {}
 
@@ -81,9 +82,10 @@ function Fields.default(field)
   return field.default
 end
 
---- Wert auf die Grenzen des Feldes bringen.
+--- Wert auf die Grenzen des Feldes bringen – und auf den Signalbereich, denn alle Felder landen als Signale im
+--- Einstellungs-Kombinator (auch Werte aus Blaupausen-Parametern und der Remote-Schnittstelle).
 function Fields.clamp(field, value)
-  value = math.floor(value)
+  value = Util.clamp_signal(math.floor(value))
   if field.min and value < field.min then value = field.min end
   return value
 end

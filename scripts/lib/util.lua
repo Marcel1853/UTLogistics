@@ -80,16 +80,28 @@ function Util.variables(key)
   return { s = size, S = size }
 end
 
+--- Größter und kleinster Signalwert (int32): Zahlen, die in Kombinatoren landen, dürfen nicht darüber liegen –
+--- sonst bricht Factorio mit einem Fehler ab (Fehlermeldung hechang27, 01.11.2026: Mindest-Zuglänge 5555555555).
+Util.SIGNAL_MAX = 2147483647
+Util.SIGNAL_MIN = -2147483648
+
+--- Zahl auf den Bereich eines Signals begrenzen.
+function Util.clamp_signal(value)
+  if value > Util.SIGNAL_MAX then return Util.SIGNAL_MAX end
+  if value < Util.SIGNAL_MIN then return Util.SIGNAL_MIN end
+  return value
+end
+
 --- Zahl aus einem Eingabefeld: normale Zahl oder Rechenausdruck wie „100*2“, „8000/4“,
 --- „(1+2)*3“ (über helpers.evaluate_expression); mit `variables` auch „2*s“ (Stapelgröße, siehe
---- Util.variables). nil, wenn ungültig oder unvollständig.
+--- Util.variables). nil, wenn ungültig oder unvollständig; zu große Zahlen werden auf den Signalbereich begrenzt.
 function Util.parse_number(text, variables)
   local value = tonumber(text)
   if not value then
     local ok, result = pcall(helpers.evaluate_expression, text, variables)
     value = ok and result or nil
   end
-  if value and value == value and value ~= math.huge and value ~= -math.huge then return value end
+  if value and value == value and value ~= math.huge and value ~= -math.huge then return Util.clamp_signal(value) end
   return nil
 end
 
