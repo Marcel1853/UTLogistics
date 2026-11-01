@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.23
+Date: 2026-11-01
+  Bugfixes:
+    - Storage stations: an item chosen as good in the station window (also in the window of the station combinator) was not taken over; only fluids worked.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.22
 Date: 2026-11-01
   Bugfixes:

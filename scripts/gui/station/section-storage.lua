@@ -62,12 +62,14 @@ function Section.build(parent, station)
   return true
 end
 
---- Ware eines Slots gewählt oder geleert (nil).
+--- Ware eines Slots gewählt oder geleert (nil). Bei Waren lässt Factorio `type` im SignalID weg (nil = „item“) –
+--- das nicht als „keine Ware“ lesen (Fehlermeldung hechang27, 01.11.2026: gewählte Waren wurden nicht übernommen).
 function Section.set_signal(cfg, slot, signal)
   local limits = cfg.storage.limits
-  if signal and (signal.type == "item" or signal.type == "fluid") then
+  local kind = signal and signal.name and (signal.type or "item")
+  if kind == "item" or kind == "fluid" then
     local limit = limits[slot] or { min = 0, max = 0 }
-    limit.signal = signal
+    limit.signal = { type = kind, name = signal.name, quality = signal.quality }
     limits[slot] = limit
   else
     limits[slot] = nil
