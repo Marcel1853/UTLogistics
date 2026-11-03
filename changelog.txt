@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.25
+Date: 2026-11-03
+  Locale:
+    - New languages: Russian, Chinese (simplified), French, Spanish, Polish and Brazilian Portuguese (pt-BR, request from GitHub issue #3). Translated with AI – corrections from native speakers are welcome on GitHub.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.24
 Date: 2026-11-03
   Bugfixes:

@@ -13,7 +13,8 @@ Automatischer Zugverkehr für Factorio 2.1: **Anbieter, Abnehmer, Depots, Tankst
 Cleanup und Übersichtsfenster in einem Mod**, gebaut für hohe UPS.
 
 - Benötigt: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age ist optional.
-- Sprachen: Englisch, Deutsch und brasilianisches Portugiesisch (pt-BR, mit KI übersetzt – Verbesserungen gern auf GitHub).
+- Sprachen: Englisch, Deutsch, Russisch, Chinesisch (vereinfacht), Französisch, Spanisch, Polnisch und brasilianisches
+  Portugiesisch – alle außer Englisch und Deutsch mit KI übersetzt, Verbesserungen gern auf GitHub.
 - Freischalten: Technologie **„Unified Train Logistics“** (nach „Automatisierter
   Schienenverkehr“ und „Schaltungsnetze“). Ausbaustufen: **„UTL: Ladesteuerung“** (Wagenfilter und
   Auftrags-Ausgabe) und **„UTL: Netzverbund I–III“** (ein Netz mit 1, 2 oder 3 Partnernetzen verbinden) und **„UTL: Lager“**
