@@ -105,13 +105,17 @@ function Fields.fill(cfg)
   -- Text-Schlüsseln („3“) zurückkommen
   local function numeric_keys(list)
     if type(list) ~= "table" then return end
+    -- erst sammeln, dann umschreiben: neue Schlüssel während `pairs` anlegen bricht mit „invalid key to 'next'“
+    -- ab (GitHub-Issue #1, jrivard: Absturz, wenn ein Roboter eine kopierte UTL-Haltestelle baut)
+    local moved = {}
     for key, value in pairs(list) do
       local n = type(key) == "string" and tonumber(key)
       if n then
-        list[key] = nil
-        list[n] = value
+        moved[n] = value
+        list[key] = nil -- vorhandenen Schlüssel leeren ist während `pairs` erlaubt
       end
     end
+    for n, value in pairs(moved) do list[n] = value end
   end
   numeric_keys(cfg.requests)
   if cfg.storage then numeric_keys(cfg.storage.limits) end

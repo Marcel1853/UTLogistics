@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.24
+Date: 2026-11-03
+  Bugfixes:
+    - Crash "invalid key to 'next'" when a robot built a copied UTL train stop (settings with request, storage or cleanup slots from a blueprint).
+---------------------------------------------------------------------------------------------------
 Version: 0.0.23
 Date: 2026-11-01
   Bugfixes:
