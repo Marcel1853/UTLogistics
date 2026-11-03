@@ -13,6 +13,8 @@ cleanup and an overview window in one mod**, built for high UPS.
 > English and German, with screenshots. This page is the short version.
 
 - Requires: Factorio 2.1, [flib](https://mods.factorio.com/mod/flib). Space Age is optional.
+- Languages: English, German, Russian, Chinese (simplified), French, Spanish, Polish and Brazilian Portuguese – all but
+  English and German translated with AI, corrections welcome on GitHub.
 - Unlock: technology **“Unified Train Logistics”** (after automated rail transportation and
   circuit network). Upgrades: **“UTL: Loading control”** (wagon filters and job output) and
   **“UTL: Network links I–III”** (link a network with 1, 2 or 3 partner networks) and **“UTL: Storage”**
