@@ -119,7 +119,13 @@ function Tab.refresh(refs, manager)
     if key == manager.depot then list.selected_index = i end
   end
 
-  local trains = manager.depot and groups[manager.depot].trains or {}
+  local trains = {}
+  for _, train in ipairs(manager.depot and groups[manager.depot].trains or {}) do
+    -- Waren-Filter: nur Züge, die die Ware geladen oder geplant haben
+    if not manager.ware_filter or (train.valid and Filter.ware(manager, (Info.cargo(train)))) then
+      trains[#trains + 1] = train
+    end
+  end
   table.sort(trains, function(a, b) return a.id < b.id end)
   List.sync(refs.rows, trains, fill, COLUMNS)
 end

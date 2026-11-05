@@ -3,6 +3,8 @@
 --- UTL-Stationen – Space-Plattformen fallen so raus, Planeten anderer Mods kommen von selbst dazu.
 --- Die Auswahl gibt es nur mit Space Age (Wunsch Marcel); ohne zeigt der Manager alles, gleichnamige
 --- Depots auf verschiedenen Oberflächen bleiben aber getrennt (mit Oberflächenname).
+local Util = require("scripts.lib.util")
+
 local Filter = {}
 
 local AUTO, ALL = "auto", "all"
@@ -137,6 +139,29 @@ end
 function Filter.train(manager, train)
   local front = train and train.valid and train.front_stock
   return front ~= nil and Filter.match(manager, front.surface_index, front.force_index)
+end
+
+--- Waren-Filter (Knopf in der Titelleiste, Wunsch Serjevski 05.11.2026): `manager.ware_filter` = "art|name" oder nil.
+--- Die Qualität zählt nicht – „Eisenplatte“ findet alle Qualitäten. Passt der Schlüssel "art|name|qualität"?
+function Filter.ware_key(manager, key)
+  local ware = manager.ware_filter
+  if not ware then return true end
+  local kind, name = Util.split_key(key)
+  return kind ~= nil and kind .. "|" .. name == ware
+end
+
+--- Enthält eine der Tabellen ([schlüssel] = menge) die gefilterte Ware? Ohne Filter immer true.
+function Filter.ware(manager, ...)
+  if not manager.ware_filter then return true end
+  for i = 1, select("#", ...) do
+    local map = select(i, ...)
+    if map then
+      for key in pairs(map) do
+        if Filter.ware_key(manager, key) then return true end
+      end
+    end
+  end
+  return false
 end
 
 --- „Name · Planet“, wenn mehrere Oberflächen gleichzeitig angezeigt werden.

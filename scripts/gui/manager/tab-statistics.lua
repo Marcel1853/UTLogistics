@@ -118,7 +118,9 @@ function Tab.refresh(refs, manager)
   local search = manager.search
   local goods_list = {}
   for key, entry in pairs(goods) do
-    if search == "" or string.find(key, search, 1, true) then goods_list[#goods_list + 1] = entry end
+    if (search == "" or string.find(key, search, 1, true)) and Filter.ware_key(manager, key) then
+      goods_list[#goods_list + 1] = entry
+    end
   end
   table.sort(goods_list, function(a, b)
     if a.hour ~= b.hour then return a.hour > b.hour end

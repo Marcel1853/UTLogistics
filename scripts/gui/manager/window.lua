@@ -19,8 +19,8 @@ local Manager = {}
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 13 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
--- 12: Aufzug-Häkchen im Reiter „Netzwerke“ · 13: Reiter von Add-ons (register_manager_tab)
+local GUI_VERSION = 14 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
+-- 12: Aufzug-Häkchen im Reiter „Netzwerke“ · 13: Reiter von Add-ons (register_manager_tab) · 14: Waren-Filter
 local ORDER = { "depots", "stations", "networks", "inventory", "history", "statistics", "alerts", "settings" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste;
 -- Einstellungen nie, sonst überschriebe der Takt das Feld beim Tippen).
@@ -123,6 +123,11 @@ function Manager.open(player)
   surface_pick.style.height = 24
   surface_pick.style.top_margin = -2
   local pin = frame_button(bar, "flib_pin_white", { "utl-manager.pin" }, "pin")
+  -- Waren-Filter: Gegenstand oder Flüssigkeit wählen, Rechtsklick leert ihn (surface-filter.lua, Filter.ware)
+  local ware = bar.add({ type = "choose-elem-button", elem_type = "signal", style = "slot_button",
+    elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } },
+    tooltip = { "utl-manager.ware-filter" }, tags = { utl_mgr = "ware_filter" } })
+  ware.style.size = 24
   frame_button(bar, "utility/search", { "utl-manager.search" }, "toggle_search")
   frame_button(bar, "utility/refresh", { "utl-manager.refresh" }, "refresh")
   frame_button(bar, "utility/close", { "utl-manager.close" }, "close")

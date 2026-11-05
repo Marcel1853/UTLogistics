@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.27
+Date: 2026-11-05
+  Features:
+    - UTL Manager: new ware filter in the title bar. Pick an item or fluid and the tabs Stations, Depots (trains), Inventory, History and Statistics only show what has to do with it (any quality). Right-click clears it. Wish from the mod portal.
+  Bugfixes:
+    - Fluid wagons of higher quality were counted with the capacity of a normal one (50k), so a train with two legendary fluid wagons only ever got 100k instead of 250k per delivery. Trains already parked are measured again on update.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.26
 Date: 2026-11-05
   Bugfixes:

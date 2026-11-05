@@ -149,6 +149,16 @@ Events.on(defines.events.on_gui_text_changed, function(event)
   Manager.refresh(event.player_index)
 end)
 
+-- Waren-Filter in der Titelleiste: "art|name" (bei Gegenständen fehlt `type` im Signal, nil = item)
+Events.on(defines.events.on_gui_elem_changed, function(event)
+  local action, _, manager = context(event)
+  if action ~= "ware_filter" or not manager then return end
+  local value = event.element.elem_value
+  local name = type(value) == "table" and value.name
+  manager.ware_filter = name and (value.type or "item") .. "|" .. name or nil
+  Manager.refresh(event.player_index)
+end)
+
 Events.on(defines.events.on_gui_selected_tab_changed, function(event)
   local action = context(event)
   if action == "tabs" then Manager.refresh(event.player_index) end

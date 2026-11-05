@@ -103,12 +103,23 @@ function Tab.refresh(refs, manager)
       for key, amount in pairs(by_key) do add(totals.incoming, key, amount) end
     end
   end
+  -- Waren-Filter: nur diese Ware zeigen und ihr Detail gleich öffnen (erste passende Qualität)
+  if manager.ware_filter and not (manager.ware and Filter.ware_key(manager, manager.ware)) then
+    manager.ware = nil
+    for _, part in ipairs({ "provide", "request", "incoming" }) do
+      for key in pairs(totals[part]) do
+        if not manager.ware and Filter.ware_key(manager, key) then manager.ware = key end
+      end
+    end
+  end
   for part, map in pairs(totals) do
     local grid = refs[part]
     grid.clear()
     for key, amount in pairs(map) do
-      local button = Widgets.add_slot(grid, key, amount, part, nil, { utl_mgr = "ware", key = key })
-      if button and key == manager.ware then button.toggled = true end
+      if Filter.ware_key(manager, key) then
+        local button = Widgets.add_slot(grid, key, amount, part, nil, { utl_mgr = "ware", key = key })
+        if button and key == manager.ware then button.toggled = true end
+      end
     end
   end
   detail(refs.detail, manager.ware, totals, manager)

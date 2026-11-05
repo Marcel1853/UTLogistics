@@ -343,6 +343,10 @@ zeigt Details), **Verlauf** (letzte 100 Lieferungen), **Statistik** (Durchsatz j
 letzte Stunde, Auslastung je Zug), **Alarme** (letzte 100), **Einstellungen**. Der Pin-Knopf hält das Fenster offen, lange Listen lassen sich blättern. Suche
 nach Stationsnamen, Klick auf eine Station zeigt sie auf der Karte, Klick auf einen Zug verfolgt ihn.
 Mit Space Age wählt eine Auswahl den Planeten.
+Der **Waren-Knopf** in der Titelleiste filtert nach einer Ware (Gegenstand oder Flüssigkeit): Stationen, Züge, Inventar,
+Verlauf und Statistik zeigen dann nur diese Ware; Rechtsklick leert ihn.
+
+![UTL-Manager mit Waren-Filter auf Kupferplatte: Nur die zwei Stationen mit Kupferplatten stehen in der Liste](https://raw.githubusercontent.com/wiki/Marcel1853/UTLogistics/images/utl-manager-ware-filter.png)
 
 **Warnungen** kommen als normale Factorio-Warnungen in drei Gruppen – kein passender Zug (nach
 5 Minuten), Restladung/Fehlmenge, Zugprobleme – jede je Spieler abschaltbar.

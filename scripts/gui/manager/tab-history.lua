@@ -70,7 +70,8 @@ function Tab.refresh(refs, manager)
     if Filter.match(manager, entry.surface, entry.force) and (search == ""
       or string.find(string.lower(entry.from or ""), search, 1, true)
       or string.find(string.lower(entry.to or ""), search, 1, true)
-      or string.find(string.lower(entry.depot or ""), search, 1, true)) then
+      or string.find(string.lower(entry.depot or ""), search, 1, true))
+      and Filter.ware(manager, entry.manifest or (entry.key and { [entry.key] = entry.amount })) then
       items[#items + 1] = entry
     end
   end

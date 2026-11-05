@@ -33,7 +33,9 @@ local function measure(train)
     end
   end
   for _, wagon in pairs(train.fluid_wagons) do
-    fluid = fluid + wagon.prototype.fluid_capacity
+    -- Qualität zählt: ein legendärer Tankwagen fasst 2,5-mal so viel (prototype.fluid_capacity gilt nur für
+    -- normale Qualität – Fehlermeldung roffl8, 05.11.2026: 2 legendäre Tankwagen bekamen nur 100k statt 250k)
+    fluid = fluid + wagon.prototype.get_fluid_capacity(wagon.quality)
   end
   return slots, wagons, fluid
 end

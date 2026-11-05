@@ -99,7 +99,9 @@ function Tab.refresh(refs, manager)
     local stop = station.stop
     local name = stop and stop.valid and stop.backer_name or ""
     if Filter.station(manager, station)
-      and (search == "" or string.find(string.lower(name), search, 1, true)) then
+      and (search == "" or string.find(string.lower(name), search, 1, true))
+      and Filter.ware(manager, station.provide, station.request, storage.deliveries.incoming[station.unit],
+        storage.deliveries.outgoing[station.unit]) then
       items[#items + 1] = station
       names[station] = name
     end
