@@ -19,9 +19,14 @@ local Fields = require("scripts.stations.fields")
 local Window = {}
 
 local NAME = "utl_station_window"
+-- Im freien Modus: kleines Panel am Vanilla-Haltestellenfenster nur mit den Positions-Knöpfen. Das freie Fenster
+-- liegt nach dem Öffnen hinter dem Haltestellenfenster (Factorio legt das zuletzt geöffnete/angeklickte nach vorn)
+-- – ohne dieses Panel kam man nicht mehr ans Andocken (Fehlermeldung 00swinter, 04.11.2026).
+local DOCK = "utl_station_dock"
 -- Bei jedem Umbau des Fensters erhöhen: offene Fenster aus alten Spielständen werden dann
 -- geschlossen statt mit falschem Aufbau aufgefrischt.
-local GUI_VERSION = 19 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+local GUI_VERSION = 20 -- 11: Netzwerk-Abschnitt aufgeräumt · 12: Cleanup-Angebot · 13: Lager · 14: Rechnen mit s
+-- 20: Andock-Panel im freien Modus (Knöpfe links/rechts/frei am Haltestellenfenster)
 -- 19: Rollen und Abschnitte von Add-ons (Schnittstelle für andere Mods)
 -- 18: Position des Panels wählbar (links/rechts/frei), Tankstelle „Treibstoff anfordern“
 -- 17: Rolle „Aktiver Anbieter“, Rollen im Rahmen
@@ -75,6 +80,7 @@ function Window.close(player_index)
     end
     frame.destroy()
   end
+  if gui and gui.dock and gui.dock.valid then gui.dock.destroy() end
 end
 
 --- Alle UTL-Fenster schließen (nach Mod-Update); auch verwaiste ohne storage-Eintrag.
@@ -82,8 +88,9 @@ function Window.close_all()
   for player_index in pairs(storage.guis) do Window.close(player_index) end
   for _, player in pairs(game.players) do
     for _, root in ipairs({ player.gui.screen, player.gui.relative }) do
-      local frame = root[NAME]
-      if frame then frame.destroy() end
+      for _, name in ipairs({ NAME, DOCK }) do
+        if root[name] then root[name].destroy() end
+      end
     end
   end
 end
@@ -97,6 +104,22 @@ local function position_buttons(bar, player)
     bar.add({ type = "sprite-button", style = "frame_action_button", sprite = sprites[p], toggled = p == side,
       tooltip = { "utl-gui.window-position-" .. p }, tags = { utl_action = "window_pos", side = p } })
   end
+end
+
+--- Andock-Panel am Vanilla-Haltestellenfenster (nur im freien Modus): Titel und die Knöpfe links/rechts/frei.
+local function dock_panel(player)
+  local panel = player.gui.relative.add({
+    type = "frame",
+    name = DOCK,
+    direction = "vertical",
+    anchor = { gui = defines.relative_gui_type.train_stop_gui, position = defines.relative_gui_position.left,
+      names = anchor_names() },
+  })
+  local bar = panel.add({ type = "flow", style = "flib_titlebar_flow" })
+  bar.add({ type = "label", style = "frame_title", caption = { "utl-gui.station-title" }, ignored_by_interaction = true })
+  bar.add({ type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true })
+  position_buttons(bar, player)
+  return panel
 end
 
 --- `standalone`: Haltestellen-Panel als eigenes Fenster statt am Vanilla-Haltestellenfenster (Tipps-
@@ -126,6 +149,9 @@ local function create_frame(player, station, standalone)
   local saved = storage.station_window_pos and storage.station_window_pos[player.index]
   if station.kind == "stop" and side == "free" and saved and saved.location then
     frame.location = saved.location
+  elseif station.kind == "stop" and side == "free" and not standalone then
+    -- erstes freies Fenster links oben statt mittig: so verdeckt es das Haltestellenfenster nicht
+    frame.location = { x = math.floor(24 * player.display_scale), y = math.floor(player.display_resolution.height * 0.12) }
   else
     frame.auto_center = true
   end
@@ -164,8 +190,9 @@ function Window.open(player, station, standalone)
   Window.close(player.index)
   -- Reste alter Fenster/Panels ohne storage-Eintrag (z. B. aus älteren Spielständen).
   for _, root in ipairs({ player.gui.screen, player.gui.relative }) do
-    local old = root[NAME]
-    if old then old.destroy() end
+    for _, name in ipairs({ NAME, DOCK }) do
+      if root[name] then root[name].destroy() end
+    end
   end
 
   Fields.fill(station.config) -- fehlende Werte älterer Stationen ergänzen
@@ -209,10 +236,10 @@ function Window.open(player, station, standalone)
 
   -- Beim Combinator ersetzt unser Fenster das Vanilla-Fenster.
   if standalone or not is_stop then player.opened = frame end
+  local free = station.kind == "stop" and not standalone and Window.position(player.index) == "free"
   storage.guis[player.index] = {
     version = GUI_VERSION, frame = frame, unit = station.unit, main = main, requests = requests, goods = goods,
-    tabs = tabs, standalone = standalone,
-    free = station.kind == "stop" and not standalone and Window.position(player.index) == "free",
+    tabs = tabs, standalone = standalone, free = free, dock = free and dock_panel(player) or nil,
   }
   Window.refresh(player.index)
 end

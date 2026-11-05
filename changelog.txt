@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.26
+Date: 2026-11-05
+  Bugfixes:
+    - Station window set to "free": after reopening the train stop, the free window could be hidden behind the train stop window, so it could not be docked again. A small panel with the buttons left/right/free now always sits at the train stop window.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.25
 Date: 2026-11-03
   Locale:
