@@ -6,7 +6,7 @@
     "author": "Marcel171297",
     "contact": "",
     "homepage": "",
-    "description": "Train dispatcher: providers, requesters, depots, fuel stations, cleanup and manager in one mod – built for high UPS.",
+    "description": "Train dispatcher: your stations say what they have and need, UTL sends the trains. Fuel stops, cleanup and an overview window included.",
     "dependencies": [
         "base >= 2.1",
         "flib >= 0.17.2",
