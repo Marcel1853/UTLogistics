@@ -161,8 +161,8 @@ to the game's own train movement and pathfinding.
 
 I'm Marcel. UTL is written with AI (Claude by Anthropic) – the code and most of the texts. I decide what
 it should do and test every version myself in my own saves before it goes online. There are also
-automated tests in [`tools/`](https://github.com/Marcel1853/UTLogistics/tree/main/tools). My PC is
-nothing special (Ryzen 3 2200G, no graphics card), so if it runs well here, it should run well for you.
+automated tests in [`tools/`](https://github.com/Marcel1853/UTLogistics/tree/main/tools). I play and
+test on a Ryzen 7 5700G with no graphics card.
 
 Bug reports and ideas help a lot – post them in the
 [discussion](https://mods.factorio.com/mod/UTLogistics/discussion).

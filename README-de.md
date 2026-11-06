@@ -164,8 +164,8 @@ Zeit geht für die Züge selbst drauf, also Fahren und Wegsuche des Spiels.
 Ich bin Marcel. UTL schreibe ich mit KI (Claude von Anthropic) – den Code und die meisten Texte. Ich
 lege fest, was der Mod können soll, und teste jede Version selbst in meinen Spielständen, bevor sie
 online geht. Dazu gibt es automatische Tests in
-[`tools/`](https://github.com/Marcel1853/UTLogistics/tree/main/tools). Mein PC ist nichts Besonderes
-(Ryzen 3 2200G, keine Grafikkarte) – was hier gut läuft, sollte bei dir auch laufen.
+[`tools/`](https://github.com/Marcel1853/UTLogistics/tree/main/tools). Ich spiele und teste auf einem
+Ryzen 7 5700G ohne Grafikkarte.
 
 Fehlerberichte und Ideen helfen sehr – am besten in der
 [Diskussion](https://mods.factorio.com/mod/UTLogistics/discussion).
