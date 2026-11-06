@@ -120,6 +120,10 @@ Events.on(defines.events.on_gui_click, function(event)
     local train = game.train_manager.get_train_by_id(tags.train_id)
     local locomotive = train and train.front_stock
     if locomotive then remote_view(player, manager, locomotive.surface_index, locomotive.position, locomotive) end
+  elseif action == "ware_filter_clear" then
+    manager.ware_button.elem_value = nil
+    Manager.set_ware_filter(manager)
+    Manager.refresh(event.player_index)
   elseif action == "ware" then
     manager.ware = manager.ware ~= tags.key and tags.key or nil
     Manager.refresh(event.player_index)
@@ -155,7 +159,7 @@ Events.on(defines.events.on_gui_elem_changed, function(event)
   if action ~= "ware_filter" or not manager then return end
   local value = event.element.elem_value
   local name = type(value) == "table" and value.name
-  manager.ware_filter = name and (value.type or "item") .. "|" .. name or nil
+  Manager.set_ware_filter(manager, name and (value.type or "item"), name or nil)
   Manager.refresh(event.player_index)
 end)
 

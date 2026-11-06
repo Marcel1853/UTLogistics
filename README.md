@@ -93,7 +93,8 @@ Open it with the locomotive button in the shortcut bar or Ctrl + Shift + U. It s
 networks, what is in stock, the last 100 deliveries, statistics and alerts. Click a station to see it
 on the map, click a train to follow it.
 
-The small button next to the magnifier filters everything by one item or fluid. Right-click it to clear.
+The filter row above the tabs filters everything by one item or fluid. The cross next to it or a
+right-click clears it.
 
 ![UTL Manager filtered by copper plate: only the two stations with copper plates are listed](https://raw.githubusercontent.com/wiki/Marcel1853/UTLogistics/images/utl-manager-ware-filter.png)
 

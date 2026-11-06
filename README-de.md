@@ -94,8 +94,8 @@ Lampen.
 Netze, was auf Lager ist, die letzten 100 Lieferungen, Statistik und Warnungen. Klick auf eine Station
 zeigt sie auf der Karte, Klick auf einen Zug verfolgt ihn.
 
-Der kleine Knopf neben der Lupe filtert alles nach einem Gegenstand oder einer Flüssigkeit.
-Rechtsklick leert ihn.
+Die Filter-Zeile über den Reitern filtert alles nach einem Gegenstand oder einer Flüssigkeit. Das Kreuz
+daneben oder ein Rechtsklick hebt den Filter auf.
 
 ![UTL-Manager gefiltert nach Kupferplatte: Nur die zwei Stationen mit Kupferplatten stehen in der Liste](https://raw.githubusercontent.com/wiki/Marcel1853/UTLogistics/images/utl-manager-ware-filter.png)
 
