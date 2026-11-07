@@ -8,6 +8,10 @@ A train dispatcher for Factorio 2.1. You tell your stations what they have and w
 UTL sends empty trains from the depot to pick it up and drop it off. Fuel stops, cleanup of leftover
 cargo and an overview window are built in, so you need only this one mod.
 
+I don't compare UTL with other train dispatchers, and I won't. Modding isn't a competition for me. I build
+UTL because I enjoy it and want trains to work the way I like. Every dispatcher has its own ideas, so use
+the one you have the most fun with.
+
 *Deutsch: [README-de.md](https://github.com/Marcel1853/UTLogistics/blob/main/README-de.md)*
 
 **The [wiki](https://github.com/Marcel1853/UTLogistics/wiki) explains everything with pictures.** This page is the short version.

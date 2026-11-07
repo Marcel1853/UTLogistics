@@ -8,6 +8,10 @@ Ein Zug-Dispatcher für Factorio 2.1. Du sagst deinen Stationen, was sie haben u
 und UTL schickt leere Züge aus dem Depot los, die es abholen und hinbringen. Tankstellen, das Leeren
 von Restladung und ein Übersichtsfenster sind schon dabei – du brauchst nur diesen einen Mod.
 
+UTL vergleiche ich nicht mit anderen Zug-Dispatchern, und das werde ich auch nicht tun. Modden ist für mich
+kein Wettbewerb. Ich baue UTL, weil es mir Spaß macht und die Züge so laufen sollen, wie ich es mag. Jeder
+Dispatcher hat seine eigenen Ideen, nimm einfach den, mit dem du am meisten Spaß hast.
+
 *English: [README.md](https://github.com/Marcel1853/UTLogistics/blob/main/README.md)*
 
 **Im [Wiki](https://github.com/Marcel1853/UTLogistics/wiki) ist alles mit Bildern erklärt.** Diese Seite ist die Kurzfassung.
