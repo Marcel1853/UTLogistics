@@ -21,7 +21,7 @@ local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
 local GUI_VERSION = 15 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
 -- 12: Aufzug-Häkchen im Reiter „Netzwerke“ · 13: Reiter von Add-ons (register_manager_tab) · 14: Waren-Filter
--- 15: Waren-Filter als eigene Zeile über den Reitern
+-- 15: Waren-Filter größer und mit Beschriftung „Filter“
 local ORDER = { "depots", "stations", "networks", "inventory", "history", "statistics", "alerts", "settings" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste;
 -- Einstellungen nie, sonst überschriebe der Takt das Feld beim Tippen).
@@ -124,22 +124,20 @@ function Manager.open(player)
   surface_pick.style.height = 24
   surface_pick.style.top_margin = -2
   local pin = frame_button(bar, "flib_pin_white", { "utl-manager.pin" }, "pin")
+  -- Waren-Filter: Gegenstand oder Flüssigkeit wählen, Rechtsklick leert ihn (surface-filter.lua, Filter.ware)
+  local ware_label = bar.add({ type = "label", caption = { "utl-manager.ware-filter-label" },
+    tooltip = { "utl-manager.ware-filter" } })
+  ware_label.style.font = "default-small"
+  ware_label.style.left_margin = 4
+  local ware_button = bar.add({ type = "choose-elem-button", elem_type = "signal", style = "slot_button",
+    elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } },
+    tooltip = { "utl-manager.ware-filter" }, tags = { utl_mgr = "ware_filter" } })
+  ware_button.style.size = 28
+  ware_button.style.top_margin = -2
+  ware_button.style.bottom_margin = -2
   frame_button(bar, "utility/search", { "utl-manager.search" }, "toggle_search")
   frame_button(bar, "utility/refresh", { "utl-manager.refresh" }, "refresh")
   frame_button(bar, "utility/close", { "utl-manager.close" }, "close")
-
-  -- Waren-Filter: Gegenstand oder Flüssigkeit wählen, Rechtsklick oder das Kreuz leert ihn (surface-filter.lua, Filter.ware)
-  local ware_row = frame.add({ type = "flow", direction = "horizontal" })
-  ware_row.style.vertical_align = "center"
-  ware_row.style.horizontal_spacing = 8
-  ware_row.style.padding = { 4, 4, 8, 4 }
-  ware_row.add({ type = "label", caption = { "utl-manager.ware-filter-label" }, tooltip = { "utl-manager.ware-filter" } })
-  local ware_button = ware_row.add({ type = "choose-elem-button", elem_type = "signal", style = "slot_button",
-    elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } },
-    tooltip = { "utl-manager.ware-filter" }, tags = { utl_mgr = "ware_filter" } })
-  local ware_name = ware_row.add({ type = "label", caption = { "utl-manager.ware-filter-all" } })
-  local ware_clear = frame_button(ware_row, "utility/close", { "utl-manager.ware-filter-clear" }, "ware_filter_clear")
-  ware_clear.visible = false
 
   local tabs = frame.add({ type = "tabbed-pane", style = "tabbed_pane_with_no_side_padding",
     tags = { utl_mgr = "tabs" } })
@@ -172,9 +170,6 @@ function Manager.open(player)
     order = order,
     search_field = search,
     surface_pick = surface_pick,
-    ware_button = ware_button,
-    ware_name = ware_name,
-    ware_clear = ware_clear,
     search = "",
     refs = refs,
     pin_button = pin,
@@ -183,14 +178,6 @@ function Manager.open(player)
   player.opened = frame
   player.set_shortcut_toggled(SHORTCUT, true)
   Manager.refresh(player.index)
-end
-
---- Setzt den Waren-Filter ("art|name" oder nil) und bringt die Filter-Zeile auf denselben Stand.
-function Manager.set_ware_filter(manager, kind, name)
-  manager.ware_filter = name and kind .. "|" .. name or nil
-  local prototype = name and (kind == "fluid" and prototypes.fluid or prototypes.item)[name]
-  manager.ware_name.caption = prototype and prototype.localised_name or { "utl-manager.ware-filter-all" }
-  manager.ware_clear.visible = name ~= nil
 end
 
 function Manager.toggle(player)
