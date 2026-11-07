@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.28
+Date: 2026-11-07
+  Features:
+    - UTL Manager: the window size can be set per player in the mod settings ("UTL Manager: width" and "UTL Manager: height"). The columns grow with the window; if it does not fit on the screen, it gets smaller.
+  Changes:
+    - UTL Manager: the window is a bit bigger by default (1040 × 620 instead of 880 × 560), and column titles are no longer cut off. The full column name is also in its tooltip.
+    - UTL Manager: the ware filter button in the title bar is bigger, looks like the buttons next to it and is labelled "Filter". Wish from the mod portal.
+    - UTL Manager: the tabs Settings and Inventory are laid out in boxes.
+  Bugfixes:
+    - UTL Manager, Inventory: the details on the right were cut off at the scroll bar, and the divider between left and right moved depending on the chosen good.
+    - UTL Manager, Statistics: long good names ran into the numbers next to them.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.27
 Date: 2026-11-05
   Features:
