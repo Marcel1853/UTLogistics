@@ -14,27 +14,27 @@ local flib_format = require("__flib__.format")
 local Tab = {}
 
 local GOODS = {
-  { caption = { "utl-manager.col-good" }, width = 170, sort = function(item) return item.key end },
-  { caption = { "utl-manager.col-stat-ten" }, width = 70, desc_first = true, sort = function(item) return item.ten end },
-  { caption = { "utl-manager.col-stat-hour" }, width = 70, desc_first = true, sort = function(item) return item.hour end },
-  { caption = { "utl-manager.col-stat-minute" }, width = 70, desc_first = true, sort = function(item) return item.hour end },
+  { caption = { "utl-manager.col-good" }, width = 220, sort = function(item) return item.key end },
+  { caption = { "utl-manager.col-stat-ten" }, width = 80, desc_first = true, sort = function(item) return item.ten end },
+  { caption = { "utl-manager.col-stat-hour" }, width = 90, desc_first = true, sort = function(item) return item.hour end },
+  { caption = { "utl-manager.col-stat-minute" }, width = 100, desc_first = true, sort = function(item) return item.hour end },
 }
 local STATIONS = {
-  { caption = { "utl-manager.col-station" }, width = 124, sort = function(item) return string.lower(item.name) end },
-  { caption = { "utl-manager.col-stat-sent-ten" }, tooltip = { "utl-manager.col-stat-sent-ten-tooltip" }, width = 72, desc_first = true,
+  { caption = { "utl-manager.col-station" }, width = 150, sort = function(item) return string.lower(item.name) end },
+  { caption = { "utl-manager.col-stat-sent-ten" }, tooltip = { "utl-manager.col-stat-sent-ten-tooltip" }, width = 86, desc_first = true,
     sort = function(item) return item.stats.sent_ten end },
-  { caption = { "utl-manager.col-stat-sent-hour" }, tooltip = { "utl-manager.col-stat-sent-hour-tooltip" }, width = 72, desc_first = true,
+  { caption = { "utl-manager.col-stat-sent-hour" }, tooltip = { "utl-manager.col-stat-sent-hour-tooltip" }, width = 86, desc_first = true,
     sort = function(item) return item.stats.sent_hour end },
-  { caption = { "utl-manager.col-stat-received-ten" }, tooltip = { "utl-manager.col-stat-received-ten-tooltip" }, width = 72, desc_first = true,
+  { caption = { "utl-manager.col-stat-received-ten" }, tooltip = { "utl-manager.col-stat-received-ten-tooltip" }, width = 86, desc_first = true,
     sort = function(item) return item.stats.received_ten end },
-  { caption = { "utl-manager.col-stat-received-hour" }, tooltip = { "utl-manager.col-stat-received-hour-tooltip" }, width = 72, desc_first = true,
+  { caption = { "utl-manager.col-stat-received-hour" }, tooltip = { "utl-manager.col-stat-received-hour-tooltip" }, width = 86, desc_first = true,
     sort = function(item) return item.stats.received_hour end },
 }
 local TRAINS = {
-  { caption = { "utl-manager.col-train" }, width = 130, sort = function(item) return item.train.id end },
-  { caption = { "utl-manager.col-stat-deliveries" }, width = 70, desc_first = true,
+  { caption = { "utl-manager.col-train" }, width = 140, sort = function(item) return item.train.id end },
+  { caption = { "utl-manager.col-stat-deliveries" }, width = 100, desc_first = true,
     sort = function(item) return item.deliveries end },
-  { caption = { "utl-manager.col-stat-utilization" }, width = 140, desc_first = true,
+  { caption = { "utl-manager.col-stat-utilization" }, width = 150, desc_first = true,
     sort = function(item) return item.utilization or -1 end }, -- „–“ (noch keine Lieferung) zuletzt
 }
 
@@ -52,8 +52,8 @@ function Tab.build(parent)
   columns.style.vertically_stretchable = true
   local left = columns.add({ type = "flow", direction = "vertical" })
   -- Stationsliste: Name + vier Zahlen ohne abgeschnittene Köpfe; zusammen mit der Zugliste rechts
-  -- höchstens so breit wie der Manager-Inhalt (880)
-  left.style.width = 460
+  -- höchstens so breit wie der Manager-Inhalt
+  left.style.width = List.w(560)
   left.style.vertically_stretchable = true
   local right = columns.add({ type = "flow", direction = "vertical" })
   right.style.horizontally_stretchable = true
@@ -67,7 +67,9 @@ local function fill_good(row, item)
   cell.style.vertical_align = "center"
   local grid = cell.add({ type = "table", style = "slot_table", column_count = 1 })
   Widgets.add_slot(grid, item.key, nil, "cargo")
-  cell.add({ type = "label", caption = Widgets.ware_name(item.key) })
+  -- lange Namen enden mit „…“ statt in die Zahl daneben zu laufen; ganz steht er im Tooltip
+  local name = cell.add({ type = "label", caption = Widgets.ware_name(item.key), tooltip = Widgets.ware_name(item.key) })
+  name.style.maximal_width = List.w(GOODS[1].width) - 48
   List.cell(row, GOODS[2].width, { type = "label", caption = flib_format.number(item.ten) })
   List.cell(row, GOODS[3].width, { type = "label", caption = flib_format.number(item.hour) })
   List.cell(row, GOODS[4].width, { type = "label", caption = flib_format.number(math.floor(item.hour / 60 + 0.5)) })
@@ -90,7 +92,7 @@ local function fill_train(row, item)
   local cell = List.cell(row, TRAINS[3].width, { type = "flow", direction = "horizontal" })
   cell.style.vertical_align = "center"
   local bar = cell.add({ type = "progressbar", value = item.utilization or 0 })
-  bar.style.width = 90
+  bar.style.width = List.w(90)
   -- „–“, bis der Zug seine erste Lieferung abgeschlossen hat
   cell.add({ type = "label", caption = item.utilization and { "", tostring(math.floor(item.utilization * 100 + 0.5)), " %" }
     or "–", tooltip = not item.utilization and { "utl-manager.utilization-none" } or nil })

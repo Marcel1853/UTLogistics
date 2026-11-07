@@ -17,17 +17,17 @@ local function total(...)
 end
 
 local COLUMNS = {
-  { caption = { "utl-manager.col-station" }, width = 220, sort = function(station)
+  { caption = { "utl-manager.col-station" }, width = 330, sort = function(station)
     local stop = station.stop
     return stop and stop.valid and string.lower(stop.backer_name) or ""
   end },
-  { caption = { "utl-manager.col-goods" }, width = 200, desc_first = true,
+  { caption = { "utl-manager.col-goods" }, width = 220, desc_first = true,
     sort = function(station) return total(station.provide, station.request) end },
-  { caption = { "utl-manager.col-transit" }, width = 200, desc_first = true, sort = function(station)
+  { caption = { "utl-manager.col-transit" }, width = 220, desc_first = true, sort = function(station)
     local deliveries = storage.deliveries
     return total(deliveries.incoming[station.unit], deliveries.outgoing[station.unit])
   end },
-  { caption = { "utl-manager.col-trains" }, width = 60, desc_first = true,
+  { caption = { "utl-manager.col-trains" }, width = 90, desc_first = true,
     sort = function(station) return storage.deliveries.trains_at[station.unit] or 0 end },
 }
 

@@ -18,10 +18,10 @@ local function total(...)
 end
 
 local COLUMNS = {
-  { caption = { "utl-manager.col-composition" }, width = 110, desc_first = true,
+  { caption = { "utl-manager.col-composition" }, width = 150, desc_first = true,
     sort = function(train) return train.valid and #train.carriages or 0 end },
-  { caption = { "utl-manager.col-status" }, width = 220 },
-  { caption = { "utl-manager.col-cargo" }, width = 160, desc_first = true,
+  { caption = { "utl-manager.col-status" }, width = 320 },
+  { caption = { "utl-manager.col-cargo" }, width = 200, desc_first = true,
     sort = function(train) return train.valid and total((Info.cargo(train))) or 0 end },
 }
 
@@ -30,7 +30,7 @@ function Tab.build(parent)
   flow.style.horizontal_spacing = 8
   flow.style.vertically_stretchable = true
   local left = flow.add({ type = "frame", style = "inside_deep_frame", direction = "vertical" })
-  left.style.width = 230
+  left.style.width = List.w(250)
   left.style.vertically_stretchable = true
   local list = left.add({ type = "list-box", tags = { utl_mgr = "depot_list" } })
   list.style.horizontally_stretchable = true

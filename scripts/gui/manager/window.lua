@@ -12,6 +12,7 @@ local Tabs = {
   settings = require("scripts.gui.manager.tab-settings"),
 }
 local Filter = require("scripts.gui.manager.surface-filter")
+local List = require("scripts.gui.common.list")
 local Addons = require("scripts.api.addons")
 
 local Manager = {}
@@ -19,8 +20,10 @@ local Manager = {}
 local NAME = "utl_manager"
 local SHORTCUT = "utl-toggle-manager"
 -- Bei jedem Umbau des Fensters erhöhen (alte Fenster werden dann geschlossen statt aufgefrischt).
-local GUI_VERSION = 14 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
+local GUI_VERSION = 17 -- 8: Reiter „Statistik“ · 9: Anheften, Blättern · 10: Spalten sortieren · 11: kleiner Pfeil
 -- 12: Aufzug-Häkchen im Reiter „Netzwerke“ · 13: Reiter von Add-ons (register_manager_tab) · 14: Waren-Filter
+-- 15: Waren-Filter größer und mit Beschriftung „Filter“ · 16: Fenster größer und einstellbar
+-- 17: Einstellungen und Inventar mit Kästen
 local ORDER = { "depots", "stations", "networks", "inventory", "history", "statistics", "alerts", "settings" }
 -- Reiter, die sich im Takt selbst auffrischen (Inventar nur auf Klick, sonst springt die Detailliste;
 -- Einstellungen nie, sonst überschriebe der Takt das Feld beim Tippen).
@@ -35,6 +38,21 @@ local function frame_button(parent, sprite, tooltip, action)
     mouse_button_filter = { "left" },
     tags = { utl_mgr = action },
   })
+end
+
+--- Standardgröße des Inhalts; die Spalten in den Reitern sind für diese Breite ausgelegt.
+local BASE_WIDTH, BASE_HEIGHT = 1040, 620
+
+--- Inhaltsgröße aus den Spieler-Einstellungen, höchstens so groß, dass das Fenster auf den Bildschirm passt.
+local function content_size(player)
+  local settings = player.mod_settings
+  local width = settings["utl-manager-width"] and settings["utl-manager-width"].value or BASE_WIDTH
+  local height = settings["utl-manager-height"] and settings["utl-manager-height"].value or BASE_HEIGHT
+  local scale = player.display_scale > 0 and player.display_scale or 1
+  local screen = player.display_resolution
+  width = math.min(width, math.floor(screen.width / scale) - 60)
+  height = math.min(height, math.floor(screen.height / scale) - 140)
+  return math.max(width, 600), math.max(height, 400)
 end
 
 function Manager.get(player_index)
@@ -88,6 +106,7 @@ function Manager.refresh(player_index, auto)
     return
   end
   Filter.apply(manager, manager.surface_pick) -- gewählte Oberfläche für diesen Durchlauf
+  List.scale = manager.scale or 1
   Tabs[name].refresh(manager.refs[name], manager)
 end
 
@@ -124,14 +143,23 @@ function Manager.open(player)
   surface_pick.style.top_margin = -2
   local pin = frame_button(bar, "flib_pin_white", { "utl-manager.pin" }, "pin")
   -- Waren-Filter: Gegenstand oder Flüssigkeit wählen, Rechtsklick leert ihn (surface-filter.lua, Filter.ware)
-  local ware = bar.add({ type = "choose-elem-button", elem_type = "signal", style = "slot_button",
+  local ware_label = bar.add({ type = "label", caption = { "utl-manager.ware-filter-label" },
+    tooltip = { "utl-manager.ware-filter" } })
+  ware_label.style.font = "default-small"
+  ware_label.style.left_margin = 4
+  local ware_button = bar.add({ type = "choose-elem-button", elem_type = "signal", style = "frame_button",
     elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } },
     tooltip = { "utl-manager.ware-filter" }, tags = { utl_mgr = "ware_filter" } })
-  ware.style.size = 24
+  -- gleiche Optik wie die Titelleisten-Knöpfe daneben, aber breiter, damit er auffällt
+  ware_button.style.height = 24
+  ware_button.style.width = 40
+  ware_button.style.padding = 0
   frame_button(bar, "utility/search", { "utl-manager.search" }, "toggle_search")
   frame_button(bar, "utility/refresh", { "utl-manager.refresh" }, "refresh")
   frame_button(bar, "utility/close", { "utl-manager.close" }, "close")
 
+  local width, height = content_size(player)
+  List.scale = width / BASE_WIDTH
   local tabs = frame.add({ type = "tabbed-pane", style = "tabbed_pane_with_no_side_padding",
     tags = { utl_mgr = "tabs" } })
   local refs = {}
@@ -146,8 +174,8 @@ function Manager.open(player)
   for _, name in ipairs(order) do
     local tab = tabs.add({ type = "tab", caption = captions[name] or { "utl-manager.tab-" .. name } })
     local content = tabs.add({ type = "flow", direction = "vertical" })
-    content.style.width = 880
-    content.style.height = 560
+    content.style.width = width
+    content.style.height = height
     content.style.padding = 8
     content.style.vertical_spacing = 8
     tabs.add_tab(tab, content)
@@ -163,6 +191,7 @@ function Manager.open(player)
     order = order,
     search_field = search,
     surface_pick = surface_pick,
+    scale = width / BASE_WIDTH,
     search = "",
     refs = refs,
     pin_button = pin,

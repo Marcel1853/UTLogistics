@@ -9,6 +9,7 @@ local TeamPanel = require("scripts.gui.common.team-panel")
 local TeamConfig = require("scripts.core.team-config")
 local Config = require("scripts.core.config")
 local Teams = require("scripts.core.teams")
+local Section = require("scripts.gui.common.section")
 
 local Tab = {}
 
@@ -44,27 +45,24 @@ function Tab.build(parent)
     horizontal_scroll_policy = "never" })
   pane.style.vertically_stretchable = true
   pane.style.horizontally_stretchable = true
-  -- Innenabstand: links etwas Luft, unten Platz nach der letzten Zeile
+  -- Kästen untereinander, rechts Platz für den Scrollbalken
   local box = pane.add({ type = "flow", direction = "vertical" })
-  box.style.left_padding = 8
-  box.style.right_padding = 8
-  box.style.top_padding = 4
-  box.style.bottom_padding = 16
-  box.style.vertical_spacing = 4
+  box.style.padding = { 0, 12, 8, 0 }
+  box.style.vertical_spacing = 12
   local refs = { map = {} }
-  refs.header = box.add({ type = "label", style = "utl_header_label" })
-  refs.note = note(box)
-  refs.team = TeamPanel.build(box, TAG)
+  local _, header, loading = Section.add(box, "")
+  refs.header = header
+  refs.note = note(loading)
+  refs.team = TeamPanel.build(loading, TAG)
 
   -- Karte / Server: nur für Admins
-  refs.map_box = box.add({ type = "flow", direction = "vertical" })
-  refs.map_box.style.vertical_spacing = 4
-  refs.map_box.style.top_margin = 8
-  refs.map_box.add({ type = "label", style = "utl_header_label", caption = { "utl-manager.settings-map" } })
-  note(refs.map_box).caption = { "utl-manager.settings-map-note" }
-  local map = refs.map_box.add({ type = "table", column_count = 4 })
+  local map_box, _, map_body = Section.add(box, { "utl-manager.settings-map" })
+  refs.map_box = map_box
+  note(map_body).caption = { "utl-manager.settings-map-note" }
+  local map = map_body.add({ type = "table", column_count = 4 })
+  map.draw_horizontal_lines = true -- feine Linie zwischen den Zeilen
   map.style.horizontal_spacing = 8
-  map.style.vertical_spacing = 4
+  map.style.vertical_spacing = 6
   map.style.vertical_align = "center"
   for _, proto in ipairs(map_settings()) do refs.map[proto.name] = Row.add(map, TAG, "map", proto.name, proto) end
   return refs

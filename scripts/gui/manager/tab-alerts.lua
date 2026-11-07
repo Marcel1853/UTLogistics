@@ -9,10 +9,10 @@ local Alerts = require("scripts.alerts.alerts")
 local Tab = {}
 
 local COLUMNS = {
-  { caption = { "utl-manager.col-time" }, width = 70, desc_first = true, sort = function(e) return e.tick end },
+  { caption = { "utl-manager.col-time" }, width = 80, desc_first = true, sort = function(e) return e.tick end },
   { caption = "", width = 32 },
-  { caption = { "utl-manager.col-alert" }, width = 560 },
-  { caption = { "utl-manager.col-place" }, width = 120 },
+  { caption = { "utl-manager.col-alert" }, width = 690 },
+  { caption = { "utl-manager.col-place" }, width = 140 },
 }
 
 function Tab.build(parent)

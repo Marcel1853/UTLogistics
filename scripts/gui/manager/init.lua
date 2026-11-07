@@ -159,6 +159,13 @@ Events.on(defines.events.on_gui_elem_changed, function(event)
   Manager.refresh(event.player_index)
 end)
 
+-- Größe in den Spieler-Einstellungen geändert: offenes Fenster in der neuen Größe neu aufbauen
+Events.on(defines.events.on_runtime_mod_setting_changed, function(event)
+  if event.setting ~= "utl-manager-width" and event.setting ~= "utl-manager-height" then return end
+  local player = event.player_index and game.get_player(event.player_index)
+  if player and Manager.get(player.index) then Manager.open(player) end
+end)
+
 Events.on(defines.events.on_gui_selected_tab_changed, function(event)
   local action = context(event)
   if action == "tabs" then Manager.refresh(event.player_index) end
