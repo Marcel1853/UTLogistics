@@ -129,12 +129,13 @@ function Manager.open(player)
     tooltip = { "utl-manager.ware-filter" } })
   ware_label.style.font = "default-small"
   ware_label.style.left_margin = 4
-  local ware_button = bar.add({ type = "choose-elem-button", elem_type = "signal", style = "slot_button",
+  local ware_button = bar.add({ type = "choose-elem-button", elem_type = "signal", style = "frame_button",
     elem_filters = { { filter = "type", type = "item" }, { filter = "type", type = "fluid" } },
     tooltip = { "utl-manager.ware-filter" }, tags = { utl_mgr = "ware_filter" } })
-  ware_button.style.size = 28
-  ware_button.style.top_margin = -2
-  ware_button.style.bottom_margin = -2
+  -- gleiche Optik wie die Titelleisten-Knöpfe daneben, aber breiter, damit er auffällt
+  ware_button.style.height = 24
+  ware_button.style.width = 40
+  ware_button.style.padding = 0
   frame_button(bar, "utility/search", { "utl-manager.search" }, "toggle_search")
   frame_button(bar, "utility/refresh", { "utl-manager.refresh" }, "refresh")
   frame_button(bar, "utility/close", { "utl-manager.close" }, "close")
