@@ -67,7 +67,7 @@ local function detail(parent, key, totals, manager)
       and Filter.station(manager, station) then
       local row = parent.add({ type = "flow", direction = "horizontal" })
       row.style.vertical_align = "center"
-      List.station_label(row, 200, station.stop.backer_name, station.stop)
+      List.station_label(row, 240, station.stop.backer_name, station.stop)
       local grid = Widgets.slot_grid(row, 1)
       if provide then Widgets.add_slot(grid, key, provide, "provide") end
       if request then Widgets.add_slot(grid, key, request, "request") end
@@ -82,7 +82,7 @@ local function detail(parent, key, totals, manager)
       local row = parent.add({ type = "flow", direction = "horizontal" })
       row.style.vertical_align = "center"
       local route = row.add({ type = "label", caption = { "utl-manager.route", delivery.from or "?", delivery.to or "?" } })
-      route.style.width = 200
+      route.style.width = List.w(240)
       Widgets.add_slot(Widgets.slot_grid(row, 1), key, amount, "incoming")
     end
   end

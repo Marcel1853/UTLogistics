@@ -16,12 +16,12 @@ local function total(...)
 end
 
 local COLUMNS = {
-  { caption = { "utl-manager.col-depot" }, width = 120, sort = function(e) return string.lower(e.depot or "") end },
-  { caption = { "utl-manager.col-route" }, width = 260, sort = function(e) return string.lower(e.from or "") end },
-  { caption = { "utl-manager.col-runtime" }, width = 70, desc_first = true,
+  { caption = { "utl-manager.col-depot" }, width = 140, sort = function(e) return string.lower(e.depot or "") end },
+  { caption = { "utl-manager.col-route" }, width = 330, sort = function(e) return string.lower(e.from or "") end },
+  { caption = { "utl-manager.col-runtime" }, width = 110, desc_first = true,
     sort = function(e) return e.finished - e.started end },
-  { caption = { "utl-manager.col-finished" }, width = 80, desc_first = true, sort = function(e) return e.finished end },
-  { caption = { "utl-manager.col-cargo" }, width = 160, desc_first = true,
+  { caption = { "utl-manager.col-finished" }, width = 100, desc_first = true, sort = function(e) return e.finished end },
+  { caption = { "utl-manager.col-cargo" }, width = 200, desc_first = true,
     sort = function(e) return total(e.manifest or (e.key and { [e.key] = e.amount })) end },
 }
 

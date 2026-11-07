@@ -10,14 +10,14 @@ local Filter = require("scripts.gui.manager.surface-filter")
 local Tab = {}
 
 local COLUMNS = {
-  -- zusammen mit der Netzliste links (230) höchstens so breit wie der Manager-Inhalt (880),
+  -- zusammen mit der Netzliste links (290) höchstens so breit wie der Manager-Inhalt (1040),
   -- Rahmen und Scrollbalken eingerechnet – vorher ragte die Liste rechts aus dem Fenster
-  { caption = { "utl-manager.col-station" }, width = 240, sort = function(entry)
+  { caption = { "utl-manager.col-station" }, width = 300, sort = function(entry)
     local stop = entry.station.stop
     return stop and stop.valid and string.lower(stop.backer_name) or ""
   end },
-  { caption = { "utl-manager.col-role" }, width = 180 },
-  { caption = { "utl-manager.col-network" }, width = 130, sort = function(entry) return string.lower(entry.network) end },
+  { caption = { "utl-manager.col-role" }, width = 200 },
+  { caption = { "utl-manager.col-network" }, width = 170, sort = function(entry) return string.lower(entry.network) end },
 }
 
 local ROLE_ORDER = { "storage", "provider", "requester", "depot", "fuel", "cleanup" }
@@ -40,7 +40,7 @@ function Tab.build(parent)
   flow.style.horizontal_spacing = 8
   flow.style.vertically_stretchable = true
   local left = flow.add({ type = "frame", style = "inside_deep_frame", direction = "vertical" })
-  left.style.width = 230
+  left.style.width = List.w(290)
   left.style.vertically_stretchable = true
   local list = left.add({ type = "list-box", tags = { utl_mgr = "network_list" } })
   list.style.horizontally_stretchable = true
@@ -63,10 +63,10 @@ function Tab.build(parent)
   local row = bar.add({ type = "flow", direction = "horizontal" })
   row.style.vertical_align = "center"
   local add = row.add({ type = "drop-down", tags = { utl_mgr = "link_add" } })
-  add.style.minimal_width = 200
+  add.style.minimal_width = List.w(220)
   local field = row.add({ type = "textfield", lose_focus_on_confirm = true, clear_and_focus_on_right_click = true,
     tooltip = { "utl-gui.networks-new-tooltip" }, tags = { utl_mgr = "link_name" } })
-  field.style.width = 180
+  field.style.width = List.w(200)
   local confirm = row.add({ type = "sprite-button", style = "utl_confirm_button", sprite = "utility/check_mark",
     tooltip = { "utl-gui.networks-new-tooltip" }, tags = { utl_mgr = "link_confirm" } })
   -- Nur mit Space Exploration: Netz darf über den Weltraumaufzug liefern

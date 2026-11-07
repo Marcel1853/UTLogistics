@@ -23,7 +23,7 @@ function Row.add(t, tag, kind, id, proto, reset_tooltip)
     local items = {}
     for i, value in ipairs(proto.allowed_values) do items[i] = { "string-mod-setting." .. proto.name .. "-" .. value } end
     refs.input = t.add({ type = "drop-down", items = items, tooltip = tooltip, tags = { [tag] = kind .. "_choice", id = id } })
-    refs.input.style.width = 160
+    refs.input.style.width = 220
   else
     refs.input = t.add({ type = "textfield", lose_focus_on_confirm = true, clear_and_focus_on_right_click = true,
       tooltip = tooltip, tags = { [tag] = kind .. "_value", id = id } })

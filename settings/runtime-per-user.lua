@@ -29,4 +29,23 @@ data:extend({
     default_value = true,
     order = "b-a",
   },
+  -- Größe des UTL-Managers (Inhalt in Pixeln bei 100 % UI-Skalierung); zu groß für den Bildschirm → kleiner
+  {
+    type = "int-setting",
+    name = "utl-manager-width",
+    setting_type = "runtime-per-user",
+    default_value = 1040,
+    minimum_value = 800,
+    maximum_value = 3000,
+    order = "c-a",
+  },
+  {
+    type = "int-setting",
+    name = "utl-manager-height",
+    setting_type = "runtime-per-user",
+    default_value = 620,
+    minimum_value = 450,
+    maximum_value = 2000,
+    order = "c-b",
+  },
 })

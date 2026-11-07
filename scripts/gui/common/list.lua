@@ -5,6 +5,15 @@ local List = {}
 
 List.MAX_ROWS = 200
 
+--- Maßstab für alle Breiten: Fenstergröße des Spielers ÷ Standardgröße. Der Manager setzt ihn vor
+--- jedem Aufbau und Auffrischen (Einstellung „Breite des UTL-Managers“).
+List.scale = 1
+
+--- Breite `n` (für die Standardgröße gedacht) im aktuellen Maßstab.
+function List.w(n)
+  return math.floor(n * List.scale + 0.5)
+end
+
 --- Spalten: { { caption = LocalisedString, width = n, tooltip = LocalisedString, sort = fn, desc_first = bool }, ... }.
 --- Mit `sort` (liefert je Zeile einen Zahl- oder Textwert) sortiert ein Klick auf die Überschrift
 --- nach dieser Spalte, ein zweiter Klick kehrt die Richtung um. `desc_first`: erster Klick
@@ -19,17 +28,21 @@ function List.build(parent, columns)
   header_flow.style.horizontal_spacing = 8
   header_flow.style.left_padding = 8
   for i, column in ipairs(columns) do
-    local tooltip = column.sort and (column.tooltip and { "", column.tooltip, "\n", { "utl-manager.sort-tooltip" } }
-      or { "utl-manager.sort-tooltip" }) or column.tooltip
+    -- Spaltenname immer oben im Tooltip, falls er in einer schmalen Spalte abgeschnitten ist
+    local parts = { "", "[font=default-bold]", column.caption, "[/font]" }
+    if column.tooltip then parts[#parts + 1] = "\n"; parts[#parts + 1] = column.tooltip end
+    if column.sort then parts[#parts + 1] = "\n"; parts[#parts + 1] = { "utl-manager.sort-tooltip" } end
+    local tooltip = column.caption ~= "" and parts or column.tooltip
+    local width = List.w(column.width)
     if column.sort then
       -- sortierbar: Text + kleiner Pfeil (12 px, nur an der sortierten Spalte sichtbar)
       local tags = { utl_mgr = "sort", column = i, desc_first = column.desc_first == true }
       local box = header_flow.add({ type = "flow", name = "col_" .. i, direction = "horizontal" })
-      box.style.width = column.width
+      box.style.width = width
       box.style.horizontal_spacing = 2
       box.style.vertical_align = "center"
       box.add({ type = "label", name = "label", style = "subheader_caption_label", caption = column.caption,
-        tooltip = tooltip, tags = tags }).style.maximal_width = column.width - 14
+        tooltip = tooltip, tags = tags }).style.maximal_width = width - 14
       local arrow = box.add({ type = "sprite", name = "arrow", sprite = "utility/collapse", tooltip = tooltip, tags = tags,
         visible = false })
       arrow.style.size = 12
@@ -37,7 +50,7 @@ function List.build(parent, columns)
     else
       local label = header_flow.add({ type = "label", name = "col_" .. i, style = "subheader_caption_label",
         caption = column.caption, tooltip = tooltip })
-      label.style.width = column.width
+      label.style.width = width
     end
   end
   local scroll = outer.add({ type = "scroll-pane", style = "flib_naked_scroll_pane_no_padding",
@@ -194,7 +207,7 @@ end
 --- Feste Breite für eine Zelle setzen und zurückgeben.
 function List.cell(row, width, element)
   local cell = row.add(element)
-  cell.style.width = width
+  cell.style.width = List.w(width)
   return cell
 end
 
@@ -212,7 +225,7 @@ function List.station_label(row, width, name, stop)
     tags = tags,
   })
   label.style.font = "default-bold"
-  if width then label.style.width = width end
+  if width then label.style.width = List.w(width) end
   return label
 end
 
