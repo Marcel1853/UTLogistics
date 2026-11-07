@@ -21,7 +21,8 @@ function Tab.build(parent)
   left.style.vertical_spacing = 8
   -- feste Breite (Raster + Innenabstand + Rahmen): sonst verschiebt ein langer Stationsname rechts
   -- je nach gewählter Ware die Trennlinie zwischen links und rechts
-  left.style.width = columns * 40 + 24
+  local left_width = columns * 40 + 24
+  left.style.width = left_width
   left.style.vertically_stretchable = true
   local refs = {}
   for _, part in ipairs({ "provide", "request", "incoming" }) do
@@ -33,8 +34,8 @@ function Tab.build(parent)
 
   -- rechts ein Kasten mit der gewählten Ware in der Kopfleiste
   local right = flow.add({ type = "frame", style = "inside_shallow_frame", direction = "vertical" })
-  right.style.horizontally_stretchable = true
-  right.style.horizontally_squashable = true
+  -- ebenfalls feste Breite: der Rest des Inhalts (Fensterbreite − Innenabstand 2 × 8 − links − Abstand 8)
+  right.style.width = List.w(1040) - 16 - left_width - 8
   right.style.vertically_stretchable = true
   local head = right.add({ type = "frame", style = "subheader_frame" })
   head.style.horizontally_stretchable = true
