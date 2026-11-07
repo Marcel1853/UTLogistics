@@ -19,6 +19,9 @@ function Tab.build(parent)
   local columns = math.max(8, math.floor(List.w(440) / 40))
   local left = flow.add({ type = "flow", direction = "vertical" })
   left.style.vertical_spacing = 8
+  -- feste Breite (Raster + Innenabstand + Rahmen): sonst verschiebt ein langer Stationsname rechts
+  -- je nach gewählter Ware die Trennlinie zwischen links und rechts
+  left.style.width = columns * 40 + 24
   left.style.vertically_stretchable = true
   local refs = {}
   for _, part in ipairs({ "provide", "request", "incoming" }) do
@@ -31,6 +34,7 @@ function Tab.build(parent)
   -- rechts ein Kasten mit der gewählten Ware in der Kopfleiste
   local right = flow.add({ type = "frame", style = "inside_shallow_frame", direction = "vertical" })
   right.style.horizontally_stretchable = true
+  right.style.horizontally_squashable = true
   right.style.vertically_stretchable = true
   local head = right.add({ type = "frame", style = "subheader_frame" })
   head.style.horizontally_stretchable = true
@@ -110,7 +114,8 @@ local function detail(refs, key, totals, manager)
       and Filter.station(manager, station) then
       stations = stations or box_list(parent, { "utl-manager.col-station" })
       local row = box_row(stations)
-      List.station_label(row, nil, station.stop.backer_name, station.stop)
+      -- zu lange Namen werden gekürzt statt die rechte Seite zu verbreitern
+      List.station_label(row, nil, station.stop.backer_name, station.stop).style.horizontally_squashable = true
       pusher(row)
       local grid = Widgets.slot_grid(row, 1)
       if provide then Widgets.add_slot(grid, key, provide, "provide") end
@@ -126,6 +131,7 @@ local function detail(refs, key, totals, manager)
       trains = trains or box_list(parent, { "utl-manager.col-trains" })
       local row = box_row(trains)
       row.add({ type = "label", caption = { "utl-manager.route", delivery.from or "?", delivery.to or "?" } })
+        .style.horizontally_squashable = true
       pusher(row)
       Widgets.add_slot(Widgets.slot_grid(row, 1), key, amount, "incoming")
     end
