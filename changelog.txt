@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.0.29
+Date: 2026-11-24
+  Features:
+    - New value per station: "Minimum load at this station (%)". At a provider, trains loading there only leave once at least this share of their cargo space gets filled; at a requester, deliveries only start then. 0 = off. The map setting "Minimum load per trip" stays as it is and is checked separately. Wish from Discord.
+---------------------------------------------------------------------------------------------------
 Version: 0.0.28
 Date: 2026-11-07
   Features:
