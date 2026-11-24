@@ -56,7 +56,8 @@ Jede Station bekommt eine Rolle:
 - **Lager** – hält einen Bestand zwischen Minimum und Maximum: darunter fordert es an, darüber bietet
   es an.
 
-Je Station lassen sich Zuglänge, max. Züge, Schwellen und Prioritäten einstellen. In Zahlenfeldern
+Je Station lassen sich Zuglänge, max. Züge, Schwellen, Prioritäten und eine Mindestladung je Fahrt
+einstellen (zum Beispiel „erst mit mindestens 70 % vollem Zug losfahren“). In Zahlenfeldern
 geht auch Rechnen wie `4000*2`.
 
 ## Netzwerke
