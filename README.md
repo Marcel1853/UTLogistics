@@ -56,7 +56,8 @@ Each station gets a role:
 - **Storage** – keeps a stock between a minimum and a maximum: below the minimum it requests, above it
   it offers.
 
-Per station you can set train length, max. trains, thresholds and priorities. Number fields accept
+Per station you can set train length, max. trains, thresholds, priorities and a minimum load per trip
+(for example “only leave with at least 70 % of the train filled”). Number fields accept
 math like `4000*2`.
 
 ## Networks

@@ -151,7 +151,8 @@ function Rounds.build(check)
   remote.call("utl", "set_request", req5.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
   remote.call("utl", "set_map_config", "utl-stuck-minutes", 1)
   local r35_train = train(s, force, 4, "R35-Depot")
-  -- R37: Mindestladung 50 % – 400 Eisen (10 % des Wagens) lösen keine Fahrt aus, 3000 schon
+  -- R37: Mindestladung – Kartenwert 30 %, am Abnehmer 50 % (Stationswert, höherer gilt). 400 Eisen (10 % des
+  -- Wagens) und 1600 (40 %, reicht für den Kartenwert, nicht für die Station) lösen keine Fahrt aus, 3000 schon
   LINE = 201
   rails(s, force, -85, 85)
   local depot7 = stop(s, force, "R37-Depot", 10, true)
@@ -161,9 +162,9 @@ function Rounds.build(check)
   local function cfg7(e, changes) changes.network = "R37"; remote.call("utl", "configure_station", e.unit_number, changes) end
   cfg7(depot7, { mode = "depot" })
   cfg7(prov7, { mode = "station", provide = true, request = false })
-  cfg7(req7, { mode = "station", provide = false, request = true, request_threshold = 100 })
+  cfg7(req7, { mode = "station", provide = false, request = true, request_threshold = 100, request_min_load = 50 })
   remote.call("utl", "set_request", req7.unit_number, 1, { type = "item", name = "iron-plate" }, 400)
-  remote.call("utl", "set_map_config", "utl-min-load-percent", 50)
+  remote.call("utl", "set_map_config", "utl-min-load-percent", 30)
   train(s, force, 4, "R37-Depot")
   -- R38: aktiver Anbieter – (a) Lager über dem Mindest füllt sich nur aus dem aktiven Anbieter (der
   -- normale liegt näher), (b) ohne Abnehmer geht die Ware des aktiven Anbieters ins Cleanup
@@ -254,7 +255,7 @@ function Rounds.watch(r, check)
       if not r.r37.raised then r.r37.early = true elseif not r.r37.done then
         r.r37.done = true
         remote.call("utl", "set_map_config", "utl-min-load-percent", 0)
-        check("R37 mindestladung: 400 warten, 3000 fahren", not r.r37.early, serpent.line(d.manifest))
+        check("R37 mindestladung (karte 30 %, abnehmer 50 %): 400 und 1600 warten, 3000 fahren", not r.r37.early, serpent.line(d.manifest))
       end
     end
     if d.to == "R38-Lager" and not r.r38.fill then
@@ -367,8 +368,12 @@ function Rounds.watch(r, check)
       and (ev.on_delivery_completed or 0) > 0 and (ev["on_delivery_canceled-remote"] or 0) >= 1 and not ev.bad,
       serpent.line(ev))
   end
-  -- R37: nach 30 s den Bedarf auf 3000 heben
-  if not r.r37.raised and game.tick - r.start > 1800 then
+  -- R37: nach 30 s den Bedarf auf 1600 heben (40 %: Kartenwert erfüllt, Stationswert nicht), nach 60 s auf 3000
+  if not r.r37.middle and game.tick - r.start > 1800 then
+    r.r37.middle = true
+    remote.call("utl", "set_request", r.r37.req, 1, { type = "item", name = "iron-plate" }, 1600)
+  end
+  if not r.r37.raised and game.tick - r.start > 3600 then
     r.r37.raised = true
     remote.call("utl", "set_request", r.r37.req, 1, { type = "item", name = "iron-plate" }, 3000)
   end
@@ -392,7 +397,7 @@ function Rounds.watch(r, check)
     if not r.r39 then check("R39 tankstelle fordert treibstoff an", false, "keine lieferung") end
     if not r.r38.fill then check("R38 aktiver anbieter füllt lager über dem mindest", false, "keine lieferung") end
     if not r.r38.cleanup then check("R38 aktiver anbieter leert ins cleanup", false, "keine lieferung") end
-    if not r.r37.done then check("R37 mindestladung: 400 warten, 3000 fahren", false, serpent.line(r.r37)) end
+    if not r.r37.done then check("R37 mindestladung (karte 30 %, abnehmer 50 %): 400 und 1600 warten, 3000 fahren", false, serpent.line(r.r37)) end
     if not r.r35.done then check("R35 hänger-erkennung: warnung nach 1 min, lieferung läuft weiter", false, serpent.line(r.r35)) end
     if not r.r34.done then check("R34 zweiter anbieter: ein zug, zwei ladehalte, volle menge", false, serpent.line(r.r34)) end
     if not (r.moved and r.moved.ok) then

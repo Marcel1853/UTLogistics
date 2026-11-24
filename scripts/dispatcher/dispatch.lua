@@ -98,8 +98,8 @@ local function try_request(request)
     end
     if record then
       local manifest = Select.manifest(request, provider, record, amount)
-      -- Mindestladung je Fahrt (Map-Einstellung): zu wenig für diesen Zug → noch warten
-      if not Select.full_enough(record, manifest, provider.station.config.locked_slots) then return false end
+      -- Mindestladung je Fahrt (Kartenwert, Anbieter, Abnehmer): zu wenig für diesen Zug → noch warten
+      if not Select.full_enough(record, manifest, provider.station.config, request.station.config) then return false end
       local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop, provider.via,
         pickup) ~= nil
       if created and not request.only_active then Warn.waiting_since(request.station.unit, request.key, true) end
@@ -171,7 +171,9 @@ function Dispatch.chain(train, network, from_stop, depot_name)
   if not (Reach.check(train, from_stop, best.provider.station.stop, true)
       and Reach.check(train, from_stop, best.request.station.stop, true)) then return nil end
   local manifest = Select.manifest(best.request, best.provider, record, best.amount)
-  if not Select.full_enough(record, manifest, best.provider.station.config.locked_slots) then return nil end
+  if not Select.full_enough(record, manifest, best.provider.station.config, best.request.station.config) then
+    return nil
+  end
   local delivery = Deliveries.create(record, best.provider.station, best.request.station, manifest, nil)
   if delivery then
     -- delivery.train_id statt train.id: ein Empfänger von on_delivery_created darf den Zug umbauen

@@ -252,11 +252,14 @@ local function worth(amount, capacity, request)
 end
 Select.worth = worth
 
---- Map-Einstellung „Mindestladung je Fahrt“: Ist die ganze Ladeliste (alle Waren, die der Anbieter
---- mitgibt) mindestens so viel Prozent des Laderaums? Items nach Slots, Flüssigkeit nach Tankinhalt.
-function Select.full_enough(record, manifest, locked)
-  local percent = storage.cfg.min_load_percent or 0
+--- „Mindestladung je Fahrt“: Ist die ganze Ladeliste (alle Waren, die der Anbieter mitgibt) mindestens
+--- so viel Prozent des Laderaums? Items nach Slots, Flüssigkeit nach Tankinhalt. Es gilt der höchste Wert
+--- aus Kartenwert, Anbieter (`provide_min_load`) und Abnehmer (`request_min_load`); 0 = kein eigener Wert.
+function Select.full_enough(record, manifest, p_cfg, r_cfg)
+  local percent = math.max(storage.cfg.min_load_percent or 0, p_cfg.provide_min_load or 0,
+    r_cfg and r_cfg.request_min_load or 0)
   if percent <= 0 then return true end
+  local locked = p_cfg.locked_slots
   local slots_used, fluid_used = 0, 0
   for key, amount in pairs(manifest) do
     local size = stack_size(key)
