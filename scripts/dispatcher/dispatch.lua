@@ -98,7 +98,7 @@ local function try_request(request)
     end
     if record then
       local manifest = Select.manifest(request, provider, record, amount)
-      -- Mindestladung je Fahrt (Kartenwert, Anbieter, Abnehmer): zu wenig für diesen Zug → noch warten
+      -- Mindestladung (Kartenwert und die eigenen Werte von Anbieter und Abnehmer): zu wenig → noch warten
       if not Select.full_enough(record, manifest, provider.station.config, request.station.config) then return false end
       local created = Deliveries.create(record, provider.station, request.station, manifest, fuel_stop, provider.via,
         pickup) ~= nil

@@ -252,24 +252,31 @@ local function worth(amount, capacity, request)
 end
 Select.worth = worth
 
---- „Mindestladung je Fahrt“: Ist die ganze Ladeliste (alle Waren, die der Anbieter mitgibt) mindestens
---- so viel Prozent des Laderaums? Items nach Slots, Flüssigkeit nach Tankinhalt. Es gilt der höchste Wert
---- aus Kartenwert, Anbieter (`provide_min_load`) und Abnehmer (`request_min_load`); 0 = kein eigener Wert.
+--- Mindestladung: Ist die ganze Ladeliste (alle Waren, die der Anbieter mitgibt) mindestens so viel Prozent
+--- des Laderaums? Items nach Slots, Flüssigkeit nach Tankinhalt. Drei getrennte Prüfungen, jede für sich:
+---   * Kartenwert „Mindestladung je Fahrt“ (wie bisher, unverändert),
+---   * eigener Wert des Anbieters (`provide_min_load`),
+---   * eigener Wert des Abnehmers (`request_min_load`).
+--- 0 heißt jeweils: diese Prüfung ist aus.
 function Select.full_enough(record, manifest, p_cfg, r_cfg)
-  local percent = math.max(storage.cfg.min_load_percent or 0, p_cfg.provide_min_load or 0,
-    r_cfg and r_cfg.request_min_load or 0)
-  if percent <= 0 then return true end
-  local locked = p_cfg.locked_slots
+  local map = storage.cfg.min_load_percent or 0
+  local provider = p_cfg.provide_min_load or 0
+  local requester = r_cfg and r_cfg.request_min_load or 0
+  if map <= 0 and provider <= 0 and requester <= 0 then return true end
   local slots_used, fluid_used = 0, 0
   for key, amount in pairs(manifest) do
     local size = stack_size(key)
     if size then slots_used = slots_used + math.ceil(amount / size) else fluid_used = fluid_used + amount end
   end
-  local slots = math.max(0, record.slots - record.wagons * (locked or 0))
+  local slots = math.max(0, record.slots - record.wagons * (p_cfg.locked_slots or 0))
   local share = 0
   if slots > 0 then share = slots_used / slots end
   if record.fluid and record.fluid > 0 then share = math.max(share, fluid_used / record.fluid) end
-  return share * 100 >= percent
+  local filled = share * 100
+  if map > 0 and filled < map then return false end             -- Kartenwert
+  if provider > 0 and filled < provider then return false end   -- eigener Wert des Anbieters
+  if requester > 0 and filled < requester then return false end -- eigener Wert des Abnehmers
+  return true
 end
 
 --- Gehört (amount, distance) in die Bestenliste `best` (höchstens TRAIN_TRIES)?

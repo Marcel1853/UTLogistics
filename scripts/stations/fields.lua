@@ -29,7 +29,7 @@ Fields.groups = {
       { key = "provide_stack_threshold", signal = "utl-provide-stack-threshold", default = 0, min = 0 },
       { key = "provide_priority", signal = "utl-provide-priority", default = 0 },
       { key = "locked_slots", signal = "utl-locked-slots", default = 0, min = 0 },
-      -- Mindestladung je Fahrt in % des Laderaums für Züge, die hier laden (0 = nur der Kartenwert)
+      -- eigene Mindestladung in % des Laderaums für Züge, die hier laden (0 = aus); getrennt vom Kartenwert
       { key = "provide_min_load", signal = "utl-provide-min-load", default = 0, min = 0, max = 100 },
     },
     -- Schalter (ja/nein) unter den Zahlen desselben Abschnitts
@@ -44,7 +44,7 @@ Fields.groups = {
       { key = "request_threshold", signal = "utl-request-threshold", setting = "default_request_threshold", min = 1 },
       { key = "request_stack_threshold", signal = "utl-request-stack-threshold", default = 0, min = 0 },
       { key = "request_priority", signal = "utl-request-priority", default = 0 },
-      -- Mindestladung je Fahrt in % des Laderaums für Lieferungen hierher (0 = nur der Kartenwert)
+      -- eigene Mindestladung in % des Laderaums für Lieferungen hierher (0 = aus); getrennt vom Kartenwert
       { key = "request_min_load", signal = "utl-request-min-load", default = 0, min = 0, max = 100 },
     },
   },
